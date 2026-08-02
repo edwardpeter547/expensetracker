@@ -1,0 +1,12 @@
+
+model Category {
+    id                 String          @id @default(cuid())
+    name               String      
+    icon               String? 
+    isSystem           Boolean         @default(false)
+    userId             Int?
+    user               User?           @relation(fields: [userId], references: [id])
+    budgets Budget[]
+
+    @@map("categories")
+}

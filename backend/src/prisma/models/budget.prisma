@@ -1,0 +1,32 @@
+model Budget {
+    id                  String              @id @default(cuid())
+    amount              Float               
+    period              BudgetPeriod        @default(MONTHLY)
+    startDate           DateTime            @default(now())
+    endDate             DateTime?
+    alertThreshold      Int                 @default(80)        
+    isActive            Boolean             @default(true)
+
+    // Relationship
+    userId              Int
+    user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+    categoryId          String
+    category            Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+    // Timestamps
+    createdAt           DateTime            @default(now())
+    updatedAt           DateTime            @updatedAt
+
+
+    @@unique([userId, categoryId, period])
+    @@index([userId])
+    @@index([categoryId])
+    @@index([isActive])
+    @@map("budget")
+}
+
+enum BudgetPeriod {
+    MONTHLY
+    WEEKLY
+    YEARLY
+}

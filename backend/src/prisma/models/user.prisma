@@ -1,0 +1,93 @@
+
+model User {
+  id                        Int           @id @default(autoincrement())
+  email                     String        @unique
+  username                  String        @unique
+  password                  String        
+  firstname                 String   
+  lastname                  String
+  dateOfBirth               DateTime?
+  mobileNumber              String?
+  avatar                    String?
+
+
+  // Validation Fields
+  isActive                  Boolean
+  isEmailVerified           Boolean
+  emailVerifiedAt           DateTime?
+  isPhoneVerified           Boolean
+  phoneVerifiedAt           DateTime?
+
+  // Security
+  lastPasswordReset         DateTime?
+
+  // User Preferences
+  currency                  String      @default("USD")
+  timezone                  String      @default("UTC")
+  language                  String      @default("en")
+  theme                     String      @default("light")
+
+  // Relationships
+  transactions              Transaction[]   
+  categories                Category[]
+  budgets                   Budget[]
+  notifications             Notification[]
+  refreshTokens             RefreshToken[]
+  loginAttempts             LoginAttempt[]
+  verificationTokens        VerificationToken[]
+  passwordResetTokens       PasswordResetToken[]
+  passwordHistories         PasswordHistory[]
+
+  // Timestamps
+  lastLoginAt               DateTime?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+
+  @@index([email])
+  @@index([username])
+  @@index([isActive])
+  @@map("user")
+}
+
+
+model LoginAttempt {
+    id                  String          @id @default(cuid())
+    email               String          
+    ipAddress           String?  
+    userAgent           String?
+    wasSuccess          Boolean
+    attemptTime         DateTime        @default(now())    
+
+    userId              Int?
+    user                User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    @@index([email])
+    @@index([ipAddress])
+    @@index([attemptTime])
+    @@index([userId])
+    @@map("login_attempt")
+
+}
+
+
+model PasswordHistory {
+    id                  String          @id @default(cuid())
+    password            String
+    userId              Int
+    user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    dateChanged         DateTime        @default(now())
+    ipAddress           String?
+    location            String?
+
+
+    @@index([userId])
+}
+
+
+
+enum SubscriptionType {
+    FREE
+    PREMIUM
+    PRO
+    ENTERPRISE
+}

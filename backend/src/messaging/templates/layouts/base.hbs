@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f4;
+            }
+
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2, 100%);
+                padding: 30px;
+                text-align: center;
+                border-radius: 8px 8px 0 0;
+            }
+
+            .header img {
+                max-width: 150px;
+                height: auto;
+            }
+
+            .content {
+                background: #ffffff;
+                padding: 40px 30px;
+                border-radius: 0 0 8px 8px;
+            }
+
+            .footer {
+                text-align: center;
+                padding: 20px;
+                color: #666;
+                font-size: 12px;
+            }
+
+            .button {
+                display: inline-block;
+                padding: 12px 30px;
+                background: #667eea;
+                color: #ffffff !important;
+                text-decoration: none;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+
+            .salutation {
+                margin-top: 30px; 
+                padding-top: 20px; 
+                border-top: 2px solid #4A90D9;
+            }
+
+            .salutation-text {
+                margin: 0 0 5px 0; 
+                font-size: 14px; 
+                color: #666666; 
+                line-height: 1.6;
+            }
+
+            .signature-text {
+                margin: 0; 
+                font-size: 15px; 
+                font-weight: 700; 
+                color: #2c3e50; 
+                line-height: 1.5;
+            }
+
+            .responsive-table {
+                margin: 20px auto;
+                width: 100%;
+                max-width: 600px;
+            }
+
+            .responsive-table td {
+                display: block;
+                text-align: center;
+                padding: 8px 0;
+            }
+
+            .responsive-table .spacer {
+                display: none;
+            }
+
+            @media (max-width: 599px){
+                .container {padding: 10px;}
+                .content {padding: 20px 15px}
+                .stack-on-mobile td { display: block !important; text-align: center !important; }
+                .stack-on-mobile td:first-child { padding-bottom: 15px !important; }
+                .stack-on-mobile .spacer { display: none !important; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="{{logoUrl}}" alt="{{logoAltText}}">
+            </div>
+            <div class="content">
+                {{{body}}}
+                <div class="salutation">
+                    <p class="salutation-text">
+                        {{salutationText}}
+                    </p>
+                    <p class="signature-text">
+                        {{signatureText}}
+                    </p>
+                </div>
+            </div>
+            <div class="footer">
+                <p>&copy; {{year}} {{developerName}}. {{copyrightText}}.</p>
+                <p>
+                    <a href="{{unsubscribeUrl}}" style="color: #667eea;">{{unsubscribeLinkText}}</a> |
+                    <a href="{{privacyUrl}}" style="color: #667eea;">{{privacyLinkText}}</a> |
+                    <a href="{{supportUrl}}" style="color: #667eea;">{{supportLinkText}}</a>
+                </p>
+                <p style="font-size: 11px; color: #999; margin-top: 10px;">
+                    {{emailFooterInfo}} {{brandName}}.
+                </p>
+            </div>
+        </div>
+    </body>
+</html>

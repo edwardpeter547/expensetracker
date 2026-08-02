@@ -1,0 +1,32 @@
+
+
+model Transaction {
+    id                      String          @id @default(cuid())
+    amount                  Float           
+    transType               TransactionType
+    category                String
+    description             String?
+    receiptUrl              String?
+    location                String?
+
+    // Transaction Audit
+    transactionDate         DateTime
+    createdAt               DateTime        @default(now())
+    updatedAt               DateTime        @updatedAt
+
+    // Relationships
+    userId                  Int
+    user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+
+    @@index([userId])
+    @@index([userId, transactionDate])
+    @@index([transType])
+    @@index([category])
+    @@map("transaction")
+}
+
+enum TransactionType {
+    INCOME
+    EXPENSE
+}

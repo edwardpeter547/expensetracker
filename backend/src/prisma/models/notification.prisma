@@ -1,0 +1,29 @@
+model Notification {
+    id              String                  @id @default(cuid())
+    noticeType      NotificationType        
+    title           String
+    message         String
+    isRead          Boolean
+    metadata        Json
+    userId          Int
+    user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    // Timestamps
+    createdAt       DateTime                @default(now())
+
+    @@index([userId])       
+    @@index([isRead])
+    @@index([createdAt])
+    @@map("notification")
+}
+
+
+enum NotificationType {
+    BUDGET_ALERT
+    RECURRING_ALERT
+    WEEKLY_REPORT_ALERT
+    MONTHLY_REPORT_ALERT
+    YEARLY_REPORT_ALERT
+    GOAL_ACHIEVED_ALERT
+    TIP_INSIGHT_ALERT
+}
