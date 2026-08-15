@@ -6,5 +6,5 @@ src/generated/prisma
 src/logs
 src/prisma/generated/
 src/prisma/migrations/
-src/coverage
+coverage/
 

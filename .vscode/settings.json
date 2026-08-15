@@ -7,7 +7,7 @@
         "**/Thumbs.db": true
     },
     "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit",
-        "source.sortmembers": "explicit"
+        "source.organizeImports": "never",
+        "source.sortmembers": "never"
     }
 }

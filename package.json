@@ -1,8 +1,0 @@
-{
-  "name": "expensetracker",
-  "private": true,
-  "workspaces":[
-    "backend",
-    "mobile"
-  ]
-}

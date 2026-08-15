@@ -5,8 +5,10 @@
   "main": "src/server.js",
   "scripts": {
     "start": "NODE_ENV=production node src/server.js",
-    "dev": "nodemon",
-    "test": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=testing jest --watch --coverage"
+    "start:dev": "nodemon",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=testing jest --watch --coverage",
+    "test": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=testing jest --coverage --verbose",
+    "clean": "rm -rf node_modules/"
   },
   "keywords": [],
   "author": "",
