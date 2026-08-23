@@ -133,7 +133,6 @@ export const confirmVerification = async(verificationId, userId) => {
 }
 
 export const saveVerificationToken = async(user, verificationToken) => {
-    
     await prisma.$transaction(async (tx) => {
         await tx.verificationToken.deleteMany({
             where: {userId: user.id}
@@ -162,7 +161,6 @@ export const savePasswordResetToken = async (user, passwordResetToken, ipAddress
 }
 
 export const getUser = async(params) => {
-    
     const user =  await prisma.user.findFirst({
         where: {...params}
     });
@@ -174,7 +172,6 @@ export const getUser = async(params) => {
         method: 'findFirst',
         args: {where: { ...params} }
     }
-    
     return user;
 }
 
