@@ -3,12 +3,6 @@ import Constants from 'expo-constants';
 import {isDevice, } from 'expo-device';
 
 
-const getMacIP = () => {
-    return process.env.EXPO_PUBLIC_MAC_IP || '192.168.0.193';
-};
-
-
-
 export const getBaseUrl = () => {
 
     const apiUrl = Constants.expoConfig?.extra?.apiUrl;
