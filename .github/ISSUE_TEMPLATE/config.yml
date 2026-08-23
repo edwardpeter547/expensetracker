@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Github Community Support
+    url: https://github.com/edwardpeter547/expensetracker/discussions
+    about: Please ask and answer project related questions here
+
+  - name: Repository Guidance
+    url: https://github.com/edwardpeter547/expensetracker/wiki
+    about: Quick onboarding guidance for the project
