@@ -1,4 +1,9 @@
-{
+
+const API_URL = process.env.API_URL;
+const LOCAL_SERVER_IP = process.env.LOCAL_SERVER_IP;
+const LOCAL_SERVER_PORT = process.env.LOCAL_SERVER_PORT;
+
+export default {
   "expo": {
     "name": "expense-tracker",
     "slug": "mobile",
@@ -44,7 +49,10 @@
     "extra": {
       "eas": {
         "projectId": "be526f99-7f66-43ed-8711-cf0312476fa9"
-      }
+      },
+      apiUrl: API_URL || `http://${LOCAL_SERVER_IP}:${LOCAL_SERVER_PORT}/api/v1`,
+      serverIp: LOCAL_SERVER_IP,
+      serverPort: LOCAL_SERVER_PORT
     },
     "owner": "edwardpeter547"
   }

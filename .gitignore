@@ -1,5 +1,5 @@
 # ============================================
-# 🔧 Node.js / JavaScript / TypeScript
+# Node.js / JavaScript / TypeScript
 # ============================================
 
 # Dependencies
@@ -13,6 +13,10 @@ node_modules/
 .env.*
 !.env.example
 !.env.template
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Build outputs
 dist/
@@ -43,7 +47,7 @@ Thumbs.db
 .bsconfig.json
 
 # ============================================
-# 🗄️ Prisma / Database
+# Prisma / Database
 # ============================================
 
 # Prisma generated client
@@ -56,15 +60,11 @@ src/prisma/generated/
 *.sqlite
 *.sqlite3
 
-# Migration files (optional - some teams commit these)
-# prisma/migrations/
-# !prisma/migrations/.keep
-
 # ============================================
-# 📱 React Native / Mobile
+# React Native / Expo / Mobile
 # ============================================
 
-# React Native
+# Native builds (if you ever eject)
 android/
 ios/
 Pods/
@@ -83,22 +83,20 @@ dist/
 web-build/
 
 # ============================================
-# 📦 Testing & Coverage
+# 🧪 Testing & Coverage
 # ============================================
 
 # Coverage
 coverage/
-backend/coverage
 .nyc_output/
 *.lcov
+*.lcov.info
 
 # Test artifacts
 __tests__/__snapshots__/
-*.test.js
-*.spec.js
 
 # ============================================
-# 🚀 Deployment & Temp files
+# Deployment & Temp files
 # ============================================
 
 # Temporary files
@@ -124,3 +122,65 @@ media/
 *.pfx
 secrets/
 credentials/
+
+# ============================================
+# Monorepo Specific
+# ============================================
+
+# Individual workspace .npmrc (should not be committed)
+**/.npmrc
+!**/.npmrc.example
+
+# Workspace-specific build outputs
+**/dist/
+**/build/
+**/.expo/
+**/coverage/
+**/node_modules/
+
+# ============================================
+# 🖥️ Backend Specific
+# ============================================
+
+# Backend logs
+backend/logs/
+backend/*.log
+
+# Backend temp files
+backend/tmp/
+backend/temp/
+
+# ============================================
+# Mobile Specific
+# ============================================
+
+# Mobile build outputs
+mobile/dist/
+mobile/web-build/
+mobile/.expo/
+
+# Mobile native builds (if ejected)
+mobile/android/
+mobile/ios/
+
+# ============================================
+# Infrastructure / Docker
+# ============================================
+
+# Docker volumes (if using local volumes)
+volumes/
+*.volume/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+*.log
+
+# Kubernetes
+*.kubeconfig
+kubeconfig

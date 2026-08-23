@@ -14,7 +14,6 @@ const IndexScreen = () => {
     useEffect(() =>{
         if(!isLoading){
             if(user){
-                console.log("I got here")
                 router.replace("/(tabs)")
             } else {
                 router.replace("/(auth)/login")

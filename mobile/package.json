@@ -22,7 +22,7 @@
     "axios": "^1.16.1",
     "expo": "~55.0.24",
     "expo-constants": "~55.0.16",
-    "expo-device": "~55.0.17",
+    "expo-device": "~55.0.19",
     "expo-font": "~55.0.7",
     "expo-glass-effect": "~55.0.11",
     "expo-image": "~55.0.10",
