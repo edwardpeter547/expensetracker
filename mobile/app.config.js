@@ -1,4 +1,3 @@
-
 const API_URL = process.env.API_URL;
 const LOCAL_SERVER_IP = process.env.LOCAL_SERVER_IP;
 const LOCAL_SERVER_PORT = process.env.LOCAL_SERVER_PORT;
@@ -40,7 +39,12 @@ export default {
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      // ✅ Added for SDK 57
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
