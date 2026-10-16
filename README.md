@@ -37,6 +37,7 @@ make test-mobile        # not yet implemented (no mobile test script)
 - [Design principles](docs/engineering/design-principles.md)
 - [Testing strategy](docs/engineering/testing-strategy.md)
 - [Architecture decisions](docs/decisions/README.md)
+- [GitHub ticket automation](tickets/README.md)
 - [Product domain design](docs/architecture/product-domain-design.md)
 
 ### Product strategy
