@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "repo": "edwardpeter547/expensetracker",
+  "package": "github-issue-management-automation",
+  "tickets": [
+    {
+      "id": "GHA-EPIC",
+      "type": "epic",
+      "title": "[FEATURE] GitHub Issue Management Automation",
+      "body": "epics/gha-epic-github-issue-management-automation.md",
+      "parent": null,
+      "labels": [
+        "EPIC",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01",
+      "type": "story",
+      "title": "[STORY] Implement Automated GitHub Ticket Management",
+      "body": "stories/gha-01-automated-github-ticket-management.md",
+      "parent": "GHA-EPIC",
+      "labels": [
+        "STORY",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01-T01",
+      "type": "task",
+      "title": "[TASK] Implement Ticket Manifest Schema and Local Validation",
+      "body": "tasks/GHA-01/gha-01-t01-implement-ticket-manifest-schema-and-local-validation.md",
+      "parent": "GHA-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01-T02",
+      "type": "task",
+      "title": "[TASK] Implement GitHub REST Client and Existing-Issue Discovery",
+      "body": "tasks/GHA-01/gha-01-t02-implement-github-rest-client-and-existing-issue-discovery.md",
+      "parent": "GHA-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [
+        "GHA-01-T01"
+      ],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01-T03",
+      "type": "task",
+      "title": "[TASK] Implement Read-Only Planning and Plan-Bound Approval",
+      "body": "tasks/GHA-01/gha-01-t03-implement-read-only-planning-and-plan-bound-approval.md",
+      "parent": "GHA-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [
+        "GHA-01-T01",
+        "GHA-01-T02"
+      ],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01-T04",
+      "type": "task",
+      "title": "[TASK] Implement Safe Issue Creation and Native Sub-Issue Linking",
+      "body": "tasks/GHA-01/gha-01-t04-implement-safe-issue-creation-and-native-sub-issue-linking.md",
+      "parent": "GHA-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [
+        "GHA-01-T01",
+        "GHA-01-T02",
+        "GHA-01-T03"
+      ],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01-T05",
+      "type": "task",
+      "title": "[TASK] Implement Execution Reporting and Automated Test Coverage",
+      "body": "tasks/GHA-01/gha-01-t05-implement-execution-reporting-and-automated-test-coverage.md",
+      "parent": "GHA-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [
+        "GHA-01-T01",
+        "GHA-01-T02",
+        "GHA-01-T03",
+        "GHA-01-T04"
+      ],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "GHA-01-T06",
+      "type": "task",
+      "title": "[TASK] Document and Integrate GitHub Ticket Automation Workflow",
+      "body": "tasks/GHA-01/gha-01-t06-document-and-integrate-github-ticket-automation-workflow.md",
+      "parent": "GHA-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [
+        "GHA-01-T01",
+        "GHA-01-T02",
+        "GHA-01-T03",
+        "GHA-01-T04",
+        "GHA-01-T05"
+      ],
+      "related": [],
+      "issue_number": null
+    }
+  ]
+}

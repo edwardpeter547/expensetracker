@@ -38,12 +38,15 @@ This is a **two-package monorepo orchestrated by a `Makefile`** — it is **not*
 8. Never write or commit secrets, tokens, or real environment values; use `.env.example` patterns.
 9. When a larger design choice is involved, explain trade-offs briefly.
 10. Never `git commit`, `git push`, or create branches unless explicitly instructed.
+11. Python code follows `docs/engineering/coding-standards.md`: Google-style docstrings, Python 3.9 type annotations, colocated tests, and explanatory comments for non-obvious or security-sensitive logic.
 
 ## Commands
 - Backend tests: `cd backend && npm test` (or `make test-backend`).
 - Backend dev server: `make start-backend-dev` (`cd backend && npm run start:dev`).
 - Mobile: `cd mobile && npm start`; lint via `cd mobile && npm run lint`.
 - Regenerate i18n JSON after editing `backend/translations/*.js`: `node --experimental-vm-modules backend/scripts/generate.locales.js`.
+- Python automation tests: `python3 -m unittest discover -s scripts/github_tickets/tests -v`.
+- Validate a ticket package: `python scripts/github_tickets.py validate --manifest <manifest.json>`.
 
 ## Documentation
 - `docs/architecture/system-overview.md` — packages, data flow, API contract.

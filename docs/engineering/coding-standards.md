@@ -124,6 +124,26 @@ These standards describe how code is written in this repository today and how it
 - Use platform guards (`Platform.OS`) only for genuine differences (e.g. keyboard behavior); prefer cross-platform code.
 - Avoid native modules not listed in the Expo SDK unless the change is explicitly discussed.
 
+## Python tooling
+
+This is an adopted engineering standard and applies to repository automation and any other Python code.
+
+- Every module has a purpose docstring describing the module's responsibility.
+- Every class has a docstring explaining its responsibility and, for data classes, the meaning of its attributes and important invariants.
+- Every function and method, including private helpers, has a meaningful docstring.
+- Functions with parameters document each parameter, its meaning, and any important constraints.
+- Functions that return a value document what is returned and its meaning.
+- Functions that raise exceptions document the relevant exceptions and circumstances.
+- Functions with important side effects document those effects.
+- Use a consistent Google-style docstring format with ``Args:``, ``Returns:``, and ``Raises:`` sections where applicable.
+- Use meaningful type annotations compatible with Python 3.9.
+- Add explanatory comments for complex algorithms, security-sensitive checks, and non-obvious implementation decisions.
+- Avoid redundant comments that simply restate the code.
+- Keep documentation synchronized with implementation behavior.
+- Colocate tests with the module or feature they test (e.g. `scripts/github_tickets/tests/`) instead of a generic root-level tests directory.
+
+A concise one-line docstring is acceptable only for trivial functions with no parameters, no meaningful return value, no exceptions, and no important side effects. A one-line docstring must not replace documenting a non-trivial function's contract.
+
 ## Financial correctness conventions
 
 - Treat monetary values as data, not display strings: keep parsing/formatting consistent and centralized.
