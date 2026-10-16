@@ -102,6 +102,7 @@ __tests__/__snapshots__/
 # Temporary files
 tmp/
 temp/
+planning/
 *.tmp
 *.temp
 
@@ -184,3 +185,6 @@ volumes/
 # Kubernetes
 *.kubeconfig
 kubeconfig
+tickets/.generated/
+tickets/drafts/
+tickets/exports/
