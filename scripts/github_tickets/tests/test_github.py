@@ -1,4 +1,5 @@
-"""Tests for the read-only GitHub client and existing-issue discovery.
+"""
+Tests for the read-only GitHub client and existing-issue discovery.
 
 All tests are offline: HTTP is mocked and no token or live GitHub API call is
 required.
@@ -14,6 +15,7 @@ from unittest import mock
 from scripts.github_tickets import github as github_module
 from scripts.github_tickets.github import (
     AmbiguousMatch,
+    GitHubAmbiguousParentError,
     GitHubAuthenticationError,
     GitHubClient,
     GitHubNotFoundError,
@@ -41,7 +43,8 @@ def make_issue(
     html_url: str = "",
     is_pull_request: bool = False,
 ) -> Issue:
-    """Build an :class:`Issue` for tests.
+    """
+    Build an :class:`Issue` for tests.
 
     Args:
         number: Issue number.
@@ -65,7 +68,8 @@ def make_issue(
 
 
 def make_ticket(ticket_id: str, title: str, issue_number=None) -> object:
-    """Build a lightweight ticket-like object for discovery tests.
+    """
+    Build a lightweight ticket-like object for discovery tests.
 
     Args:
         ticket_id: Ticket identifier.
@@ -79,7 +83,8 @@ def make_ticket(ticket_id: str, title: str, issue_number=None) -> object:
 
 
 class RepoTest(unittest.TestCase):
-    """Repository reference parsing and validation."""
+    """
+    Repository reference parsing and validation."""
 
     def test_parse_valid_repo(self) -> None:
         """A valid owner/repo string parses into owner and name."""
@@ -220,6 +225,47 @@ class ClientHttpTest(unittest.TestCase):
         self.assertNotIn("test-token", caught[0] if caught else "")
 
 
+    def test_get_parent_null_returns_none(self):
+        """GraphQL parent:null means the child is parentless."""
+        payload = {"data": {"repository": {"issue": {"parent": None}}}}
+        with mock.patch.object(self.client, "_request_json", return_value=payload):
+            self.assertIsNone(self.client.get_parent_issue(7))
+
+    def test_get_parent_returns_parent_issue(self):
+        """GraphQL returns the parent issue when one exists."""
+        payload = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "parent": {
+                            "number": 5,
+                            "title": "Parent",
+                            "state": "open",
+                            "url": "https://github.com/acme/repo/issues/5",
+                        }
+                    }
+                }
+            }
+        }
+        with mock.patch.object(self.client, "_request_json", return_value=payload):
+            parent = self.client.get_parent_issue(7)
+        self.assertEqual(parent.number, 5)
+
+    def test_get_parent_graphql_errors_raise(self):
+        """GraphQL errors raise a controlled response error."""
+        payload = {"errors": [{"message": "Could not resolve to an issue"}]}
+        with mock.patch.object(self.client, "_request_json", return_value=payload):
+            with self.assertRaises(GitHubResponseError):
+                self.client.get_parent_issue(7)
+
+    def test_get_parent_permission_failure_raises(self):
+        """A permission failure propagates and never looks like parentless."""
+        with mock.patch.object(
+            self.client, "_request_json", side_effect=GitHubRequestError("forbidden")
+        ):
+            with self.assertRaises(GitHubRequestError):
+                self.client.get_parent_issue(7)
+
 class ListIssuesTest(unittest.TestCase):
     """Issue listing, pagination, and pull-request filtering."""
 
@@ -278,6 +324,38 @@ class ListIssuesTest(unittest.TestCase):
         self.assertEqual(issue.number, 7)
         self.assertEqual(issue.state, "closed")
 
+
+    def test_sub_issues_paginated(self) -> None:
+        """Sub-issues across multiple pages are all returned."""
+        page1 = [
+            {"number": n, "title": f"c{n}", "state": "open", "html_url": f"u{n}"}
+            for n in range(1, 101)
+        ]
+        page2 = [{"number": 101, "title": "c101", "state": "open", "html_url": "u101"}]
+        with mock.patch.object(
+            self.client, "_request_json", side_effect=[page1, page2]
+        ):
+            children = self.client.list_sub_issues(9)
+        self.assertEqual(len(children), 101)
+        self.assertEqual(children[-1].number, 101)
+
+    def test_sub_issues_duplicate_entry_raises(self) -> None:
+        """Duplicate sub-issue numbers raise GitHubResponseError."""
+        page = [
+            {"number": 1, "title": "a", "state": "open", "html_url": "u1"},
+            {"number": 1, "title": "a", "state": "open", "html_url": "u1"},
+        ]
+        with mock.patch.object(self.client, "_request_json", return_value=page):
+            with self.assertRaises(GitHubResponseError):
+                self.client.list_sub_issues(9)
+
+    def test_sub_issues_api_failure_raises(self) -> None:
+        """A transport failure listing sub-issues propagates typed error."""
+        with mock.patch.object(
+            self.client, "_request_json", side_effect=GitHubRequestError("boom")
+        ):
+            with self.assertRaises(GitHubRequestError):
+                self.client.list_sub_issues(9)
 
 class DiscoveryTest(unittest.TestCase):
     """Matching manifest tickets against existing issues."""

@@ -40,6 +40,18 @@ This is a **two-package monorepo orchestrated by a `Makefile`** — it is **not*
 10. Never `git commit`, `git push`, or create branches unless explicitly instructed.
 11. Python code follows `docs/engineering/coding-standards.md`: Google-style docstrings, Python 3.9 type annotations, colocated tests, and explanatory comments for non-obvious or security-sensitive logic.
 
+## Implementation protocol
+Before implementing and before declaring a task complete, Codex must:
+
+1. Derive acceptance criteria from the task specification first.
+2. Cover the successful execution path, failure cases, edge cases, and regressions.
+3. Maintain a requirements-to-tests checklist.
+4. Verify every required execution path remains reachable after changes.
+5. Inspect the final diff for unintended modifications.
+6. Never declare completion while a core requirement is unimplemented.
+7. Stop and report unresolved technical blockers rather than inventing workarounds.
+8. Never stage, commit, push, create PRs, or perform live external mutations without explicit user authorization.
+
 ## Commands
 - Backend tests: `cd backend && npm test` (or `make test-backend`).
 - Backend dev server: `make start-backend-dev` (`cd backend && npm run start:dev`).
