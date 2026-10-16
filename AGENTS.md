@@ -52,6 +52,17 @@ Before implementing and before declaring a task complete, Codex must:
 7. Stop and report unresolved technical blockers rather than inventing workarounds.
 8. Never stage, commit, push, create PRs, or perform live external mutations without explicit user authorization.
 
+## GitHub ticket automation workflow
+
+Workflow: **validate → plan → human review → hash-bound approval → separately authorized apply**.
+
+- Codex may validate, inspect, test, and plan within existing permissions.
+- Codex must never independently execute live GitHub issue creation/linking,
+  commit, push, change branches, or open a PR.
+- Approval of a plan hash is not, by itself, authorization to perform live
+  mutations. Live `apply` requires separate explicit user authorization.
+- See `tickets/README.md` for package structure, commands, and safety rules.
+
 ## Commands
 - Backend tests: `cd backend && npm test` (or `make test-backend`).
 - Backend dev server: `make start-backend-dev` (`cd backend && npm run start:dev`).
