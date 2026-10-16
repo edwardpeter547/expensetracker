@@ -19,8 +19,10 @@ from typing import List, Optional
 from scripts.github_tickets import manifest as manifest_module
 from scripts.github_tickets import executor as executor_module
 from scripts.github_tickets import planner as planner_module
+from scripts.github_tickets import report as report_module
 from scripts.github_tickets.executor import ExecutionError
 from scripts.github_tickets.planner import PlannerError
+from scripts.github_tickets.report import ReportError
 from scripts.github_tickets.github import (
     GitHubAuthenticationError,
     GitHubClient,
@@ -51,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser.add_argument(
         "--manifest", required=True, help="Path to the package manifest.json."
     )
+    _add_report_dir(validate_parser)
     validate_parser.set_defaults(func=_run_validate)
 
     plan_parser = subparsers.add_parser(
@@ -75,6 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="Write the deterministic plan artifact (plan.json).",
     )
+    _add_report_dir(plan_parser)
     plan_parser.set_defaults(func=_run_plan)
 
     apply_parser = subparsers.add_parser(
@@ -95,9 +99,77 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Verify the plan without performing any mutations.",
     )
+    _add_report_dir(apply_parser)
     apply_parser.set_defaults(func=_run_apply)
 
     return parser
+
+
+def _add_report_dir(parser: argparse.ArgumentParser) -> None:
+    """Add a ``--report-dir`` argument to a subcommand parser.
+
+    Args:
+        parser: The subcommand parser to extend.
+    """
+    parser.add_argument(
+        "--report-dir",
+        required=False,
+        metavar="DIR",
+        help="Write JSON and Markdown reports into this directory "
+             "(recommended: tickets/.generated).",
+    )
+
+
+def _write_reports(directory: str, prefix: str, json_data, markdown: str) -> bool:
+    """Write JSON and Markdown reports into ``directory``.
+
+    Args:
+        directory: Output directory.
+        prefix: File-name prefix (e.g. ``validate``).
+        json_data: JSON-serializable report data.
+        markdown: Markdown report text.
+
+    Returns:
+        ``True`` on success, ``False`` on failure.
+
+    Side effects:
+        Creates the output directory if needed and writes two files.
+    """
+    from pathlib import Path as _Path
+    try:
+        _Path(directory).mkdir(parents=True, exist_ok=True)
+        report_module.write_json_report(
+            str(_Path(directory) / f"{prefix}-report.json"), json_data
+        )
+        report_module.write_markdown_report(
+            str(_Path(directory) / f"{prefix}-report.md"), markdown
+        )
+        return True
+    except ReportError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return False
+
+
+def _write_failure_report(
+    directory: str, prefix: str, kind: str, error: str, repo=None, plan_hash=None, secrets=None
+) -> None:
+    """Write a failure report for an aborted command, if requested.
+
+    Args:
+        directory: Output directory, or ``None`` to skip.
+        prefix: File-name prefix.
+        kind: Report kind.
+        error: Error message.
+        repo: Optional target repository.
+        plan_hash: Optional plan hash.
+        secrets: Optional list of secret strings to redact.
+    """
+    if not directory:
+        return
+    data, markdown = report_module.render_failure_report(
+        kind, error, repo=repo, plan_hash=plan_hash, secrets=secrets
+    )
+    _write_reports(directory, prefix, data, markdown)
 
 
 def _run_validate(args: argparse.Namespace) -> int:
@@ -117,6 +189,9 @@ def _run_validate(args: argparse.Namespace) -> int:
         manifest = manifest_module.load_manifest(args.manifest)
     except ManifestLoadError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "validate", "validate", str(exc)
+        )
         return 1
 
     errors, warnings = manifest_module.validate_manifest(manifest)
@@ -125,6 +200,13 @@ def _run_validate(args: argparse.Namespace) -> int:
         print(f"warning: {warning}", file=sys.stderr)
     for error in errors:
         print(f"error: {error}", file=sys.stderr)
+
+    if getattr(args, "report_dir", None):
+        data, markdown = report_module.render_validation_report(
+            args.manifest, errors, warnings
+        )
+        if not _write_reports(args.report_dir, "validate", data, markdown):
+            return 1
 
     if errors:
         print(
@@ -161,6 +243,9 @@ def _run_plan(args: argparse.Namespace) -> int:
         manifest = manifest_module.load_manifest(args.manifest)
     except ManifestLoadError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "plan", "plan", str(exc)
+        )
         return 1
 
     errors, warnings = manifest_module.validate_manifest(manifest)
@@ -169,14 +254,17 @@ def _run_plan(args: argparse.Namespace) -> int:
     for error in errors:
         print(f"error: {error}", file=sys.stderr)
     if errors:
+        _write_failure_report(
+            getattr(args, "report_dir", None), "plan", "plan", "manifest validation failed"
+        )
         return 1
 
     repo = args.repo if args.repo else manifest.repo
     if args.repo and args.repo != manifest.repo:
-        print(
-            f"error: --repo {args.repo!r} does not match manifest.repo "
-            f"{manifest.repo!r}",
-            file=sys.stderr,
+        message = f"--repo {args.repo!r} does not match manifest.repo {manifest.repo!r}"
+        print(f"error: {message}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "plan", "plan", message, repo=repo
         )
         return 1
 
@@ -184,6 +272,9 @@ def _run_plan(args: argparse.Namespace) -> int:
         client = GitHubClient(repo)
     except (RepoError, GitHubAuthenticationError) as exc:
         print(f"error: {exc}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "plan", "plan", str(exc), repo=repo
+        )
         return 1
 
     try:
@@ -191,6 +282,10 @@ def _run_plan(args: argparse.Namespace) -> int:
         discovery = discover_issues(client, manifest.tickets, issues=issues)
     except GitHubError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "plan", "plan", str(exc),
+            repo=repo, secrets=[getattr(client, "token", None)],
+        )
         return 1
 
     plan = planner_module.build_plan(manifest, discovery, repo, issues=issues)
@@ -202,6 +297,10 @@ def _run_plan(args: argparse.Namespace) -> int:
             print(f"Plan artifact written: {args.output}")
         except PlannerError as exc:
             print(f"error: {exc}", file=sys.stderr)
+            _write_failure_report(
+                getattr(args, "report_dir", None), "plan", "plan", str(exc),
+                repo=repo, secrets=[getattr(client, "token", None)],
+            )
             return 1
 
     print(f"Target repository: {plan.repo}")
@@ -249,13 +348,22 @@ def _run_plan(args: argparse.Namespace) -> int:
                 f"({candidate.issue_title!r})"
             )
 
+    approval_result = None
     if args.approve:
-        result = planner_module.approve_plan(plan, args.approve)
+        approval_result = planner_module.approve_plan(plan, args.approve)
         print()
-        print(f"Approval: {'APPROVED' if result.approved else 'REJECTED'}")
-        print(f"  reason: {result.reason}")
-        return 0 if result.approved else 1
+        print(f"Approval: {'APPROVED' if approval_result.approved else 'REJECTED'}")
+        print(f"  reason: {approval_result.reason}")
 
+    if getattr(args, "report_dir", None):
+        data, markdown = report_module.render_plan_report(
+            plan, plan_hash, approval=approval_result, secrets=[getattr(client, "token", None)]
+        )
+        if not _write_reports(args.report_dir, "plan", data, markdown):
+            return 1
+
+    if approval_result is not None:
+        return 0 if approval_result.approved else 1
     return 0
 
 
@@ -278,6 +386,9 @@ def _run_apply(args: argparse.Namespace) -> int:
         manifest = manifest_module.load_manifest(args.manifest)
     except ManifestLoadError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "apply", "apply", str(exc)
+        )
         return 1
 
     errors, warnings = manifest_module.validate_manifest(manifest)
@@ -286,12 +397,19 @@ def _run_apply(args: argparse.Namespace) -> int:
     for error in errors:
         print(f"error: {error}", file=sys.stderr)
     if errors:
+        _write_failure_report(
+            getattr(args, "report_dir", None), "apply", "apply", "manifest validation failed"
+        )
         return 1
 
     try:
         client = GitHubClient(manifest.repo)
     except (RepoError, GitHubAuthenticationError) as exc:
         print(f"error: {exc}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "apply", "apply", str(exc),
+            repo=manifest.repo,
+        )
         return 1
 
     try:
@@ -308,19 +426,40 @@ def _run_apply(args: argparse.Namespace) -> int:
                     f"  LINK {rel.parent_id} (#{rel.parent_issue_number}) "
                     f"-> {rel.child_id} (#{rel.child_issue_number})"
                 )
+            if getattr(args, "report_dir", None):
+                data, markdown = report_module.render_plan_report(
+                    plan, planner_module.compute_plan_hash(plan)
+                )
+                if not _write_reports(args.report_dir, "apply-dry-run", data, markdown):
+                    return 1
             return 0
 
         report = executor_module.execute_plan(client, manifest, args.approve)
     except ExecutionError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(f"error: {report_module.redact(str(exc), [getattr(client, 'token', None)])}", file=sys.stderr)
+        _write_failure_report(
+            getattr(args, "report_dir", None), "apply", "apply", str(exc),
+            repo=manifest.repo, plan_hash=args.approve, secrets=[getattr(client, "token", None)],
+        )
         return 1
 
     print(f"Execution status: {report.status}")
+    secrets = [getattr(client, "token", None)]
     for operation in report.operations:
         marker = f"#{operation.issue_number}" if operation.issue_number is not None else "-"
-        print(f"  [{operation.op:8}] {operation.target:24} issue={marker:>8} {operation.message}")
+        target = report_module.redact(operation.target, secrets)
+        message = report_module.redact(operation.message, secrets)
+        print(f"  [{operation.op:8}] {target:24} issue={marker:>8} {message}")
     for error in report.errors:
-        print(f"  error: {error}", file=sys.stderr)
+        print(f"  error: {report_module.redact(error, secrets)}", file=sys.stderr)
+
+    if getattr(args, "report_dir", None):
+        data, markdown = report_module.render_execution_report(
+            report, manifest.repo, plan_hash=args.approve, secrets=[getattr(client, "token", None)]
+        )
+        if not _write_reports(args.report_dir, "apply", data, markdown):
+            return 1
+
     return 0 if report.status == executor_module.STATUS_COMPLETED else 1
 
 
