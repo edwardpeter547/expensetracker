@@ -1,4 +1,5 @@
-"""Read-only GitHub REST client and existing-issue discovery.
+"""
+Read-only GitHub REST client and existing-issue discovery.
 
 Task 02 scope only: no create, update, delete, label, or sub-issue mutations.
 
@@ -33,7 +34,8 @@ _MARKER_RE = re.compile(
 
 
 def ticket_id_marker(ticket_id: str) -> str:
-    """Return the invisible body marker that links an issue to ``ticket_id``.
+    """
+    Return the invisible body marker that links an issue to ``ticket_id``.
 
     Args:
         ticket_id: The stable manifest ticket identifier.
@@ -45,7 +47,8 @@ def ticket_id_marker(ticket_id: str) -> str:
 
 
 def extract_ticket_markers(body: Optional[str]) -> List[str]:
-    """Extract sorted ticket ids referenced by markers in an issue body.
+    """
+    Extract sorted ticket ids referenced by markers in an issue body.
 
     Args:
         body: Issue body text, or ``None``.
@@ -60,7 +63,8 @@ def extract_ticket_markers(body: Optional[str]) -> List[str]:
 
 
 def _token_from_env() -> Optional[str]:
-    """Read the GitHub token from the environment.
+    """
+    Read the GitHub token from the environment.
 
     Returns:
         The token value, or ``None`` when neither ``GITHUB_TOKEN`` nor
@@ -73,7 +77,8 @@ def _token_from_env() -> Optional[str]:
 
 
 def _normalize_title(title: Optional[str]) -> str:
-    """Normalize a title for comparison by collapsing whitespace.
+    """
+    Normalize a title for comparison by collapsing whitespace.
 
     Args:
         title: The title to normalize, or ``None``.
@@ -123,6 +128,10 @@ class GitHubNotFoundError(GitHubError):
     """Raised when a requested resource does not exist (HTTP 404)."""
 
 
+class GitHubAmbiguousParentError(GitHubError):
+    """Raised when the absence of an issue's parent cannot be confirmed."""
+
+
 class GitHubRequestError(GitHubError):
     """Raised for network, timeout, or unexpected HTTP failures."""
 
@@ -137,7 +146,8 @@ class RepoError(ValueError):
 
 @dataclass(frozen=True)
 class Repo:
-    """A validated GitHub repository reference.
+    """
+    A validated GitHub repository reference.
 
     Attributes:
         owner: Repository owner (user or organization).
@@ -149,7 +159,8 @@ class Repo:
 
     @classmethod
     def parse(cls, value: str) -> "Repo":
-        """Parse and validate an ``owner/repo`` string.
+        """
+        Parse and validate an ``owner/repo`` string.
 
         Args:
             value: Repository reference in ``owner/repo`` form.
@@ -174,7 +185,8 @@ class Repo:
 
 @dataclass
 class Issue:
-    """Metadata parsed from a GitHub issue.
+    """
+    Metadata parsed from a GitHub issue.
 
     Attributes:
         number: GitHub issue number (positive integer).
@@ -183,6 +195,8 @@ class Issue:
         body: Issue body, or ``None`` if absent.
         html_url: Canonical web URL for the issue.
         is_pull_request: Whether GitHub reports this as a pull request.
+        id: GitHub global issue id used by the sub-issues API. ``None`` when
+            the API did not return it.
     """
 
     number: int
@@ -191,11 +205,13 @@ class Issue:
     body: Optional[str]
     html_url: str
     is_pull_request: bool
+    id: Optional[int] = None
 
 
 @dataclass
 class TicketMatch:
-    """A manifest ticket matched to an existing issue.
+    """
+    A manifest ticket matched to an existing issue.
 
     Attributes:
         ticket_id: Manifest ticket identifier.
@@ -218,7 +234,8 @@ class TicketMatch:
 
 @dataclass
 class TitleMismatch:
-    """A matched issue whose title differs from the manifest title.
+    """
+    A matched issue whose title differs from the manifest title.
 
     Attributes:
         ticket_id: Manifest ticket identifier.
@@ -235,7 +252,8 @@ class TitleMismatch:
 
 @dataclass
 class PullRequestReference:
-    """An explicit ``issue_number`` that points at a pull request.
+    """
+    An explicit ``issue_number`` that points at a pull request.
 
     Attributes:
         ticket_id: Manifest ticket identifier.
@@ -252,7 +270,8 @@ class PullRequestReference:
 
 @dataclass
 class AmbiguousMatch:
-    """A ticket whose marker appears on multiple issues.
+    """
+    A ticket whose marker appears on multiple issues.
 
     Attributes:
         ticket_id: Manifest ticket identifier.
@@ -265,7 +284,8 @@ class AmbiguousMatch:
 
 @dataclass
 class IssueConflict:
-    """Multiple manifest tickets claiming the same GitHub issue.
+    """
+    Multiple manifest tickets claiming the same GitHub issue.
 
     Attributes:
         issue_number: The contested GitHub issue number.
@@ -293,7 +313,8 @@ class RepositoryMismatch:
 
 @dataclass
 class DiscoveryResult:
-    """Outcome of matching manifest tickets against GitHub issues.
+    """
+    Outcome of matching manifest tickets against GitHub issues.
 
     Attributes:
         matched: Tickets with a unique, deterministic match.
@@ -331,7 +352,8 @@ class GitHubClient:
         retry_backoff: float = 2.0,
         sleep: Optional[Callable[[float], None]] = None,
     ) -> None:
-        """Create a read-only client for ``repo``.
+        """
+        Create a read-only client for ``repo``.
 
         Args:
             repo: Repository reference in ``owner/repo`` form.
@@ -363,7 +385,8 @@ class GitHubClient:
         self._sleep = sleep if sleep is not None else time.sleep
 
     def _headers(self) -> Dict[str, str]:
-        """Build request headers without ever logging the token.
+        """
+        Build request headers without ever logging the token.
 
         Returns:
             A dictionary of HTTP headers including the authorization header.
@@ -376,7 +399,8 @@ class GitHubClient:
 
     @staticmethod
     def _is_rate_limited(headers: Any) -> bool:
-        """Return whether response headers indicate an exhausted rate limit.
+        """
+        Return whether response headers indicate an exhausted rate limit.
 
         Args:
             headers: Response header mapping, or ``None``.
@@ -394,7 +418,8 @@ class GitHubClient:
 
     @staticmethod
     def _retry_after(headers: Any, default: float) -> float:
-        """Return the Retry-After delay in seconds, falling back to ``default``.
+        """
+        Return the Retry-After delay in seconds, falling back to ``default``.
 
         Args:
             headers: Response header mapping, or ``None``.
@@ -414,7 +439,8 @@ class GitHubClient:
             return default
 
     def _is_retryable_status(self, status: int, headers: Any) -> bool:
-        """Return whether an HTTP status should be retried for GET requests.
+        """
+        Return whether an HTTP status should be retried for GET requests.
 
         Args:
             status: HTTP status code.
@@ -428,9 +454,14 @@ class GitHubClient:
         return status == 403 and self._is_rate_limited(headers)
 
     def _request_json(
-        self, method: str, path: str, query: Optional[Dict[str, Any]] = None
+        self,
+        method: str,
+        path: str,
+        query: Optional[Dict[str, Any]] = None,
+        json_body: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        """Perform an HTTP request and return the decoded JSON body.
+        """
+        Perform an HTTP request and return the decoded JSON body.
 
         Read-only GET requests are retried on transient failures (HTTP 429,
         5xx, and rate-limited 403) up to ``max_retries`` attempts. Permanent
@@ -440,6 +471,8 @@ class GitHubClient:
             method: HTTP method (e.g. ``"GET"``).
             path: API path beginning with ``/``.
             query: Optional query-string parameters.
+            json_body: Optional JSON body for write requests; sent with
+                ``Content-Type: application/json``.
 
         Returns:
             The parsed JSON response body.
@@ -458,7 +491,13 @@ class GitHubClient:
 
         retryable = method.upper() == "GET"
         delay = self.retry_delay
-        request = urllib.request.Request(url, method=method, headers=self._headers())
+        headers = self._headers()
+        data = None
+        if json_body is not None:
+            data = json.dumps(json_body).encode("utf-8")
+            headers = dict(headers)
+            headers["Content-Type"] = "application/json"
+        request = urllib.request.Request(url, method=method, headers=headers, data=data)
 
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -517,7 +556,8 @@ class GitHubClient:
         raise GitHubRequestError(f"Request did not complete for {url}")
 
     def _issue_path(self, number: Optional[int] = None) -> str:
-        """Return the issues API path for this repository.
+        """
+        Return the issues API path for this repository.
 
         Args:
             number: Optional issue number for a single-issue path.
@@ -530,7 +570,8 @@ class GitHubClient:
 
     @staticmethod
     def _parse_issue(item: Any) -> Issue:
-        """Parse a single issue JSON object into an :class:`Issue`.
+        """
+        Parse a single issue JSON object into an :class:`Issue`.
 
         Args:
             item: Raw JSON object for an issue.
@@ -574,6 +615,12 @@ class GitHubClient:
         else:
             raise GitHubResponseError("Issue 'pull_request' must be an object or absent")
 
+        issue_id = item.get("id")
+        if issue_id is not None and (
+            isinstance(issue_id, bool) or not isinstance(issue_id, int)
+        ):
+            raise GitHubResponseError("Issue 'id' must be an integer when present")
+
         return Issue(
             number=int(number),
             title=title,
@@ -581,10 +628,12 @@ class GitHubClient:
             body=body,
             html_url=html_url,
             is_pull_request=is_pull_request,
+            id=int(issue_id) if isinstance(issue_id, int) else None,
         )
 
     def get_issue(self, number: int) -> Issue:
-        """Fetch a single issue by number.
+        """
+        Fetch a single issue by number.
 
         Args:
             number: GitHub issue number (positive, non-boolean integer).
@@ -612,10 +661,173 @@ class GitHubClient:
             )
         return issue
 
+    def create_issue(
+        self, title: str, body: str, labels: Optional[List[str]] = None
+    ) -> Issue:
+        """
+        Create a new issue in the target repository.
+
+        Args:
+            title: Issue title.
+            body: Issue body.
+            labels: Optional list of label names.
+
+        Returns:
+            The parsed :class:`Issue` returned by GitHub, including its
+            assigned number and id.
+
+        Raises:
+            GitHubError subclasses: For authentication, rate-limit, request,
+                or response failures.
+        """
+        payload: Dict[str, Any] = {"title": title, "body": body}
+        if labels:
+            payload["labels"] = labels
+        data = self._request_json(
+            "POST", self._issue_path(), json_body=payload
+        )
+        return self._parse_issue(data)
+
+    def list_sub_issues(self, issue_number: int) -> List[Issue]:
+        """
+        List all pages of a parent issue's direct sub-issues.
+
+        Args:
+            issue_number: Parent issue number.
+
+        Returns:
+            The parsed child issues across all pages, or an empty list when
+            none exist.
+
+        Raises:
+            GitHubResponseError: If a page is malformed, contains a duplicate
+                issue number, or pagination does not terminate.
+            GitHubError subclasses: For transport, auth, or response failures.
+        """
+        children: List[Issue] = []
+        seen_numbers: Set[int] = set()
+        page = 1
+        while True:
+            if page > MAX_PAGES:
+                raise GitHubResponseError("Sub-issue pagination did not terminate")
+            data = self._request_json(
+                "GET",
+                f"{self._issue_path(issue_number)}/sub_issues",
+                {"per_page": PER_PAGE, "page": page},
+            )
+            if not isinstance(data, list):
+                raise GitHubResponseError("Expected a JSON array of sub-issues")
+            for item in data:
+                issue = self._parse_issue(item)
+                if issue.number in seen_numbers:
+                    raise GitHubResponseError(
+                        f"Duplicate sub-issue number {issue.number} in paginated response"
+                    )
+                seen_numbers.add(issue.number)
+                children.append(issue)
+            if len(data) < PER_PAGE:
+                break
+            page += 1
+        return children
+
+    def add_sub_issue(self, parent_number: int, sub_issue_id: int) -> None:
+        """
+        Attach an existing issue as a sub-issue of a parent issue.
+
+        Args:
+            parent_number: Parent issue number.
+            sub_issue_id: Global id of the child issue.
+
+        Returns:
+            ``None``.
+
+        Raises:
+            GitHubError subclasses: For auth, permission, not-found, or
+                unsupported-feature failures.
+        """
+        self._request_json(
+            "POST",
+            f"{self._issue_path(parent_number)}/sub_issues",
+            json_body={"sub_issue_id": sub_issue_id},
+        )
+
+    def get_parent_issue(self, issue_number: int) -> Optional[Issue]:
+        """
+        Return the parent issue of ``issue_number``, or ``None`` when parentless.
+
+        Uses the GraphQL ``Issue.parent`` field, which is authoritative and
+        nullable: it returns the parent ``Issue`` when one exists and ``null``
+        when the issue has no parent. This avoids interpreting an ambiguous
+        REST 404.
+
+        Args:
+            issue_number: Child issue number.
+
+        Returns:
+            The parent :class:`Issue`, or ``None`` when the child is confirmed
+            to have no parent.
+
+        Raises:
+            GitHubAmbiguousParentError: If the child issue cannot be resolved.
+            GitHubResponseError: For malformed GraphQL responses or GraphQL
+                errors.
+            GitHubError subclasses: For auth, rate-limit, permission, request,
+                or response failures.
+        """
+        query = (
+            "query($owner:String!,$name:String!,$number:Int!){"
+            "repository(owner:$owner,name:$name){"
+            "issue(number:$number){parent{number title state url}}"
+            "}}"
+        )
+        variables = {
+            "owner": self.repo.owner,
+            "name": self.repo.name,
+            "number": issue_number,
+        }
+        data = self._request_json(
+            "POST", "/graphql", json_body={"query": query, "variables": variables}
+        )
+        if not isinstance(data, dict):
+            raise GitHubResponseError("Expected an object from GraphQL")
+
+        if "errors" in data:
+            messages = "; ".join(
+                str(error.get("message", "unknown error"))
+                for error in data.get("errors", [])
+            )
+            raise GitHubResponseError(f"GraphQL parent query failed: {messages}")
+
+        issue = ((data.get("data") or {}).get("repository") or {}).get("issue")
+        if issue is None:
+            raise GitHubAmbiguousParentError(
+                f"Cannot resolve child issue #{issue_number} via GraphQL"
+            )
+
+        parent = issue.get("parent")
+        if parent is None:
+            return None
+        if not isinstance(parent, dict):
+            raise GitHubResponseError("GraphQL parent must be an object or null")
+
+        number = parent.get("number")
+        if isinstance(number, bool) or not isinstance(number, int):
+            raise GitHubResponseError("GraphQL parent 'number' is not an integer")
+        return Issue(
+            number=int(number),
+            title=str(parent.get("title") or ""),
+            state=str(parent.get("state") or ""),
+            body=None,
+            html_url=str(parent.get("url") or ""),
+            is_pull_request=False,
+            id=None,
+        )
+
     def list_issues(
         self, state: str = "all", exclude_pull_requests: bool = True
     ) -> List[Issue]:
-        """List repository issues with pagination.
+        """
+        List repository issues with pagination.
 
         Args:
             state: Issue state filter (``open``, ``closed``, or ``all``).
@@ -661,7 +873,8 @@ class GitHubClient:
 
 
 def _validate_issue_number(value: Any) -> bool:
-    """Return whether ``value`` is a positive, non-boolean integer.
+    """
+    Return whether ``value`` is a positive, non-boolean integer.
 
     Args:
         value: The manifest issue number value.
@@ -673,7 +886,8 @@ def _validate_issue_number(value: Any) -> bool:
 
 
 def _belongs_to_repo(repo: Repo, issue: Issue) -> bool:
-    """Return whether an issue's canonical URL matches the target repository.
+    """
+    Return whether an issue's canonical URL matches the target repository.
 
     Args:
         repo: The target repository.
@@ -691,7 +905,8 @@ def discover_issues(
     tickets: List[Any],
     issues: Optional[List[Issue]] = None,
 ) -> DiscoveryResult:
-    """Match manifest tickets against existing GitHub issues.
+    """
+    Match manifest tickets against existing GitHub issues.
 
     Matching rules:
       - An explicit ``issue_number`` takes priority and is verified against the
@@ -746,7 +961,8 @@ def discover_issues(
     conflict_keys: Set[tuple] = set()
 
     def add_conflict(number: int, ticket_ids: Set[str]) -> None:
-        """Record a deduplicated conflict for ``number``.
+        """
+        Record a deduplicated conflict for ``number``.
 
         Args:
             number: The contested issue number.
@@ -871,7 +1087,8 @@ def discover_issues(
 def _record_match(
     result: DiscoveryResult, ticket: Any, issue: Issue, source: str
 ) -> None:
-    """Append a confirmed match, including any title mismatch.
+    """
+    Append a confirmed match, including any title mismatch.
 
     Args:
         result: The discovery result being populated.

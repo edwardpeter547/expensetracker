@@ -17,7 +17,9 @@ import sys
 from typing import List, Optional
 
 from scripts.github_tickets import manifest as manifest_module
+from scripts.github_tickets import executor as executor_module
 from scripts.github_tickets import planner as planner_module
+from scripts.github_tickets.executor import ExecutionError
 from scripts.github_tickets.planner import PlannerError
 from scripts.github_tickets.github import (
     GitHubAuthenticationError,
@@ -30,7 +32,8 @@ from scripts.github_tickets.manifest import ManifestLoadError
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build and return the top-level argument parser.
+    """
+    Build and return the top-level argument parser.
 
     Returns:
         An :class:`argparse.ArgumentParser` with ``validate`` and ``plan``
@@ -74,11 +77,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_parser.set_defaults(func=_run_plan)
 
+    apply_parser = subparsers.add_parser(
+        "apply",
+        help="Execute an approved plan (mutating) after hash verification.",
+    )
+    apply_parser.add_argument(
+        "--manifest", required=True, help="Path to the package manifest.json."
+    )
+    apply_parser.add_argument(
+        "--approve",
+        required=True,
+        metavar="HASH",
+        help="Exact approved plan SHA-256 hash.",
+    )
+    apply_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Verify the plan without performing any mutations.",
+    )
+    apply_parser.set_defaults(func=_run_apply)
+
     return parser
 
 
 def _run_validate(args: argparse.Namespace) -> int:
-    """Run the ``validate`` subcommand.
+    """
+    Run the ``validate`` subcommand.
 
     Args:
         args: Parsed arguments; must expose ``args.manifest`` as a string
@@ -117,7 +141,8 @@ def _run_validate(args: argparse.Namespace) -> int:
 
 
 def _run_plan(args: argparse.Namespace) -> int:
-    """Run the read-only ``plan`` subcommand.
+    """
+    Run the read-only ``plan`` subcommand.
 
     Args:
         args: Parsed arguments; must expose ``args.manifest``, ``args.repo``,
@@ -234,8 +259,74 @@ def _run_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_apply(args: argparse.Namespace) -> int:
+    """
+    Run the mutating ``apply`` subcommand.
+
+    Args:
+        args: Parsed arguments; must expose ``args.manifest``, ``args.approve``,
+            and ``args.dry_run``.
+
+    Returns:
+        0 on completed (or dry-run verified) execution; 1 for invalid input,
+        stale/unsafe plans, conflicts, or partial/failed execution.
+
+    Side effects:
+        Performs GitHub mutations only when ``--dry-run`` is not set.
+    """
+    try:
+        manifest = manifest_module.load_manifest(args.manifest)
+    except ManifestLoadError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    errors, warnings = manifest_module.validate_manifest(manifest)
+    for warning in warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+    for error in errors:
+        print(f"error: {error}", file=sys.stderr)
+    if errors:
+        return 1
+
+    try:
+        client = GitHubClient(manifest.repo)
+    except (RepoError, GitHubAuthenticationError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        if args.dry_run:
+            plan = executor_module.verify_approved_plan(client, manifest, args.approve)
+            print("Dry-run verified. No mutations performed.")
+            print(f"Plan hash (SHA-256): {planner_module.compute_plan_hash(plan)}")
+            print("Actions:")
+            for action in plan.actions:
+                print(f"  [{action.action}] {action.ticket_id} -> {action.reason}")
+            print("Relationships:")
+            for rel in plan.relationships:
+                print(
+                    f"  LINK {rel.parent_id} (#{rel.parent_issue_number}) "
+                    f"-> {rel.child_id} (#{rel.child_issue_number})"
+                )
+            return 0
+
+        report = executor_module.execute_plan(client, manifest, args.approve)
+    except ExecutionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"Execution status: {report.status}")
+    for operation in report.operations:
+        marker = f"#{operation.issue_number}" if operation.issue_number is not None else "-"
+        print(f"  [{operation.op:8}] {operation.target:24} issue={marker:>8} {operation.message}")
+    for error in report.errors:
+        print(f"  error: {error}", file=sys.stderr)
+    return 0 if report.status == executor_module.STATUS_COMPLETED else 1
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    """Parse ``argv`` (or ``sys.argv`` when ``None``) and run the selected command.
+    """
+    Parse ``argv`` (or ``sys.argv`` when ``None``) and run the selected command.
 
     Args:
         argv: Optional explicit argument list. When ``None``, ``sys.argv`` is
