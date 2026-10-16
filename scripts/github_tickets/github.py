@@ -281,10 +281,12 @@ class RepositoryMismatch:
     """An issue whose canonical URL does not match the target repository.
 
     Attributes:
+        ticket_id: Manifest ticket identifier that referenced the issue.
         issue_number: The issue number.
         url: The issue's reported URL.
     """
 
+    ticket_id: str
     issue_number: int
     url: str
 
@@ -813,7 +815,9 @@ def discover_issues(
 
         if not _belongs_to_repo(client.repo, issue):
             result.repository_mismatches.append(
-                RepositoryMismatch(issue_number=number, url=issue.html_url)
+                RepositoryMismatch(
+                    ticket_id=ticket.id, issue_number=number, url=issue.html_url
+                )
             )
             result.unmatched.append(ticket.id)
             continue
@@ -847,7 +851,9 @@ def discover_issues(
 
         if not _belongs_to_repo(client.repo, issue):
             result.repository_mismatches.append(
-                RepositoryMismatch(issue_number=number, url=issue.html_url)
+                RepositoryMismatch(
+                    ticket_id=ticket.id, issue_number=number, url=issue.html_url
+                )
             )
             result.unmatched.append(ticket.id)
             continue
