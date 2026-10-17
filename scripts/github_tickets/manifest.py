@@ -1,4 +1,5 @@
-"""Manifest loading and local validation for GitHub ticket packages.
+"""
+Manifest loading and local validation for GitHub ticket packages.
 
 Validation is intentionally offline: it never opens a network connection and
 does not require credentials. It reads Markdown bodies only to verify the
@@ -74,7 +75,8 @@ class ManifestLoadError(Exception):
 
 
 def load_manifest(path: str) -> Manifest:
-    """Read and parse a ``manifest.json`` file into a :class:`Manifest`.
+    """
+    Read and parse a ``manifest.json`` file into a :class:`Manifest`.
 
     Parsing is defensive: field values are preserved as read (including wrong
     types) so :func:`validate_manifest` can report them, while malformed
@@ -153,7 +155,8 @@ def load_manifest(path: str) -> Manifest:
 
 
 def validate_manifest(manifest: Manifest) -> Tuple[List[str], List[str]]:
-    """Validate a :class:`Manifest` and return ``(errors, warnings)``.
+    """
+    Validate a :class:`Manifest` and return ``(errors, warnings)``.
 
     Validation is cumulative and defensive: it never assumes a field has its
     declared type and therefore cannot crash on malformed JSON values.
@@ -213,7 +216,8 @@ def validate_manifest(manifest: Manifest) -> Tuple[List[str], List[str]]:
 
 
 def _validate_header(manifest: Manifest, errors: List[str], warnings: List[str]) -> None:
-    """Validate manifest-level fields: schema, repo, package, and ticket list.
+    """
+    Validate manifest-level fields: schema, repo, package, and ticket list.
 
     Args:
         manifest: The manifest to validate.
@@ -297,7 +301,8 @@ def _validate_ticket_fields(ticket: Ticket, errors: List[str], warnings: List[st
 
 
 def _validate_references(manifest: Manifest, ids: Dict[str, Ticket], errors: List[str]) -> None:
-    """Validate that parent, dependency, and related references resolve.
+    """
+    Validate that parent, dependency, and related references resolve.
 
     Args:
         manifest: The manifest whose tickets reference each other.
@@ -348,7 +353,8 @@ def _validate_references(manifest: Manifest, ids: Dict[str, Ticket], errors: Lis
 
 
 def _validate_hierarchy(manifest: Manifest, ids: Dict[str, Ticket], errors: List[str]) -> None:
-    """Enforce mandatory type rules for Epic, Story, and Task parents.
+    """
+    Enforce mandatory type rules for Epic, Story, and Task parents.
 
     Tickets whose type is not ``epic``, ``story``, or ``task`` are skipped
     here because the invalid type is already reported by field validation.
@@ -411,7 +417,8 @@ def _validate_hierarchy(manifest: Manifest, ids: Dict[str, Ticket], errors: List
 
 
 def _validate_cycles(manifest: Manifest, ids: Dict[str, Ticket], errors: List[str]) -> None:
-    """Detect directed cycles in the combined parent + dependency graph.
+    """
+    Detect directed cycles in the combined parent + dependency graph.
 
     Args:
         manifest: The manifest whose parent and dependency edges are checked.
@@ -444,7 +451,8 @@ def _validate_cycles(manifest: Manifest, ids: Dict[str, Ticket], errors: List[st
     stack: List[str] = []
 
     def visit(node: str) -> Optional[List[str]]:
-        """Traverse from ``node`` and return the first cycle path found.
+        """
+        Traverse from ``node`` and return the first cycle path found.
 
         Args:
             node: Ticket id currently being visited.
@@ -475,7 +483,8 @@ def _validate_cycles(manifest: Manifest, ids: Dict[str, Ticket], errors: List[st
 
 
 def _validate_body_files(manifest: Manifest, errors: List[str], warnings: List[str]) -> None:
-    """Check that each body path is safe and resolves to an existing file.
+    """
+    Check that each body path is safe and resolves to an existing file.
 
     Args:
         manifest: The manifest whose body files are checked.
@@ -506,7 +515,8 @@ def _validate_body_files(manifest: Manifest, errors: List[str], warnings: List[s
 
 
 def _safe_body_path(root: Path, body: str) -> Tuple[bool, Optional[Path]]:
-    """Return whether ``body`` is safe and, if so, its resolved path.
+    """
+    Return whether ``body`` is safe and, if so, its resolved path.
 
     Args:
         root: Package root directory; relative paths resolve against it.
@@ -550,7 +560,8 @@ def _safe_body_path(root: Path, body: str) -> Tuple[bool, Optional[Path]]:
 def _validate_template_headings(
     ticket: Ticket, body_file: Path, errors: List[str], warnings: List[str]
 ) -> None:
-    """Verify that a body file contains the required template headings.
+    """
+    Verify that a body file contains the required template headings.
 
     Args:
         ticket: The ticket whose body file is checked; its type selects the

@@ -1,4 +1,5 @@
-"""Tests for deterministic read-only planning, artifacts, and approval.
+"""
+Tests for deterministic read-only planning, artifacts, and approval.
 
 All tests are offline and use temporary filesystem fixtures plus mocked GitHub
 clients; no live GitHub API calls are performed.
@@ -56,7 +57,8 @@ def make_ticket(
     issue_number=None,
     body: str = "body.md",
 ) -> Ticket:
-    """Build a manifest Ticket for planning tests.
+    """
+    Build a manifest Ticket for planning tests.
 
     Args:
         ticket_id: Ticket identifier.
@@ -83,7 +85,8 @@ def make_ticket(
 
 
 def make_manifest(tickets, root: pathlib.Path) -> Manifest:
-    """Build a manifest and write each ticket's body file under ``root``.
+    """
+    Build a manifest and write each ticket's body file under ``root``.
 
     Args:
         tickets: Manifest ticket entries.
@@ -108,7 +111,8 @@ def make_manifest(tickets, root: pathlib.Path) -> Manifest:
 def make_issue(
     number: int, title: str = "Ticket", state: str = "open", body: str = ""
 ) -> Issue:
-    """Build an existing issue for discovery.
+    """
+    Build an existing issue for discovery.
 
     Args:
         number: Issue number.
@@ -130,7 +134,8 @@ def make_issue(
 
 
 def make_match(ticket_id: str, number: int, title: str, state: str = "open") -> TicketMatch:
-    """Build a confirmed match result.
+    """
+    Build a confirmed match result.
 
     Args:
         ticket_id: Ticket identifier.
@@ -154,7 +159,6 @@ def make_match(ticket_id: str, number: int, title: str, state: str = "open") -> 
 
 class FakeClient:
     """Minimal client stub with a repo attribute for discovery."""
-
     def __init__(self, repo: str = REPO) -> None:
         """Create a stub client."""
         self.repo = Repo.parse(repo)
@@ -165,7 +169,8 @@ class FakeClient:
 
 
 class TmpTestCase(unittest.TestCase):
-    """Base test case that provides a temporary package directory."""
+    """
+    Base test case that provides a temporary package directory."""
 
     def setUp(self) -> None:
         """Create a temporary directory for body files."""
@@ -288,6 +293,17 @@ class HashTest(TmpTestCase):
     """Plan hash determinism and sensitivity."""
 
     def _plan_for(self, issues, tickets=None, repo=REPO):
+        """Build a plan for the given issues and optional tickets.
+
+        Args:
+            issues: Existing issues passed to discovery.
+            tickets: Optional ticket list; defaults to a single Epic mapped to
+                issue #1.
+            repo: Optional target repository override.
+
+        Returns:
+            The built :class:`Plan`.
+        """
         tickets = tickets or [
             make_ticket("E1", "epic", "Epic One", issue_number=1, body="e1.md")
         ]
@@ -369,6 +385,11 @@ class ApprovalTest(TmpTestCase):
     """Explicit hash-bound approval and artifact integrity."""
 
     def _approved_plan(self) -> Plan:
+        """Build a fully approved single-Epic plan.
+
+        Returns:
+            A :class:`Plan` whose only action is ``EXISTS`` for issue #1.
+        """
         tickets = [make_ticket("E1", "epic", "Epic One", issue_number=1, body="e1.md")]
         discovery = DiscoveryResult(matched=[make_match("E1", 1, "Epic One")])
         return build_plan(self.manifest(tickets), discovery, REPO)
@@ -484,6 +505,15 @@ class CliPlanTest(TmpTestCase):
     """CLI ``plan`` command integration with a mocked client."""
 
     def _run_plan(self, argv, issues):
+        """Run the CLI ``plan`` command against a mocked client.
+
+        Args:
+            argv: CLI argument list (without the program name).
+            issues: Existing issues returned by the mocked client.
+
+        Returns:
+            The CLI exit code.
+        """
         fake_client = SimpleNamespace(
             repo=Repo.parse(REPO),
             list_issues=mock.Mock(return_value=issues),
@@ -492,6 +522,15 @@ class CliPlanTest(TmpTestCase):
             return cli_module.main(argv)
 
     def _write_package(self, body_text=None):
+        """Write a minimal valid package and return its manifest path.
+
+        Args:
+            body_text: Optional body content; defaults to a complete Epic body
+                with all required template headings.
+
+        Returns:
+            The path to the written ``manifest.json``.
+        """
         pkg = self.root / "pkg"
         pkg.mkdir()
         (pkg / "manifest.json").write_text(

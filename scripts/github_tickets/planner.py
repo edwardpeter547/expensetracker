@@ -1,4 +1,5 @@
-"""Deterministic read-only planning, plan artifacts, and approval.
+"""
+Deterministic read-only planning, plan artifacts, and approval.
 
 This module builds a synchronization plan from a validated manifest and the
 Task 02 discovery result, fingerprints each ticket's Markdown body, computes a
@@ -46,7 +47,8 @@ class PlannerError(Exception):
 
 @dataclass
 class PlanAction:
-    """A single ticket's proposed action.
+    """
+    A single ticket's proposed action.
 
     Attributes:
         ticket_id: Manifest ticket identifier.
@@ -67,7 +69,8 @@ class PlanAction:
 
 @dataclass
 class RelationshipAction:
-    """A proposed parent-child link between two verified issues.
+    """
+    A proposed parent-child link between two verified issues.
 
     Attributes:
         parent_id: Parent manifest ticket identifier.
@@ -88,7 +91,8 @@ class RelationshipAction:
 
 @dataclass
 class TitleCandidate:
-    """A title-based suggestion, never a verified identity.
+    """
+    A title-based suggestion, never a verified identity.
 
     Attributes:
         ticket_id: Manifest ticket identifier.
@@ -105,7 +109,8 @@ class TitleCandidate:
 
 @dataclass
 class Plan:
-    """A deterministic read-only synchronization plan.
+    """
+    A deterministic read-only synchronization plan.
 
     Attributes:
         repo: Target repository in ``owner/repo`` form.
@@ -140,7 +145,8 @@ class Plan:
 
 @dataclass
 class ApprovalResult:
-    """Outcome of verifying an approval against a plan hash.
+    """
+    Outcome of verifying an approval against a plan hash.
 
     Attributes:
         approved: Whether approval is granted for this exact plan.
@@ -157,7 +163,8 @@ class ApprovalResult:
 
 @dataclass
 class ArtifactVerification:
-    """Result of verifying a plan.json artifact's integrity.
+    """
+    Result of verifying a plan.json artifact's integrity.
 
     Attributes:
         valid: Whether the stored hash matches the recomputed hash.
@@ -173,7 +180,8 @@ class ArtifactVerification:
 
 
 def _body_sha256(manifest: Manifest, ticket: Ticket) -> str:
-    """Return the SHA-256 fingerprint of a ticket's Markdown body.
+    """
+    Return the SHA-256 fingerprint of a ticket's Markdown body.
 
     Args:
         manifest: The validated manifest whose root contains the body file.
@@ -197,7 +205,8 @@ def _body_sha256(manifest: Manifest, ticket: Ticket) -> str:
 
 
 def _canonical_tickets(manifest: Manifest) -> List[Dict[str, Any]]:
-    """Return canonical ticket definitions including body fingerprints.
+    """
+    Return canonical ticket definitions including body fingerprints.
 
     Args:
         manifest: The validated :class:`Manifest`.
@@ -238,7 +247,8 @@ def build_plan(
     repo: str,
     issues: Optional[List[Issue]] = None,
 ) -> Plan:
-    """Build a deterministic plan from a manifest and discovery result.
+    """
+    Build a deterministic plan from a manifest and discovery result.
 
     Classification:
       - Confirmed match with a matching title -> ``EXISTS``.
@@ -413,7 +423,8 @@ def build_plan(
 def _title_candidates(
     manifest: Manifest, actions: List[PlanAction], issues: Optional[List[Issue]]
 ) -> List[TitleCandidate]:
-    """Suggest title-based candidates for unresolved tickets.
+    """
+    Suggest title-based candidates for unresolved tickets.
 
     Candidates are informational only and never establish identity.
 
@@ -456,7 +467,8 @@ def _title_candidates(
 def _build_relationships(
     manifest: Manifest, actions: List[PlanAction]
 ) -> List[RelationshipAction]:
-    """Propose parent-child link actions for verified tickets.
+    """
+    Propose parent-child link actions for verified tickets.
 
     A relationship is proposed only when both the parent and child are
     ``EXISTS`` actions with verified issue numbers.
@@ -496,7 +508,8 @@ def _build_relationships(
 
 
 def _canonical_dict(plan: Plan) -> Dict[str, Any]:
-    """Return the canonical, hash-relevant representation of a plan.
+    """
+    Return the canonical, hash-relevant representation of a plan.
 
     Args:
         plan: The plan to canonicalize.
@@ -562,7 +575,8 @@ def _canonical_dict(plan: Plan) -> Dict[str, Any]:
 
 
 def _canonical_json(plan: Plan) -> str:
-    """Return the canonical JSON payload used for hashing and artifacts.
+    """
+    Return the canonical JSON payload used for hashing and artifacts.
 
     Args:
         plan: The plan to serialize.
@@ -586,7 +600,8 @@ def compute_plan_hash(plan: Plan) -> str:
 
 
 def plan_artifact_dict(plan: Plan) -> Dict[str, Any]:
-    """Return the deterministic ``plan.json`` artifact dictionary.
+    """
+    Return the deterministic ``plan.json`` artifact dictionary.
 
     Args:
         plan: The plan to serialize.
@@ -603,7 +618,8 @@ def plan_artifact_dict(plan: Plan) -> Dict[str, Any]:
 
 
 def write_plan_artifact(plan: Plan, path: str) -> None:
-    """Write a deterministic ``plan.json`` artifact without overwriting.
+    """
+    Write a deterministic ``plan.json`` artifact without overwriting.
 
     Args:
         plan: The plan to serialize.
@@ -626,7 +642,8 @@ def write_plan_artifact(plan: Plan, path: str) -> None:
 
 
 def verify_plan_artifact(artifact: Dict[str, Any]) -> ArtifactVerification:
-    """Verify a ``plan.json`` artifact's stored hash against its payload.
+    """
+    Verify a ``plan.json`` artifact's stored hash against its payload.
 
     The stored hash is never trusted; it is recomputed from the artifact's
     canonical plan payload.
@@ -669,7 +686,8 @@ def verify_plan_artifact(artifact: Dict[str, Any]) -> ArtifactVerification:
 
 
 def approve_plan(plan: Plan, expected_hash: str) -> ApprovalResult:
-    """Verify explicit approval against the exact plan hash.
+    """
+    Verify explicit approval against the exact plan hash.
 
     Approval is rejected when the hash does not match or when the plan still
     contains blocking or unresolved identity concerns.

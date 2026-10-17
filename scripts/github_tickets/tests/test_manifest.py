@@ -1,4 +1,5 @@
-"""Tests for manifest loading and local validation.
+"""
+Tests for manifest loading and local validation.
 
 All tests are offline and use temporary directories; no GitHub interaction is
 performed. The suite covers valid manifests plus duplicate ids, broken
@@ -52,7 +53,8 @@ TASK_HEADINGS = [
 
 
 def _real_manifest_path() -> pathlib.Path:
-    """Locate the committed GitHub Automation package manifest.
+    """
+    Locate the committed GitHub Automation package manifest.
 
     The search walks upward from this test file and also checks the current
     working directory, so the test works from any directory the runner is
@@ -92,7 +94,8 @@ def _real_manifest_path() -> pathlib.Path:
 
 
 def body(*headings: str) -> str:
-    """Build a Markdown body containing exactly the supplied headings.
+    """
+    Build a Markdown body containing exactly the supplied headings.
 
     Args:
         headings: Heading names, each emitted as ``### <name>`` followed by a
@@ -105,7 +108,8 @@ def body(*headings: str) -> str:
 
 
 def write_ticket(root: pathlib.Path, rel_path: str, text: str) -> pathlib.Path:
-    """Write a ticket body file, creating parent directories as needed.
+    """
+    Write a ticket body file, creating parent directories as needed.
 
     Args:
         root: Package root under which the file is written.
@@ -135,7 +139,8 @@ class PackageBuilder:
         self.pkg.mkdir(parents=True, exist_ok=True)
 
     def write(self, manifest: dict) -> pathlib.Path:
-        """Write ``manifest.json`` and one body file per ticket.
+        """
+        Write ``manifest.json`` and one body file per ticket.
 
         Args:
             manifest: The manifest dictionary to persist.
@@ -154,7 +159,8 @@ class PackageBuilder:
         return self.pkg / "manifest.json"
 
     def valid_manifest(self) -> dict:
-        """Return a minimal, structurally valid manifest dictionary.
+        """
+        Return a minimal, structurally valid manifest dictionary.
 
         Returns:
             A manifest with one Epic, one Story (mapped to issue 42), and one
@@ -206,7 +212,8 @@ class ManifestTestCase(unittest.TestCase):
     """Validation-focused tests that never touch the network."""
 
     def setUp(self) -> None:
-        """Create a fresh temporary directory for each test.
+        """
+        Create a fresh temporary directory for each test.
 
         Side effects:
             Stores a :class:`tempfile.TemporaryDirectory` on ``self.tmp`` and
@@ -216,7 +223,8 @@ class ManifestTestCase(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
 
     def load(self, manifest: dict):
-        """Write ``manifest`` to disk and load it.
+        """
+        Write ``manifest`` to disk and load it.
 
         Args:
             manifest: The manifest dictionary.
@@ -228,7 +236,8 @@ class ManifestTestCase(unittest.TestCase):
         return manifest_module.load_manifest(str(path))
 
     def rewrite_manifest(self, data: dict) -> str:
-        """Write a valid package, overwrite its manifest, and reload it.
+        """
+        Write a valid package, overwrite its manifest, and reload it.
 
         Args:
             data: Manifest dictionary to persist in place of the valid one.
@@ -562,7 +571,8 @@ class CliTestCase(unittest.TestCase):
     """Exit-code and output tests for the ``validate`` subcommand."""
 
     def setUp(self) -> None:
-        """Create a fresh temporary directory for each test.
+        """
+        Create a fresh temporary directory for each test.
 
         Side effects:
             Stores a :class:`tempfile.TemporaryDirectory` on ``self.tmp`` and
