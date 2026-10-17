@@ -27,6 +27,7 @@ from scripts.github_tickets.github import (
     Issue,
     Repo,
     discover_issues,
+    ticket_id_marker,
 )
 from scripts.github_tickets.model import Manifest, Ticket
 
@@ -70,6 +71,8 @@ class FakeClient:
         self.parent = parent or {}
         self.children = children or {}
         self.create_calls = []
+        self.create_bodies = []
+        self.create_labels_calls = []
         self.add_calls = []
 
     def list_issues(self):
@@ -95,7 +98,171 @@ class FakeClient:
         issue = make_issue(number, title, issue_id=5000 + number, body=body)
         self.issues.append(issue)
         self.create_calls.append(issue)
+        self.create_bodies.append(body)
+        self.create_labels_calls.append(labels)
         return issue
+
+
+class RacingFakeClient(FakeClient):
+    """A client where an issue appears after the initial verification."""
+
+    def __init__(self):
+        """Create a client that reports an existing Epic after first list."""
+        super().__init__([])
+        self.list_calls = 0
+        self.preexisting = make_issue(
+            10, "Epic One", issue_id=5010, body=ticket_id_marker("E1")
+        )
+
+    def list_issues(self):
+        """Return an empty snapshot first, then a pre-existing Epic."""
+        self.list_calls += 1
+        if self.list_calls == 1:
+            return []
+        return [self.preexisting]
+
+
+class AmbiguousCreateClient(FakeClient):
+    """A client whose create POST is ambiguous but actually succeeded."""
+
+    def __init__(self):
+        """Create an empty client and a POST attempt counter."""
+        super().__init__([])
+        self.post_attempts = []
+
+    def create_issue(self, title, body, labels=None):
+        """Record a POST attempt, then report an ambiguous failure."""
+        self.post_attempts.append(title)
+        issue = make_issue(1, title, issue_id=5001, body=body)
+        self.issues.append(issue)
+        raise GitHubRequestError("timeout", status_code=500)
+
+
+class UnknownCreateClient(FakeClient):
+    """A client whose ambiguous create POST leaves no trace."""
+
+    def __init__(self):
+        """Create an empty client and a POST attempt counter."""
+        super().__init__([])
+        self.post_attempts = []
+
+    def create_issue(self, title, body, labels=None):
+        """Record a POST attempt, then report an ambiguous failure."""
+        self.post_attempts.append(title)
+        raise GitHubRequestError("timeout", status_code=500)
+
+
+class DefinitiveCreateClient(FakeClient):
+    """A client whose create POST fails definitively without a mutation."""
+
+    def __init__(self):
+        """Create an empty client and track reads and POST attempts."""
+        super().__init__([])
+        self.post_attempts = []
+        self.list_calls = 0
+
+    def create_issue(self, title, body, labels=None):
+        """Record a POST attempt and raise a definitive 422 failure."""
+        self.post_attempts.append(title)
+        raise GitHubRequestError("validation failed", status_code=422)
+
+    def list_issues(self):
+        """Return an empty list and count read calls."""
+        self.list_calls += 1
+        return []
+
+
+class WrongTitleCreateClient(FakeClient):
+    """A client whose create POST returns an issue with the wrong title."""
+
+    def __init__(self):
+        """Create an empty client."""
+        super().__init__([])
+
+    def create_issue(self, title, body, labels=None):
+        """Return an issue with an unexpected title."""
+        issue = make_issue(1, "Different Title", issue_id=5001, body=body)
+        self.issues.append(issue)
+        self.create_calls.append(issue)
+        return issue
+
+
+class AmbiguousPreCreateClient(FakeClient):
+    """A client that reports two marker matches just before creation."""
+
+    def __init__(self):
+        """Create an empty client and two ambiguous marker issues."""
+        super().__init__([])
+        self.list_calls = 0
+        marker = ticket_id_marker("E1")
+        self.ambiguous = [
+            make_issue(10, "Epic One", issue_id=5010, body=marker),
+            make_issue(11, "Epic One", issue_id=5011, body=marker),
+        ]
+
+    def list_issues(self):
+        """Return an empty snapshot first, then the ambiguous pair."""
+        self.list_calls += 1
+        if self.list_calls == 1:
+            return []
+        return self.ambiguous
+
+
+class WrongRepoReuseClient(FakeClient):
+    """A client offering a marker match from the wrong repository."""
+
+    def __init__(self):
+        """Create an empty client and a wrong-repository candidate."""
+        super().__init__([])
+        self.list_calls = 0
+        self.candidate = make_issue(
+            10, "Epic One", issue_id=5010, body=ticket_id_marker("E1")
+        )
+        self.candidate.html_url = "https://github.com/other/repo/issues/10"
+
+    def list_issues(self):
+        """Return an empty snapshot first, then the wrong-repo issue."""
+        self.list_calls += 1
+        if self.list_calls == 1:
+            return []
+        return [self.candidate]
+
+
+class ConflictingMarkerReuseClient(FakeClient):
+    """A client offering a marker match with a conflicting marker."""
+
+    def __init__(self):
+        """Create an empty client and a multi-marker candidate."""
+        super().__init__([])
+        self.list_calls = 0
+        body = ticket_id_marker("E1") + "\n" + ticket_id_marker("OTHER")
+        self.candidate = make_issue(
+            10, "Epic One", issue_id=5010, body=body
+        )
+
+    def list_issues(self):
+        """Return an empty snapshot first, then the conflicting issue."""
+        self.list_calls += 1
+        if self.list_calls == 1:
+            return []
+        return [self.candidate]
+
+
+class MarkerlessTitleClient(FakeClient):
+    """A client that reports markerless issues after initial verification."""
+
+    def __init__(self, candidates):
+        """Create an empty client and store the post-approval candidates."""
+        super().__init__([])
+        self.list_calls = 0
+        self.candidates = candidates
+
+    def list_issues(self):
+        """Return an empty snapshot first, then the configured candidates."""
+        self.list_calls += 1
+        if self.list_calls == 1:
+            return []
+        return list(self.candidates)
 
 
 class ExecutorTestCase(unittest.TestCase):
@@ -259,6 +426,293 @@ class ExecutorTestCase(unittest.TestCase):
         with self.assertRaises(ExecutionError):
             execute_plan(self.client, self.manifest, hash_value)
         self.assertEqual(self.client.add_calls, [])
+
+
+class CreateExecutionTest(unittest.TestCase):
+    """Explicitly authorized issue creation and guarded linking."""
+
+    def setUp(self):
+        """Create a temporary package directory."""
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = pathlib.Path(self.tmp.name)
+
+    def _write_manifest(self, tickets):
+        """Write body files and build a manifest from ``tickets``."""
+        for ticket in tickets:
+            (self.root / ticket.body).write_text(
+                f"body-{ticket.id}\n", encoding="utf-8"
+            )
+        return Manifest(
+            schema_version=1,
+            repo=REPO,
+            package="pkg",
+            tickets=tickets,
+            root=self.root,
+        )
+
+    def make_create_manifest(self):
+        """Build an Epic -> Story -> Task package with no issue numbers."""
+        tickets = [
+            make_ticket("E1", "epic", "Epic One", issue_number=None),
+            make_ticket("S1", "story", "Story One", parent="E1", issue_number=None),
+            make_ticket("T1", "task", "Task One", parent="S1", issue_number=None),
+        ]
+        return self._write_manifest(tickets)
+
+    def make_single_manifest(self):
+        """Build a single-Epic package with no issue number."""
+        return self._write_manifest(
+            [make_ticket("E1", "epic", "Epic One", issue_number=None)]
+        )
+
+    def approved_hash(self, manifest, client, allow_create=True):
+        """Compute the approved hash for a create-authorized plan."""
+        discovery = discover_issues(
+            client, manifest.tickets, issues=client.issues
+        )
+        plan = planner_module.build_plan(
+            manifest,
+            discovery,
+            REPO,
+            issues=client.issues,
+            allow_create=allow_create,
+        )
+        return planner_module.compute_plan_hash(plan)
+
+    def test_allow_create_creates_in_order_and_links(self):
+        """Authorized creation creates parents first and links new issues."""
+        manifest = self.make_create_manifest()
+        client = FakeClient([])
+        hash_value = self.approved_hash(manifest, client)
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_COMPLETED)
+        self.assertEqual(
+            [issue.title for issue in client.create_calls],
+            ["Epic One", "Story One", "Task One"],
+        )
+        self.assertEqual(
+            [issue.number for issue in client.create_calls], [1, 2, 3]
+        )
+        self.assertEqual(
+            client.create_labels_calls, [["EPIC"], ["STORY"], ["TASK"]]
+        )
+        for issue, ticket_id in zip(
+            client.create_calls, ["E1", "S1", "T1"]
+        ):
+            self.assertIn(ticket_id_marker(ticket_id), issue.body)
+        self.assertEqual(client.add_calls, [(1, 5002), (2, 5003)])
+        self.assertEqual(report.created_issues, ["E1", "S1", "T1"])
+
+    def test_apply_without_allow_create_rejects_create_plan(self):
+        """A create-authorized hash cannot be applied without --allow-create."""
+        manifest = self.make_create_manifest()
+        client = FakeClient([])
+        hash_value = self.approved_hash(manifest, client)
+
+        with self.assertRaises(ExecutionError) as ctx:
+            execute_plan(client, manifest, hash_value)
+
+        self.assertIn("--allow-create", str(ctx.exception))
+        self.assertEqual(client.create_calls, [])
+        self.assertEqual(client.add_calls, [])
+
+    def test_pre_create_revalidation_skips_duplicate(self):
+        """An issue appearing after approval is preserved, not duplicated."""
+        manifest = self.make_create_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = RacingFakeClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_COMPLETED)
+        self.assertEqual(
+            [issue.title for issue in client.create_calls],
+            ["Story One", "Task One"],
+        )
+        self.assertNotIn("E1", report.created_issues)
+        self.assertIn("S1", report.created_issues)
+        self.assertIn("T1", report.created_issues)
+        self.assertEqual(len(client.add_calls), 2)
+
+    def test_ambiguous_create_failure_reconciles_without_retry(self):
+        """An ambiguous POST is reconciled with a read-only lookup, not retried."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = AmbiguousCreateClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_COMPLETED)
+        self.assertEqual(client.post_attempts, ["Epic One"])
+        self.assertEqual(report.created_issues, ["E1"])
+
+    def test_ambiguous_create_unknown_stops_without_retry(self):
+        """An unreconcilable ambiguous POST stops as PARTIAL without retrying."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = UnknownCreateClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_PARTIAL)
+        self.assertEqual(client.post_attempts, ["Epic One"])
+        self.assertEqual(report.created_issues, [])
+
+    def test_definitive_create_failure_is_not_reconciled(self):
+        """A definitive 422 create failure stops without a reconciliation read."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = DefinitiveCreateClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_PARTIAL)
+        self.assertEqual(client.post_attempts, ["Epic One"])
+        self.assertEqual(client.list_calls, 2)
+
+    def test_created_identity_mismatch_stops(self):
+        """A created issue whose identity cannot be verified stops execution."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = WrongTitleCreateClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_PARTIAL)
+        self.assertTrue(
+            any("title differs" in error for error in report.errors)
+        )
+
+    def test_pre_create_ambiguity_blocks_without_mutation(self):
+        """Ambiguous identities immediately before creation block the POST."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = AmbiguousPreCreateClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_FAILED)
+        self.assertEqual(client.create_calls, [])
+        self.assertEqual(client.add_calls, [])
+        self.assertTrue(any(op.op == "CONFLICT" for op in report.operations))
+
+    def test_reuse_rejects_wrong_repository_url(self):
+        """A marker match from another repository is never reused."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = WrongRepoReuseClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_FAILED)
+        self.assertEqual(client.create_calls, [])
+        self.assertTrue(any("URL" in error for error in report.errors))
+
+    def test_reuse_rejects_conflicting_marker_spec(self):
+        """A candidate carrying extra markers is reported and not reused."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = ConflictingMarkerReuseClient()
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_FAILED)
+        self.assertEqual(client.create_calls, [])
+        self.assertTrue(
+            any("marker specification" in error for error in report.errors)
+        )
+
+    def test_markerless_identical_title_blocks_create(self):
+        """A markerless identical-title issue appearing late blocks creation."""
+        manifest = self.make_single_manifest()
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = MarkerlessTitleClient(
+            [make_issue(10, "Epic One", issue_id=5010)]
+        )
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_FAILED)
+        self.assertEqual(client.create_calls, [])
+        self.assertTrue(any(op.op == "CONFLICT" for op in report.operations))
+        self.assertTrue(any("#10" in error for error in report.errors))
+
+    def test_markerless_normalized_title_variant_blocks_create(self):
+        """A normalized title variant appearing late blocks creation."""
+        manifest = self._write_manifest(
+            [
+                make_ticket(
+                    "E1",
+                    "epic",
+                    "[TASK] Enable Manual Creation",
+                    issue_number=None,
+                )
+            ]
+        )
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = MarkerlessTitleClient(
+            [make_issue(10, "Enable Manual Creation", issue_id=5010)]
+        )
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_FAILED)
+        self.assertEqual(client.create_calls, [])
+        self.assertTrue(any("#10" in error for error in report.errors))
+
+    def test_markerless_unrelated_title_does_not_block_create(self):
+        """An unrelated markerless issue does not block safe creation."""
+        manifest = self._write_manifest(
+            [
+                make_ticket(
+                    "E1",
+                    "epic",
+                    "[TASK] Enable Manual Creation",
+                    issue_number=None,
+                )
+            ]
+        )
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = MarkerlessTitleClient(
+            [make_issue(10, "Fix the login screen", issue_id=5010)]
+        )
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_COMPLETED)
+        self.assertEqual(len(client.create_calls), 1)
+
+    def test_markerless_multiple_plausible_candidates_block_create(self):
+        """Multiple plausible title candidates block creation with diagnostics."""
+        manifest = self._write_manifest(
+            [
+                make_ticket(
+                    "E1",
+                    "epic",
+                    "[TASK] Enable Manual Creation",
+                    issue_number=None,
+                )
+            ]
+        )
+        hash_value = self.approved_hash(manifest, FakeClient([]))
+        client = MarkerlessTitleClient(
+            [
+                make_issue(10, "Enable Manual Creation", issue_id=5010),
+                make_issue(
+                    11, "[TASK] Enable Manual Creation", issue_id=5011
+                ),
+            ]
+        )
+
+        report = execute_plan(client, manifest, hash_value, allow_create=True)
+
+        self.assertEqual(report.status, STATUS_FAILED)
+        self.assertEqual(client.create_calls, [])
+        self.assertTrue(any("#10" in error for error in report.errors))
+        self.assertTrue(any("#11" in error for error in report.errors))
 
 
 if __name__ == "__main__":

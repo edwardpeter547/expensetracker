@@ -66,6 +66,12 @@ python3 scripts/github_tickets.py validate \
 python3 scripts/github_tickets.py plan \
   --manifest tickets/packages/github-automation/manifest.json
 
+# Read-only reconciliation that authorizes safe issue creation in the plan.
+# The permission is bound into the plan hash; apply must also pass the flag.
+python3 scripts/github_tickets.py plan \
+  --manifest tickets/packages/github-automation/manifest.json \
+  --allow-create
+
 # Verify approval against the exact plan hash (read-only).
 python3 scripts/github_tickets.py plan \
   --manifest tickets/packages/github-automation/manifest.json \
@@ -82,10 +88,25 @@ python3 scripts/github_tickets.py apply \
   --approve "$APPROVED_PLAN_HASH" \
   --dry-run
 
+# Preflight a creation plan without mutating GitHub. Dry-run does not perform
+# live per-issue absence revalidation or GraphQL parent checks.
+python3 scripts/github_tickets.py apply \
+  --manifest tickets/packages/github-automation/manifest.json \
+  --approve "$APPROVED_PLAN_HASH" \
+  --allow-create \
+  --dry-run
+
 # Controlled execution (only with explicit human authorization).
 python3 scripts/github_tickets.py apply \
   --manifest tickets/packages/github-automation/manifest.json \
   --approve "$APPROVED_PLAN_HASH"
+
+# Controlled creation (requires both the reviewed plan hash and the explicit
+# --allow-create permission that was used to generate that hash).
+python3 scripts/github_tickets.py apply \
+  --manifest tickets/packages/github-automation/manifest.json \
+  --approve "$APPROVED_PLAN_HASH" \
+  --allow-create
 ```
 
 Reports are written with `--report-dir` (recommended: `tickets/.generated`):
@@ -121,9 +142,10 @@ APPROVED_PLAN_HASH="<paste the reviewed plan hash here>"
 ## Action classifications
 
 - `EXISTS` — a GitHub issue was positively identified and verified.
-- `CREATE` — reserved for a future, separately reviewed safe creation policy.
-  The current planner never emits `CREATE`, so end-to-end issue creation is not
-  operational yet.
+- `CREATE` — emitted only when planning ran with `--allow-create`, no existing
+  issue carries the ticket's stable body marker, and no plausible existing
+  title candidate exists. The same explicit permission is required again at
+  apply time.
 - `REVIEW_REQUIRED` — identity could not be verified; manual reconciliation is
   required (for example, by setting `issue_number` in `manifest.json`).
 - `BLOCKED` — a conflict, pull-request reference, repository mismatch, or
@@ -132,6 +154,8 @@ APPROVED_PLAN_HASH="<paste the reviewed plan hash here>"
 ## Native sub-issue linking
 
 - Parent relationships are proposed for verified `EXISTS` issues.
+- Parent relationships are also proposed for planned `CREATE` issues; their
+  issue numbers are resolved after creation, parents first.
 - Parent lookup uses a read-only GraphQL query for the authoritative
   `Issue.parent` field; a `null` parent means the child is parentless. This
   query runs during execution relationship preflight (not during planning).
@@ -151,9 +175,10 @@ APPROVED_PLAN_HASH="<paste the reviewed plan hash here>"
 - `apply` preflight verifies the plan and, before linking, runs a read-only
   GraphQL `Issue.parent` query. GraphQL is sent over HTTP POST but performs no
   mutation.
-- Only the linking step of `apply` (without `--dry-run`) performs live GitHub
-  mutations, and it requires the full approved hash plus explicit human
-  authorization.
+- `apply` (without `--dry-run`) performs live GitHub mutations: creating
+  authorized missing issues and linking sub-issues. Creation requires the full
+  approved hash plus the same explicit `--allow-create` permission used during
+  planning.
 
 ## Partial failures and reruns
 
@@ -161,6 +186,15 @@ APPROVED_PLAN_HASH="<paste the reviewed plan hash here>"
   `FAILED`; unrelated children are not linked.
 - Reruns rediscover current GitHub state, skip existing links, and never create
   duplicate links or duplicate issues.
+- Immediately before each creation the executor re-lists issues and checks for
+  the ticket's marker again, so a concurrent or previous run cannot produce a
+  duplicate. An ambiguous creation response (timeout, 5xx, rate limit, or
+  malformed response) is reconciled with a read-only lookup before any further
+  mutation; it is never blindly retried.
+- An issue found during that pre-create revalidation is reused only when its
+  repository, stable marker specification, and title all match. Any mismatch
+  stops execution with an actionable diagnostic; existing issues are never
+  overwritten or repaired.
 
 ## Troubleshooting
 
