@@ -1,4 +1,5 @@
-"""Command-line interface for the GitHub ticket automation tool.
+"""
+Command-line interface for the GitHub ticket automation tool.
 
 This module wires argparse subcommands to the underlying modules and converts
 results into exit codes:
@@ -153,7 +154,8 @@ def _write_reports(directory: str, prefix: str, json_data, markdown: str) -> boo
 def _write_failure_report(
     directory: str, prefix: str, kind: str, error: str, repo=None, plan_hash=None, secrets=None
 ) -> None:
-    """Write a failure report for an aborted command, if requested.
+    """
+    Write a failure report for an aborted command, if requested.
 
     Args:
         directory: Output directory, or ``None`` to skip.
