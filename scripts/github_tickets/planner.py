@@ -7,8 +7,10 @@ stable SHA-256 plan hash, writes a deterministic ``plan.json`` artifact, and
 verifies explicit hash-bound approval. It performs no GitHub mutations.
 
 A missing ``issue_number`` never proves an issue is missing, so unmatched
-tickets are always classified ``REVIEW_REQUIRED``. Creation is never inferred
-from the absence of identity evidence.
+tickets are classified ``REVIEW_REQUIRED`` by default. With an explicit
+``allow_create`` authorization, a ticket with no explicit issue number and no
+stable body-marker match may be classified ``CREATE``. Creation is still
+confirmed against current GitHub state again during execution.
 """
 from __future__ import annotations
 
@@ -39,6 +41,10 @@ RELATIONSHIP_ACTION = "LINK"
 RELATIONSHIP_PROPOSED = "PROPOSED"
 
 ARTIFACT_SCHEMA_VERSION = 1
+
+# A leading bracketed tag such as ``[TASK]`` is metadata, not identity; it is
+# stripped for conservative duplicate-candidate detection only.
+_TITLE_TAG_RE = re.compile(r"^\[[^\]]+\]\s*")
 
 
 class PlannerError(Exception):
@@ -126,6 +132,9 @@ class Plan:
         invalid_issue_numbers: Ticket ids with invalid issue numbers.
         verified_issues: Verified existing issue identities included in the hash.
         title_candidates: Title-based suggestions, excluded from the hash.
+        allow_create: Whether issue creation was authorized for this plan.
+            Bound to the plan hash so a plan approved without creation
+            permission can never gain it at apply time.
     """
 
     repo: str
@@ -141,6 +150,7 @@ class Plan:
     invalid_issue_numbers: List[str] = field(default_factory=list)
     verified_issues: List[Dict[str, Any]] = field(default_factory=list)
     title_candidates: List[TitleCandidate] = field(default_factory=list)
+    allow_create: bool = False
 
 
 @dataclass
@@ -241,11 +251,71 @@ def _canonical_tickets(manifest: Manifest) -> List[Dict[str, Any]]:
     return tickets
 
 
+def _title_variant(title: str) -> str:
+    """Return a conservative, normalized variant of a title.
+
+    The variant collapses whitespace, lowercases, and strips a leading
+    bracketed tag such as ``[TASK]``. It is used only to gate automatic
+    creation; it never establishes a verified identity.
+
+    Args:
+        title: The title to normalize.
+
+    Returns:
+        The normalized title variant.
+    """
+    text = " ".join((title or "").split()).lower()
+    return _TITLE_TAG_RE.sub("", text).strip()
+
+
+def plausible_title_match(ticket_title: str, issue_title: str) -> bool:
+    """Return whether an issue title is a plausible duplicate candidate.
+
+    A match here is intentionally conservative: it only blocks automatic
+    creation and never proves that the issue is the same ticket.
+
+    Args:
+        ticket_title: The manifest ticket title.
+        issue_title: The existing GitHub issue title.
+
+    Returns:
+        ``True`` when the normalized title variants are equal and non-empty.
+    """
+    ticket_variant = _title_variant(ticket_title)
+    if not ticket_variant:
+        return False
+    return ticket_variant == _title_variant(issue_title)
+
+
+def plausible_title_candidates(
+    ticket_title: str, issues: List[Issue]
+) -> List[int]:
+    """Return sorted issue numbers with plausible duplicate titles.
+
+    Args:
+        ticket_title: The manifest ticket title.
+        issues: Existing GitHub issues to inspect.
+
+    Returns:
+        A sorted list of issue numbers whose titles are plausible duplicates.
+        Title similarity is never used to establish identity.
+    """
+    return sorted(
+        {
+            issue.number
+            for issue in issues
+            if not issue.is_pull_request
+            and plausible_title_match(ticket_title, issue.title)
+        }
+    )
+
+
 def build_plan(
     manifest: Manifest,
     discovery: DiscoveryResult,
     repo: str,
     issues: Optional[List[Issue]] = None,
+    allow_create: bool = False,
 ) -> Plan:
     """
     Build a deterministic plan from a manifest and discovery result.
@@ -253,10 +323,11 @@ def build_plan(
     Classification:
       - Confirmed match with a matching title -> ``EXISTS``.
       - Confirmed match with a title mismatch -> ``REVIEW_REQUIRED``.
-      - Unmatched or ambiguous -> ``REVIEW_REQUIRED``.
+      - Unmatched or ambiguous -> ``REVIEW_REQUIRED`` by default. With
+        ``allow_create`` enabled, a ticket with no explicit ``issue_number``
+        and no marker match is classified ``CREATE``.
       - Conflicts, pull-request references, repository mismatches, and invalid
         issue numbers -> ``BLOCKED``.
-      - ``CREATE`` is never inferred from a missing number or marker.
 
     Args:
         manifest: The validated :class:`Manifest`.
@@ -265,6 +336,9 @@ def build_plan(
         issues: Existing issues used only for title-based candidate
             suggestions; suggestions never establish identity and are excluded
             from the plan hash.
+        allow_create: Whether to emit ``CREATE`` actions for safely confirmed
+            absent tickets. Defaults to ``False``; creation must be explicitly
+            authorized during planning and again during apply.
 
     Returns:
         A populated, deterministic :class:`Plan`.
@@ -281,6 +355,15 @@ def build_plan(
     invalid_ids = set(discovery.invalid_issue_numbers)
     ambiguous_ids = {item.ticket_id for item in discovery.ambiguous}
     matched_by_id = {item.ticket_id: item for item in discovery.matched}
+
+    plausible_title_numbers: Dict[str, List[int]] = {}
+    if allow_create:
+        for ticket in manifest.tickets:
+            if not isinstance(ticket.id, str) or ticket.issue_number is not None:
+                continue
+            candidates = plausible_title_candidates(ticket.title, issues or [])
+            if candidates:
+                plausible_title_numbers[ticket.id] = candidates
 
     actions: List[PlanAction] = []
     for ticket in manifest.tickets:
@@ -364,6 +447,36 @@ def build_plan(
                     )
                 )
         else:
+            if allow_create and ticket.issue_number is None:
+                plausible = plausible_title_numbers.get(ticket.id)
+                if plausible:
+                    numbers = ", ".join(f"#{number}" for number in plausible)
+                    actions.append(
+                        PlanAction(
+                            ticket_id=ticket.id,
+                            action=ACTION_REVIEW_REQUIRED,
+                            reason=(
+                                "plausible existing issue candidate(s) by title: "
+                                f"{numbers}; manual reconciliation required"
+                            ),
+                            issue_number=None,
+                            expected_title=ticket.title or "",
+                        )
+                    )
+                    continue
+                actions.append(
+                    PlanAction(
+                        ticket_id=ticket.id,
+                        action=ACTION_CREATE,
+                        reason=(
+                            "no existing issue carries this ticket's stable "
+                            "marker; creation authorized"
+                        ),
+                        issue_number=None,
+                        expected_title=ticket.title or "",
+                    )
+                )
+                continue
             actions.append(
                 PlanAction(
                     ticket_id=ticket.id,
@@ -417,6 +530,7 @@ def build_plan(
         ),
         invalid_issue_numbers=sorted(set(discovery.invalid_issue_numbers)),
         title_candidates=title_candidates,
+        allow_create=bool(allow_create),
     )
 
 
@@ -468,10 +582,11 @@ def _build_relationships(
     manifest: Manifest, actions: List[PlanAction]
 ) -> List[RelationshipAction]:
     """
-    Propose parent-child link actions for verified tickets.
+    Propose parent-child link actions for verified or planned tickets.
 
     A relationship is proposed only when both the parent and child are
-    ``EXISTS`` actions with verified issue numbers.
+    ``EXISTS`` or ``CREATE`` actions. Issue numbers for ``CREATE`` tickets are
+    ``None`` at plan time and are resolved by the executor after creation.
 
     Args:
         manifest: The validated :class:`Manifest`.
@@ -483,16 +598,16 @@ def _build_relationships(
     issue_by_ticket = {
         action.ticket_id: action.issue_number
         for action in actions
-        if action.action == ACTION_EXISTS and action.issue_number is not None
+        if action.action in (ACTION_EXISTS, ACTION_CREATE)
     }
     relationships: List[RelationshipAction] = []
     for ticket in manifest.tickets:
         if not isinstance(ticket.id, str) or not isinstance(ticket.parent, str):
             continue
+        if ticket.id not in issue_by_ticket or ticket.parent not in issue_by_ticket:
+            continue
         parent_number = issue_by_ticket.get(ticket.parent)
         child_number = issue_by_ticket.get(ticket.id)
-        if parent_number is None or child_number is None:
-            continue
         relationships.append(
             RelationshipAction(
                 parent_id=ticket.parent,
@@ -522,6 +637,7 @@ def _canonical_dict(plan: Plan) -> Dict[str, Any]:
     return {
         "repo": plan.repo,
         "package": plan.package,
+        "allow_create": plan.allow_create,
         "tickets": plan.tickets,
         "actions": [
             {
@@ -733,9 +849,20 @@ def approve_plan(plan: Plan, expected_hash: str) -> ApprovalResult:
             expected_hash=expected_hash,
         )
 
+    if any(action.action == ACTION_CREATE for action in plan.actions) and not plan.allow_create:
+        return ApprovalResult(
+            approved=False,
+            reason="plan contains CREATE actions but creation is not authorized",
+            plan_hash=plan_hash,
+            expected_hash=expected_hash,
+        )
+
     return ApprovalResult(
         approved=True,
-        reason="plan hash matches and no blocking actions remain",
+        reason=(
+            "plan hash matches and no blocking actions remain"
+            + ("; creation authorized" if plan.allow_create else "")
+        ),
         plan_hash=plan_hash,
         expected_hash=expected_hash,
     )

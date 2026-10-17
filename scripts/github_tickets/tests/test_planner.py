@@ -32,6 +32,7 @@ from scripts.github_tickets.github import (
 from scripts.github_tickets.model import Manifest, Ticket
 from scripts.github_tickets.planner import (
     ACTION_BLOCKED,
+    ACTION_CREATE,
     ACTION_EXISTS,
     ACTION_REVIEW_REQUIRED,
     ApprovalResult,
@@ -221,6 +222,100 @@ class BuildPlanTest(TmpTestCase):
         for action in plan.actions:
             self.assertNotEqual(action.action, planner_module.ACTION_CREATE)
 
+    def test_allow_create_emits_create_for_unmatched_marker_ticket(self) -> None:
+        """With --allow-create, an unmatched marker ticket becomes CREATE."""
+        tickets = [make_ticket("E1", "epic", "Epic One", issue_number=None)]
+        plan = build_plan(
+            self.manifest(tickets),
+            DiscoveryResult(unmatched=["E1"]),
+            REPO,
+            allow_create=True,
+        )
+        self.assertEqual(plan.actions[0].action, ACTION_CREATE)
+        self.assertTrue(plan.allow_create)
+
+    def test_allow_create_keeps_explicit_missing_number_review_required(self) -> None:
+        """An explicit issue_number that no longer exists is never auto-created."""
+        tickets = [make_ticket("E1", "epic", "Epic One", issue_number=99)]
+        plan = build_plan(
+            self.manifest(tickets),
+            DiscoveryResult(unmatched=["E1"]),
+            REPO,
+            allow_create=True,
+        )
+        self.assertEqual(plan.actions[0].action, ACTION_REVIEW_REQUIRED)
+
+    def test_allow_create_keeps_ambiguous_review_required(self) -> None:
+        """Ambiguous marker matches remain REVIEW_REQUIRED under --allow-create."""
+        tickets = [make_ticket("E1", "epic", "Epic One")]
+        discovery = DiscoveryResult(ambiguous=[AmbiguousMatch("E1", [1, 2])])
+        plan = build_plan(
+            self.manifest(tickets), discovery, REPO, allow_create=True
+        )
+        self.assertEqual(plan.actions[0].action, ACTION_REVIEW_REQUIRED)
+
+    def test_create_tickets_produce_relationships_with_unknown_numbers(self) -> None:
+        """Planned CREATE tickets still yield parent-child relationships."""
+        tickets = [
+            make_ticket("E1", "epic", "Epic One", parent=None, body="e1.md"),
+            make_ticket("S1", "story", "Story One", parent="E1", body="s1.md"),
+            make_ticket("T1", "task", "Task One", parent="S1", body="t1.md"),
+        ]
+        discovery = DiscoveryResult(unmatched=["E1", "S1", "T1"])
+        plan = build_plan(
+            self.manifest(tickets), discovery, REPO, allow_create=True
+        )
+        self.assertEqual(len(plan.relationships), 2)
+        self.assertIsNone(plan.relationships[0].parent_issue_number)
+        self.assertIsNone(plan.relationships[0].child_issue_number)
+
+    def _title_candidate_plan(self, ticket_title, issue_titles):
+        """Build an allow-create plan for one ticket against title candidates.
+
+        Args:
+            ticket_title: The manifest ticket title.
+            issue_titles: Existing issue titles to offer as candidates.
+
+        Returns:
+            The built :class:`Plan`.
+        """
+        tickets = [make_ticket("E1", "epic", ticket_title, issue_number=None)]
+        issues = [
+            make_issue(index, title)
+            for index, title in enumerate(issue_titles, start=1)
+        ]
+        return build_plan(
+            self.manifest(tickets),
+            DiscoveryResult(unmatched=["E1"]),
+            REPO,
+            issues=issues,
+            allow_create=True,
+        )
+
+    def test_exact_title_duplicate_blocks_create(self) -> None:
+        """An exact-title existing issue requires review before creation."""
+        plan = self._title_candidate_plan(
+            "[TASK] Enable Manual Creation",
+            ["[TASK] Enable Manual Creation"],
+        )
+        self.assertEqual(plan.actions[0].action, ACTION_REVIEW_REQUIRED)
+
+    def test_plausible_title_variant_blocks_create(self) -> None:
+        """A tag-stripped title variant requires review before creation."""
+        plan = self._title_candidate_plan(
+            "[TASK] Enable Manual Creation",
+            ["Enable Manual Creation"],
+        )
+        self.assertEqual(plan.actions[0].action, ACTION_REVIEW_REQUIRED)
+
+    def test_unrelated_title_allows_create(self) -> None:
+        """An unrelated existing title does not block safe creation."""
+        plan = self._title_candidate_plan(
+            "[TASK] Enable Manual Creation",
+            ["Fix the login screen"],
+        )
+        self.assertEqual(plan.actions[0].action, ACTION_CREATE)
+
     def test_title_mismatch_is_review_required(self) -> None:
         """A title mismatch on a matched issue is surfaced for review."""
         tickets = [make_ticket("E1", "epic", "Epic One", body="e1.md")]
@@ -380,6 +475,19 @@ class HashTest(TmpTestCase):
         plan_without = build_plan(manifest2, discovery, REPO)
         self.assertNotEqual(compute_plan_hash(plan_with), compute_plan_hash(plan_without))
 
+    def test_allow_create_changes_hash(self) -> None:
+        """Creation authorization is bound into the plan hash."""
+        ticket = make_ticket(
+            "E1", "epic", "Epic One", issue_number=None, body="e1.md"
+        )
+        manifest = self.manifest([ticket])
+        discovery = DiscoveryResult(unmatched=["E1"])
+        plan_without = build_plan(manifest, discovery, REPO, allow_create=False)
+        plan_with = build_plan(manifest, discovery, REPO, allow_create=True)
+        self.assertNotEqual(
+            compute_plan_hash(plan_without), compute_plan_hash(plan_with)
+        )
+
 
 class ApprovalTest(TmpTestCase):
     """Explicit hash-bound approval and artifact integrity."""
@@ -423,6 +531,20 @@ class ApprovalTest(TmpTestCase):
         plan = build_plan(self.manifest(tickets), DiscoveryResult(), REPO)
         result = approve_plan(plan, compute_plan_hash(plan))
         self.assertFalse(result.approved)
+
+    def test_create_actions_require_allow_create(self) -> None:
+        """CREATE actions are rejected when creation is not authorized."""
+        tickets = [make_ticket("E1", "epic", "Epic One")]
+        plan = build_plan(
+            self.manifest(tickets),
+            DiscoveryResult(unmatched=["E1"]),
+            REPO,
+            allow_create=True,
+        )
+        plan.allow_create = False
+        result = approve_plan(plan, compute_plan_hash(plan))
+        self.assertFalse(result.approved)
+        self.assertIn("creation", result.reason)
 
     def test_body_change_rejects_old_approval_hash(self) -> None:
         """A body content change invalidates the previously approved hash."""
@@ -521,7 +643,7 @@ class CliPlanTest(TmpTestCase):
         with mock.patch.object(cli_module, "GitHubClient", return_value=fake_client):
             return cli_module.main(argv)
 
-    def _write_package(self, body_text=None):
+    def _write_package(self, body_text=None, issue_number=1):
         """Write a minimal valid package and return its manifest path.
 
         Args:
@@ -549,7 +671,7 @@ class CliPlanTest(TmpTestCase):
                             "labels": ["EPIC"],
                             "depends_on": [],
                             "related": [],
-                            "issue_number": 1,
+                            "issue_number": issue_number,
                         }
                     ],
                 }
@@ -605,6 +727,20 @@ class CliPlanTest(TmpTestCase):
                 [make_issue(1, "Epic One")],
             )
         self.assertEqual(code, 1)
+
+    def test_plan_allow_create_prints_create_action(self) -> None:
+        """plan --allow-create classifies a confirmed-absent ticket as CREATE."""
+        manifest_path = self._write_package(issue_number=None)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = self._run_plan(
+                ["plan", "--manifest", manifest_path, "--allow-create"],
+                [],
+            )
+        self.assertEqual(code, 0)
+        output = out.getvalue()
+        self.assertIn("Creation authorized: yes", output)
+        self.assertIn("[CREATE", output)
 
 
 if __name__ == "__main__":

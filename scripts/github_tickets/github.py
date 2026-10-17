@@ -1,12 +1,12 @@
 """
-Read-only GitHub REST client and existing-issue discovery.
-
-Task 02 scope only: no create, update, delete, label, or sub-issue mutations.
+GitHub REST client and existing-issue discovery.
 
 The client uses the Python 3.9 standard library. Authentication is read from
 ``GITHUB_TOKEN`` or ``GH_TOKEN`` and is never hardcoded, logged, or included in
 exception messages. Read-only GET requests use bounded retries for transient
-failures (HTTP 429, 5xx, and rate-limited 403 responses).
+failures (HTTP 429, 5xx, and rate-limited 403 responses). Mutation endpoints
+(issue creation and sub-issue linking) are not retried; callers reconcile
+ambiguous outcomes with read-only lookups.
 """
 from __future__ import annotations
 

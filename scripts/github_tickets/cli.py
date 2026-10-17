@@ -8,8 +8,7 @@ results into exit codes:
     1 — validation, planning, or approval failure
     2 — command-line usage error (handled by argparse)
 
-Implemented commands: ``validate`` (Task 01) and ``plan`` (Task 03). ``apply``
-is added by a later task.
+Implemented commands: ``validate``, ``plan``, and ``apply``.
 """
 from __future__ import annotations
 
@@ -74,6 +73,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify approval against the exact plan SHA-256 hash.",
     )
     plan_parser.add_argument(
+        "--allow-create",
+        action="store_true",
+        help=(
+            "Authorize CREATE actions for safely confirmed absent tickets. "
+            "The permission is bound into the plan hash."
+        ),
+    )
+    plan_parser.add_argument(
         "--output",
         required=False,
         metavar="PATH",
@@ -99,6 +106,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Verify the plan without performing any mutations.",
+    )
+    apply_parser.add_argument(
+        "--allow-create",
+        action="store_true",
+        help=(
+            "Separately authorize live issue creation. Must match the "
+            "--allow-create used when the approved plan was generated."
+        ),
     )
     _add_report_dir(apply_parser)
     apply_parser.set_defaults(func=_run_apply)
@@ -290,7 +305,13 @@ def _run_plan(args: argparse.Namespace) -> int:
         )
         return 1
 
-    plan = planner_module.build_plan(manifest, discovery, repo, issues=issues)
+    plan = planner_module.build_plan(
+        manifest,
+        discovery,
+        repo,
+        issues=issues,
+        allow_create=bool(args.allow_create),
+    )
     plan_hash = planner_module.compute_plan_hash(plan)
 
     if args.output:
@@ -307,6 +328,7 @@ def _run_plan(args: argparse.Namespace) -> int:
 
     print(f"Target repository: {plan.repo}")
     print(f"Package: {plan.package}")
+    print(f"Creation authorized: {'yes' if plan.allow_create else 'no'}")
     print(f"Plan hash (SHA-256): {plan_hash}")
     print()
     print("Actions:")
@@ -322,9 +344,19 @@ def _run_plan(args: argparse.Namespace) -> int:
     if plan.relationships:
         print("Proposed relationships:")
         for rel in plan.relationships:
+            parent_marker = (
+                f"#{rel.parent_issue_number}"
+                if rel.parent_issue_number is not None
+                else "?"
+            )
+            child_marker = (
+                f"#{rel.child_issue_number}"
+                if rel.child_issue_number is not None
+                else "?"
+            )
             print(
-                f"  LINK parent={rel.parent_id} (#{rel.parent_issue_number}) "
-                f"-> child={rel.child_id} (#{rel.child_issue_number})"
+                f"  LINK parent={rel.parent_id} ({parent_marker}) "
+                f"-> child={rel.child_id} ({child_marker})"
             )
     else:
         print("Proposed relationships: none")
@@ -375,7 +407,7 @@ def _run_apply(args: argparse.Namespace) -> int:
 
     Args:
         args: Parsed arguments; must expose ``args.manifest``, ``args.approve``,
-            and ``args.dry_run``.
+            ``args.dry_run``, and ``args.allow_create``.
 
     Returns:
         0 on completed (or dry-run verified) execution; 1 for invalid input,
@@ -416,27 +448,61 @@ def _run_apply(args: argparse.Namespace) -> int:
 
     try:
         if args.dry_run:
-            plan = executor_module.verify_approved_plan(client, manifest, args.approve)
+            plan = executor_module.verify_approved_plan(
+                client,
+                manifest,
+                args.approve,
+                allow_create=bool(args.allow_create),
+            )
             print("Dry-run verified. No mutations performed.")
+            print(
+                "Creation authorized: "
+                f"{'yes' if plan.allow_create else 'no'}"
+            )
+            print(
+                "Checks deferred until live execution: per-issue absence "
+                "revalidation and GraphQL parent verification."
+            )
             print(f"Plan hash (SHA-256): {planner_module.compute_plan_hash(plan)}")
             print("Actions:")
             for action in plan.actions:
                 print(f"  [{action.action}] {action.ticket_id} -> {action.reason}")
             print("Relationships:")
             for rel in plan.relationships:
+                parent_marker = (
+                    f"#{rel.parent_issue_number}"
+                    if rel.parent_issue_number is not None
+                    else "?"
+                )
+                child_marker = (
+                    f"#{rel.child_issue_number}"
+                    if rel.child_issue_number is not None
+                    else "?"
+                )
                 print(
-                    f"  LINK {rel.parent_id} (#{rel.parent_issue_number}) "
-                    f"-> {rel.child_id} (#{rel.child_issue_number})"
+                    f"  LINK {rel.parent_id} ({parent_marker}) "
+                    f"-> {rel.child_id} ({child_marker})"
                 )
             if getattr(args, "report_dir", None):
                 data, markdown = report_module.render_plan_report(
-                    plan, planner_module.compute_plan_hash(plan)
+                    plan,
+                    planner_module.compute_plan_hash(plan),
+                    notes=[
+                        "Dry-run performed no mutations.",
+                        "Per-issue absence revalidation and GraphQL parent "
+                        "verification are deferred until live execution.",
+                    ],
                 )
                 if not _write_reports(args.report_dir, "apply-dry-run", data, markdown):
                     return 1
             return 0
 
-        report = executor_module.execute_plan(client, manifest, args.approve)
+        report = executor_module.execute_plan(
+            client,
+            manifest,
+            args.approve,
+            allow_create=bool(args.allow_create),
+        )
     except ExecutionError as exc:
         print(f"error: {report_module.redact(str(exc), [getattr(client, 'token', None)])}", file=sys.stderr)
         _write_failure_report(

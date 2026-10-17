@@ -212,6 +212,7 @@ def render_plan_report(
     plan_hash: str,
     approval: Optional[ApprovalResult] = None,
     secrets: Optional[List[str]] = None,
+    notes: Optional[List[str]] = None,
 ) -> tuple:
     """
     Render a read-only planning report.
@@ -221,6 +222,7 @@ def render_plan_report(
         plan_hash: The plan's SHA-256 hash.
         approval: Optional approval result when ``--approve`` was supplied.
         secrets: Optional list of secret strings to redact.
+        notes: Optional list of human-readable notes (e.g. dry-run limits).
 
     Returns:
         A tuple ``(json_data, markdown)`` describing the plan.
@@ -246,6 +248,7 @@ def render_plan_report(
         "repo": plan.repo,
         "package": plan.package,
         "plan_hash": plan_hash,
+        "allow_create": plan.allow_create,
         "actions": actions,
         "relationships": [
             {
@@ -266,6 +269,8 @@ def render_plan_report(
             for candidate in plan.title_candidates
         ],
     }
+    if notes:
+        data["notes"] = [_redact(note, secrets) for note in notes]
     if approval is not None:
         data["approval"] = {
             "approved": approval.approved,
@@ -277,6 +282,8 @@ def render_plan_report(
         f"# Plan Report: {plan.repo} ({plan.package})",
         "",
         f"Plan hash: `{plan_hash}`",
+        "",
+        f"Creation authorized: {'yes' if plan.allow_create else 'no'}",
         "",
         "## Actions",
     ]
@@ -300,6 +307,11 @@ def render_plan_report(
         lines.append("## Approval")
         lines.append(f"- approved: {approval.approved}")
         lines.append(f"- reason: {approval.reason}")
+    if notes:
+        lines.append("")
+        lines.append("## Notes")
+        for note in data["notes"]:
+            lines.append(f"- {note}")
     return data, "\n".join(lines) + "\n"
 
 
@@ -322,7 +334,10 @@ def render_execution_report(
         A tuple ``(json_data, markdown)`` describing the execution.
     """
     operations = []
+    summary = {"CREATE": 0, "SKIP": 0, "LINK": 0, "CONFLICT": 0, "ERROR": 0}
     for operation in report.operations:
+        if operation.op in summary:
+            summary[operation.op] += 1
         operations.append(
             {
                 "op": operation.op,
@@ -342,6 +357,7 @@ def render_execution_report(
         "status": report.status,
         "plan_hash": plan_hash,
         "operations": operations,
+        "summary": summary,
         "created_issues": [
             {
                 "ticket_id": ticket_id,
@@ -367,6 +383,10 @@ def render_execution_report(
         lines.append(f"Plan hash: `{plan_hash}`")
         lines.append("")
     lines.append(f"Status: {report.status}")
+    lines.append("")
+    lines.append("## Summary")
+    for label in ("CREATE", "SKIP", "LINK", "CONFLICT", "ERROR"):
+        lines.append(f"- {label}: {summary[label]}")
     lines.append("")
     lines.append("## Operations")
     for operation in operations:

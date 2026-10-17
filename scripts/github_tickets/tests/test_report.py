@@ -21,7 +21,7 @@ from scripts.github_tickets import report as report_module
 from scripts.github_tickets.executor import ExecutionReport, Operation
 from scripts.github_tickets.github import Issue, Repo, discover_issues
 from scripts.github_tickets.model import Manifest, Ticket
-from scripts.github_tickets.planner import ApprovalResult
+from scripts.github_tickets.planner import ApprovalResult, Plan
 from scripts.github_tickets.report import ReportError, write_json_report
 
 REPO = "acme/repo"
@@ -120,6 +120,33 @@ class RenderTest(unittest.TestCase):
         )
         data, _ = report_module.render_execution_report(report, REPO)
         self.assertEqual(data["status"], "PARTIAL")
+
+    def test_execution_report_summarizes_operation_counts(self):
+        """Execution reports summarize created, skipped, and failed operations."""
+        report = ExecutionReport(
+            status="COMPLETED",
+            operations=[
+                Operation("CREATE", "E1", "created", 1),
+                Operation("SKIP", "S1", "preserved", 2),
+                Operation("LINK", "E1 -> S1", "linked", 2),
+            ],
+            created_issues=["E1"],
+        )
+        data, markdown = report_module.render_execution_report(report, REPO)
+        self.assertEqual(data["summary"]["CREATE"], 1)
+        self.assertEqual(data["summary"]["SKIP"], 1)
+        self.assertEqual(data["summary"]["LINK"], 1)
+        self.assertIn("## Summary", markdown)
+
+    def test_plan_report_includes_creation_authorization(self):
+        """Plan reports expose whether creation was authorized."""
+        plan = Plan(repo=REPO, package="p", allow_create=True)
+        data, markdown = report_module.render_plan_report(
+            plan, "a" * 64, notes=["Dry-run only."]
+        )
+        self.assertTrue(data["allow_create"])
+        self.assertIn("Creation authorized: yes", markdown)
+        self.assertEqual(data["notes"], ["Dry-run only."])
 
     def test_write_json_refuses_overwrite(self):
         """Report writing never overwrites an existing file."""
