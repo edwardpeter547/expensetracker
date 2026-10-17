@@ -188,3 +188,4 @@ kubeconfig
 tickets/.generated/
 tickets/drafts/
 tickets/exports/
+tickets/reviews/
