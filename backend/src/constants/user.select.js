@@ -1,10 +1,15 @@
 /**
- * Allowlisted Prisma projection for user records returned in API responses.
+ * Allowlisted Prisma projections for user records returned in API responses.
  *
- * Prefer this explicit selection over fetching a complete user record and
- * removing sensitive fields afterwards. It deliberately omits password hashes
- * and credential metadata (e.g. lastPasswordReset) so those values never reach
- * a serialized response.
+ * These selections deliberately omit password hashes, credential metadata
+ * (lastPasswordReset), and unnecessary personal data (dateOfBirth,
+ * mobileNumber). Use the narrowest projection that satisfies the endpoint's
+ * contract; never return a full user record.
+ */
+
+/**
+ * Minimal projection for authentication lifecycle responses (email
+ * verification, resend, OTP verification, and password recovery).
  */
 export const USER_PUBLIC_SELECT = {
     id: true,
@@ -12,19 +17,23 @@ export const USER_PUBLIC_SELECT = {
     username: true,
     firstname: true,
     lastname: true,
-    dateOfBirth: true,
-    mobileNumber: true,
     avatar: true,
     isActive: true,
     isEmailVerified: true,
     emailVerifiedAt: true,
-    isPhoneVerified: true,
-    phoneVerifiedAt: true,
-    currency: true,
-    timezone: true,
     language: true,
-    theme: true,
-    lastLoginAt: true,
-    createdAt: true,
-    updatedAt: true,
+};
+
+/**
+ * Projection for a user nested as the owner of another resource (e.g. a
+ * transaction). It is narrower than the authentication projection because
+ * status and verification flags are irrelevant to the parent resource.
+ */
+export const USER_OWNER_SELECT = {
+    id: true,
+    email: true,
+    username: true,
+    firstname: true,
+    lastname: true,
+    avatar: true,
 };

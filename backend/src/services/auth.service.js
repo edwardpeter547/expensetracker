@@ -111,7 +111,11 @@ export const createVerificationToken = async (user, token, tx = prisma) => {
 export const getVerificationToken = async (token) => {
     return await prisma.verificationToken.findUnique({
         where: { token },
-        include: { user: { select: USER_PUBLIC_SELECT } }
+        select: {
+            id: true,
+            expiresAt: true,
+            user: { select: USER_PUBLIC_SELECT }
+        }
     });
 }
 
