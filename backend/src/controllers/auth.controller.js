@@ -15,6 +15,7 @@ import {
     deleteRefreshToken,
     getRefreshToken,
     getUser,
+    getSafeUser,
     getVerificationToken,
     refreshRecord,
     removeVerificationToken,
@@ -99,7 +100,7 @@ export const verifyEmail = catchAsync(async (request, response) => {
 
 export const resendVerification = catchAsync(async (request, response) => {
     const { email } = request.body;
-    const user = await getUser({email});
+    const user = await getSafeUser({email});
 
     if(!user){
         logger.warn('User does not exist', {user: maskEmail(email), action: USER_ACTIONS.USER_NOT_FOUND});
@@ -201,7 +202,7 @@ export const changePassword = catchAsync(async (request, response) => {
 export const verifyToken = catchAsync(async (request, response) => {
 
     const {code, email } = request.body;
-    const user = await getUser({email});
+    const user = await getSafeUser({email});
     const locale = user.language || Config.defaultLocale;
 
     const result = await verifyResetPasswordToken(code, user);
@@ -221,7 +222,7 @@ export const verifyToken = catchAsync(async (request, response) => {
 
 export const forgotPassword = catchAsync(async (request, response) => {
     const { email } = request.body;
-    const user = await getUser({email});
+    const user = await getSafeUser({email});
 
     if(!user){
         logger.warn('User does not exist', {user: maskEmail(email), action: USER_ACTIONS.USER_NOT_FOUND});

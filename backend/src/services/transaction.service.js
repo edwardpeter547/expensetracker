@@ -1,4 +1,5 @@
 import prisma from "../configurations/prisma.connect.js";
+import { USER_PUBLIC_SELECT } from "../constants/user.select.js";
 
 export const createTransactionRecord = async (transactionData) => {
 
@@ -8,7 +9,7 @@ export const createTransactionRecord = async (transactionData) => {
         data: {...transactionData},
         select: {
             id: true,
-            user: true,
+            user: { select: USER_PUBLIC_SELECT },
             userId: true,
             transType: true,
             category: true,

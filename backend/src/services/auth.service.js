@@ -3,6 +3,7 @@ import Config from "../configurations/env.config.js";
 import logger from "../configurations/logger.config.js";
 import prisma from "../configurations/prisma.connect.js";
 import { AUTH_ACTIONS, USER_ACTIONS } from "../constants/audit.actions.js";
+import { USER_PUBLIC_SELECT } from "../constants/user.select.js";
 import AppError from "../utils/appError.js";
 
 export const checkExistingUser = async (email, username) => {
@@ -110,7 +111,7 @@ export const createVerificationToken = async (user, token, tx = prisma) => {
 export const getVerificationToken = async (token) => {
     return await prisma.verificationToken.findUnique({
         where: { token },
-        include: { user: true }
+        include: { user: { select: USER_PUBLIC_SELECT } }
     });
 }
 
@@ -173,6 +174,25 @@ export const getUser = async(params) => {
         args: {where: { ...params} }
     }
     return user;
+}
+
+/**
+ * Fetch a user using only the public, allowlisted projection.
+ *
+ * Unlike {@link getUser}, this never loads the password hash or credential
+ * metadata, so the returned record is safe to serialize directly in an API
+ * response. It also does not attach the internal `_meta` marker.
+ *
+ * @param {object} params Prisma `where` filters for the user (e.g. `{email}`).
+ * @returns {Promise<object|null>} The safely projected user, or null.
+ */
+export const getSafeUser = async (params) => {
+    const user = await prisma.user.findFirst({
+        where: { ...params },
+        select: USER_PUBLIC_SELECT
+    });
+
+    return user || null;
 }
 
 export const getProfile = async(params) => {
