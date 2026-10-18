@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import logger from "../configurations/logger.config.js";
 import { BUDGET_ACTIONS } from "../constants/audit.actions.js";
-import { addBudget, budgetExists, checkBudget, deleteBudgetRecord, getBudgetList, getBudgetWithSpending } from "../services/budget.service.js";
+import { addBudget, budgetExists, checkBudget, deleteBudgetRecord, getBudgetList, getBudgetRecord, getBudgetWithSpending } from "../services/budget.service.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { maskEmail } from "../utils/helpers.js";
@@ -27,7 +27,7 @@ export const getBudgets = catchAsync(async (request, response) => {
 export const getBudget = catchAsync(async (request, response) => {
     const userId = request.user?.id;
     const budgetId = request.params?.id;
-    const budget = await getBugetRecord(userId, budgetId);
+    const budget = await getBudgetRecord(userId, budgetId);
     if(!budget){
         logger.warn("Budget not found", {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.NOT_FOUND});
         throw new AppError("Budget not found", StatusCodes.NOT_FOUND)

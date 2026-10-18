@@ -6,6 +6,7 @@ import {
     getTransactionsbyUser,
     updateTransactionRecord
 } from "../services/transaction.service.js";
+import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { parseDate } from "../utils/helpers.js";
 
@@ -25,8 +26,12 @@ export const getTransactions = catchAsync(async (request, response) => {
 
 export const getTransaction = catchAsync(async (request, response) => {
     const { id } = request.params;
+    const userId = request.user?.id;
 
-    const transaction = await getTransactionById(id);
+    const transaction = await getTransactionById(id, userId);
+    if(!transaction){
+        throw new AppError("Transaction not found", StatusCodes.NOT_FOUND);
+    }
     response.status(StatusCodes.OK).json({
         success: true,
         message: "Transaction Detail",

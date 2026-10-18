@@ -34,7 +34,7 @@ export const getCategory = catchAsync(async (request, response) => {
     const categoryId = request.params?.id;
     const userId = request.user?.id;
 
-    const category = getCategoryRecord(categoryId, userId);
+    const category = await getCategoryRecord(categoryId, userId);
 
     if(!category){
         logger.warn("Category not found", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.NOT_FOUND});
@@ -84,7 +84,7 @@ export const updateCategory = catchAsync(async (request, response) => {
 
     const existingCategory = await checkCategoryById(userId, categoryId);
 
-    if(!existing){
+    if(!existingCategory){
         logger.error("Category not found or cannot be edited.", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.NOT_FOUND});
         throw new AppError("Category not found or cannot be edited.", StatusCodes.NOT_FOUND);
     }
@@ -103,7 +103,7 @@ export const updateCategory = catchAsync(async (request, response) => {
         ...(icon !== undefined && { icon })
     }
 
-    const updated = await updateCategoryRecord(categoryData, categoryId);
+    const updated = await updateCategoryRecord(categoryData, categoryId, userId);
 
 
     response.status(StatusCodes.OK).json({
@@ -125,8 +125,8 @@ export const deleteCategory = catchAsync(async (request, response) => {
         throw new AppError("Category not found or cannot be deleted.", StatusCodes.NOT_FOUND);
     }
 
-    const transactionCount = await countTransaction(category.name);
-    const budgetCount = await countBudget(categoryId);
+    const transactionCount = await countTransaction(userId, category.name);
+    const budgetCount = await countBudget(userId, categoryId);
 
     if(budgetCount > 0 || transactionCount > 0 ){
         logger.warn(
@@ -137,7 +137,7 @@ export const deleteCategory = catchAsync(async (request, response) => {
         throw new AppError(`Category is in use by ${budgetCount} budgets and ${transactionCount} transactions`, StatusCodes.CONFLICT);
     }
 
-    await deleteCategoryRecord(categoryId);
+    await deleteCategoryRecord(categoryId, userId);
 
     response.status(StatusCodes.NO_CONTENT).json({
         success: true,

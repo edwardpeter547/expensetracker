@@ -12,7 +12,7 @@ categoryRoutes.use(authenticate);
 categoryRoutes.get('/', getCategories);
 categoryRoutes.get('/:id', validateParams(categoryIdSchema), getCategory);
 categoryRoutes.post('/', validate(createCategorySchema), createCategory);
-categoryRoutes.put('/', validate(updateCategorySchema), updateCategory);
+categoryRoutes.put('/:id', validateParams(categoryIdSchema), validate(updateCategorySchema), updateCategory);
 categoryRoutes.delete('/:id', validateParams(categoryIdSchema), deleteCategory);
 
 export default categoryRoutes;
