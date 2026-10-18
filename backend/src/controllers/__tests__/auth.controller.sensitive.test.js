@@ -76,6 +76,7 @@ describe('auth.controller sensitive-data responses', () => {
     test('verifyEmail returns a user without a password hash', async () => {
         mockAuthService.getVerificationToken.mockResolvedValue({
             id: 'v1',
+            token: 'raw-verification-token',
             expiresAt: new Date(Date.now() + 60 * 1000),
             user: { id: 1, email: 'a@b.c', language: 'en', username: 'a', firstname: 'A', lastname: 'B' },
         });
@@ -92,7 +93,11 @@ describe('auth.controller sensitive-data responses', () => {
         expect(status).toHaveBeenCalledWith(200);
         const payload = json.mock.calls[0][0];
         expect(payload.data.user).not.toHaveProperty('password');
+        expect(payload.data.user).not.toHaveProperty('dateOfBirth');
+        expect(payload.data.user).not.toHaveProperty('mobileNumber');
         expect(payload.data.user).toHaveProperty('email', 'a@b.c');
+        expect(payload.data).not.toHaveProperty('token');
+        expect(payload.data).not.toHaveProperty('verification');
     });
 
     test('resendVerification uses getSafeUser and omits the password hash', async () => {
@@ -119,6 +124,8 @@ describe('auth.controller sensitive-data responses', () => {
         expect(mockAuthService.getUser).not.toHaveBeenCalled();
         const payload = json.mock.calls[0][0];
         expect(payload.data.user).not.toHaveProperty('password');
+        expect(payload.data.user).not.toHaveProperty('dateOfBirth');
+        expect(payload.data.user).not.toHaveProperty('mobileNumber');
         expect(payload.data.user).toHaveProperty('email', 'a@b.c');
     });
 
@@ -135,6 +142,8 @@ describe('auth.controller sensitive-data responses', () => {
         expect(mockAuthService.getSafeUser).toHaveBeenCalledWith({ email: 'a@b.c' });
         const payload = json.mock.calls[0][0];
         expect(payload.data.user).not.toHaveProperty('password');
+        expect(payload.data.user).not.toHaveProperty('dateOfBirth');
+        expect(payload.data.user).not.toHaveProperty('mobileNumber');
         expect(payload.data.user).toHaveProperty('email', 'a@b.c');
     });
 
@@ -159,6 +168,8 @@ describe('auth.controller sensitive-data responses', () => {
         expect(mockAuthService.getSafeUser).toHaveBeenCalledWith({ email: 'a@b.c' });
         const payload = json.mock.calls[0][0];
         expect(payload.data.user).not.toHaveProperty('password');
+        expect(payload.data.user).not.toHaveProperty('dateOfBirth');
+        expect(payload.data.user).not.toHaveProperty('mobileNumber');
         expect(payload.data.user).not.toHaveProperty('resetToken');
         expect(payload.data.user).not.toHaveProperty('passwordResetToken');
         expect(payload.data.user).not.toHaveProperty('verificationToken');
