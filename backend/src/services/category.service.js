@@ -67,22 +67,23 @@ export const checkConflict = async(categoryId, categoryName, userId) => {
 }
 
 
-export const updateCategoryRecord = async (categoryData, categoryId) => {
+export const updateCategoryRecord = async (categoryData, categoryId, userId) => {
     return await prisma.category.update({
-        where: {id: categoryId},
+        where: {id: categoryId, userId: userId},
         data: categoryData
     });
 } 
 
-export const countBudget = async (categoryId) => {
+export const countBudget = async (userId, categoryId) => {
     return await prisma.budget.count({
-        where: {categoryId: categoryId}
+        where: {userId: userId, categoryId: categoryId}
     });
 }
 
-export const countTransaction = async (categoryName) => {
+export const countTransaction = async (userId, categoryName) => {
     return await prisma.transaction.count({
         where: {
+            userId: userId,
             category: {
                 equals: categoryName,
                 mode: "insensitive"
@@ -92,9 +93,9 @@ export const countTransaction = async (categoryName) => {
 }
 
 
-export const deleteCategoryRecord = async (categoryId) => {
+export const deleteCategoryRecord = async (categoryId, userId) => {
     return await prisma.category.delete({
-        where: {id: categoryId}
+        where: {id: categoryId, userId: userId}
     });
 }
 

@@ -31,8 +31,8 @@ export const getTransactionsbyUser = async (userId) => {
     return transactions;
 }
 
-export const getTransactionById = async (transactionId) => {
-    const transaction = await prisma.transaction.findUnique({where: {id: transactionId}});
+export const getTransactionById = async (transactionId, userId) => {
+    const transaction = await prisma.transaction.findUnique({where: {id: transactionId, userId: userId}});
     if(!transaction) return null;
     return transaction;
 }
