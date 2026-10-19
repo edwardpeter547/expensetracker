@@ -39,6 +39,7 @@ This is a **two-package monorepo orchestrated by a `Makefile`** — it is **not*
 9. When a larger design choice is involved, explain trade-offs briefly.
 10. Never `git commit`, `git push`, or create branches unless explicitly instructed.
 11. Python code follows `docs/engineering/coding-standards.md`: Google-style docstrings, Python 3.9 type annotations, colocated tests, and explanatory comments for non-obvious or security-sensitive logic.
+12. All new or modified JavaScript functions, including Jest test callbacks and test helpers, must follow the mandatory documentation rules in `docs/engineering/coding-standards.md`. Missing required documentation is an implementation defect and must be corrected before completion.
 
 ## Implementation protocol
 Before implementing and before declaring a task complete, Codex must:
