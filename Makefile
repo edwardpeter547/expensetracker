@@ -76,7 +76,11 @@ test-all:
 
 # Run backend test (Unitest/Integration)
 test-backend:
+ifdef DIR
+	cd $(BACKEND) && $(PACKAGE_MANAGER) run test -- --runInBand --testPathPatterns="src/$(DIR)/__tests__/"
+else
 	cd $(BACKEND) && $(PACKAGE_MANAGER) run test
+endif
 
 # Run backend test with watch (Unitest/Integration)
 test-backend-watch:
@@ -93,10 +97,6 @@ add-pkg-backend:
 # Install development only package in backend
 add-pkg-backend-dev:
 	cd $(BACKEND) && $(PACKAGE_MANAGER) install $(PKG) --save-dev
-
-# Install package in backend
-add-pkg-backend:
-	cd $(BACKEND) && $(PACKAGE_MANAGER) install $(PKG)
 
 # Install development package in mobile
 add-pkg-mobile-dev:

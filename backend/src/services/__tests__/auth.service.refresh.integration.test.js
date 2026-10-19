@@ -22,6 +22,7 @@ import path from 'path';
 import { Client } from 'pg';
 import crypto from 'crypto';
 import { readFile } from 'fs/promises';
+import bcrypt from 'bcryptjs';
 
 const RUN_DB = process.env.RUN_DB_INTEGRATION === '1';
 const ADMIN_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -93,11 +94,12 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
     };
 
     const seedUser = async (overrides = {}) => {
+        const testPassword = crypto.randomBytes(32).toString('hex');
         return prisma.user.create({
             data: {
-                email: `refresh-${Date.now()}-${Math.random()}@example.com`,
-                username: `refresh-${Date.now()}-${Math.random()}`,
-                password: 'not-used-in-refresh',
+                email: `refresh-${crypto.randomUUID()}@example.com`,
+                username: `refresh-${crypto.randomUUID()}`,
+                password: await bcrypt.hash(testPassword, 10),
                 firstname: 'Refresh',
                 lastname: 'User',
                 language: 'en',
