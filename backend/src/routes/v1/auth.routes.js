@@ -16,6 +16,7 @@ import {
     changePasswordSchema,
     emailVerificationSchema,
     loginSchema,
+    logoutSchema,
     refreshSchema,
     registerSchema,
     resetPasswordTokenSchema,
@@ -36,6 +37,6 @@ authRoutes.post('/change-password', validate(changePasswordSchema), changePasswo
 authRoutes.post('/refresh-token', validate(refreshSchema), refreshToken);
 
 // Protected Routes
-authRoutes.post('/logout', authenticate, logout);
+authRoutes.post('/logout', authenticate, validate(logoutSchema), logout);
 
 export default authRoutes;
