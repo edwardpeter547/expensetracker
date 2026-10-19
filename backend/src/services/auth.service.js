@@ -82,6 +82,18 @@ export const getRefreshToken = async (token) => {
     });
 }
 
+/**
+ * Revoke the caller's presented refresh-token session, if it is still active.
+ *
+ * The raw token is SHA-256 hashed before lookup, and the conditional update is
+ * constrained by both the token hash and the authenticated user's id. This
+ * guarantees one user can never revoke another user's session. Already-revoked
+ * or unknown tokens simply match zero rows, making logout idempotent.
+ *
+ * @param {string} refreshToken The raw refresh token presented by the client.
+ * @param {number} userId The authenticated user's id.
+ * @returns {Promise<{count: number}>} The number of tokens revoked (0 or 1).
+ */
 export const revokeRefreshTokenByHash = async (refreshToken, userId) => {
     return await prisma.refreshToken.updateMany({
         where: { token: hashToken(refreshToken), userId, isRevoked: false },

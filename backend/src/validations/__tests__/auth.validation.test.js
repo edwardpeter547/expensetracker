@@ -3,6 +3,7 @@ import {
     changePasswordSchema,
     forgotPasswordSchema,
     loginSchema,
+    logoutSchema,
     refreshSchema,
     registerSchema,
 } from '../auth.validation';
@@ -272,3 +273,49 @@ describe('Change Password Schema Validation - changePasswordSchema', () => {
         expect(error.message).toContain('newPassword');
     });
 } )
+
+describe('Logout Schema Validation - logoutSchema', () => {
+    /**
+     * Build a valid 80-character hexadecimal refresh token for schema tests.
+     *
+     * @returns {string} A syntactically valid opaque refresh token.
+     */
+    const validToken = () => 'a'.repeat(80);
+
+    /**
+     * A logout body containing exactly one valid refresh token must pass.
+     */
+    test('accepts a valid 80-character refresh token', () => {
+        const { error } = logoutSchema.validate({ refreshToken: validToken() });
+        expect(error).toBeUndefined();
+    });
+
+    /**
+     * A missing refresh token must be rejected so the controller never runs
+     * with an undefined token.
+     */
+    test('rejects a missing refresh token', () => {
+        const { error } = logoutSchema.validate({});
+        expect(error).toBeDefined();
+        expect(error.message).toContain('refreshToken');
+    });
+
+    /**
+     * A token of the wrong length must be rejected as malformed.
+     */
+    test('rejects a refresh token with the wrong length', () => {
+        const { error } = logoutSchema.validate({ refreshToken: 'abc123' });
+        expect(error).toBeDefined();
+        expect(error.message).toContain('refreshToken');
+    });
+
+    /**
+     * A token containing non-hexadecimal characters must be rejected as
+     * malformed.
+     */
+    test('rejects a non-hexadecimal refresh token', () => {
+        const { error } = logoutSchema.validate({ refreshToken: 'z'.repeat(80) });
+        expect(error).toBeDefined();
+        expect(error.message).toContain('refreshToken');
+    });
+});

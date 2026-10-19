@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import {id, email, password, otpToken, text, token} from './common.validation.js';
+import {id, email, password, otpToken, refreshToken, text, token} from './common.validation.js';
 
 export const registerSchema = Joi.object({
     email: email(),
@@ -18,6 +18,16 @@ export const loginSchema = Joi.object({
 export const refreshSchema = Joi.object({
     refreshToken: token(),
 })
+
+/**
+ * Validation schema for the logout request body.
+ *
+ * Logout requires exactly one well-formed opaque refresh token. Validation
+ * rejects missing and malformed tokens before the controller or service runs.
+ */
+export const logoutSchema = Joi.object({
+    refreshToken: refreshToken(),
+});
 
 
 export const verificationTokenSchema = Joi.object({

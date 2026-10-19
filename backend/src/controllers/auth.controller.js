@@ -243,23 +243,28 @@ export const forgotPassword = catchAsync(async (request, response) => {
     });
 });
 
+/**
+ * Revoke the authenticated user's presented refresh-token session.
+ *
+ * Logout is idempotent: route validation rejects missing or malformed tokens
+ * before this handler runs, and an unknown or already-revoked token is treated
+ * as a successful logout. Only the presented token is revoked — matched by its
+ * SHA-256 hash and the authenticated user's id — so no other session and no
+ * other user's session is affected. No token material is logged or returned.
+ *
+ * @param {import('express').Request} request Express request carrying
+ *        `body.refreshToken` and the authenticated `request.user`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const logout = catchAsync(async (request, response) => {
-    
     const { refreshToken } = request.body;
     const user = request.user;
 
-    if(!refreshToken){
-        logger.error('Missing refreshToken', {user: maskEmail(user.email), action: AUTH_ACTIONS.MISSING_REFRESH_TOKEN})
-        throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST);
-    }
-
-    const result = await revokeRefreshTokenByHash(refreshToken, user.id);
-
-    if(result.count === 0)
-        throw new AppError('Refresh token not found or already revoked', StatusCodes.NOT_FOUND);
+    await revokeRefreshTokenByHash(refreshToken, user.id);
 
     logger.info('User logged out', {user: maskEmail(user.email), action: AUTH_ACTIONS.LOGOUT_SUCCESS});
-    
+
     response.status(StatusCodes.OK).json({
         success: true,
         message: request.__('RESPONSE_LOGOUT_SUCCESSFUL'),
