@@ -9,6 +9,16 @@ These standards describe how code is written in this repository today and how it
 - Use `import`/`export` (ESM) in the backend; TypeScript/ESM in mobile.
 - No new module system, package manager, or formatter is introduced.
 
+### Mandatory JavaScript documentation
+
+- Every newly introduced or modified function or methods must have meaningful JSDoc, including private helpers, test fixtures, setup/teardown helpers, and test callbacks.
+- Document parameters using `@param`, return values using `@returns`, and important exceptions using `@throws`, where applicable.
+- Each Jest `test()` or `it()` callback must have a preceding documentation comment explaining the scenario, behavior under test, and expected result.
+- For security-sensitive tests, document relevant invariants, such as atomicity, ownership, replay detection, and rollback behavior.
+- Avoid comments that merely repeat function or test names.
+- Keep documentation synchronized with the implementation.
+- Review documentation compliance before declaring a task complete.
+
 ### Naming
 
 **Existing**
