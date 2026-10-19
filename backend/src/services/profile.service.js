@@ -27,16 +27,6 @@ export const userProfile = async (userData) => {
 }
 
 
-export const revokeRefreshToken = async (refreshToken, userId) => {
-    return await prisma.refreshToken.updateMany({
-        where: {token: refreshToken, userId, isRevoked: false},
-        data: {
-            isRevoked: true
-        }
-    })
-}
-
-
 export const getUserSummary = async (userId, startOfMonth, limit = 5) => {
     return await Promise.all([
         prisma.transaction.aggregate({

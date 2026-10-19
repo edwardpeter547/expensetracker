@@ -1,10 +1,13 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import Config from "../configurations/env.config.js";
 import logger from "../configurations/logger.config.js";
 import prisma from "../configurations/prisma.connect.js";
 import { AUTH_ACTIONS, USER_ACTIONS } from "../constants/audit.actions.js";
 import { USER_PUBLIC_SELECT } from "../constants/user.select.js";
 import AppError from "../utils/appError.js";
+import { generateTokens } from "../utils/helpers.js";
+import { REFRESH_TOKEN_TTL_MS, REFRESH_TOKEN_PATTERN, REUSE_DETECTED } from "../constants/app.constants.js";
 
 export const checkExistingUser = async (email, username) => {
     
@@ -51,13 +54,21 @@ export const createUser = async (email, username, password, firstname, lastname,
     return user;
 }
 
-export const createRefreshToken = async (refreshToken, userId, ipAddress) => {
-    
+/**
+ * Return the SHA-256 hex digest of a refresh token. Only this digest is ever
+ * persisted; the raw token exists only in the client and in memory.
+ */
+export const hashToken = (token) => {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+export const createRefreshToken = async (refreshToken, userId, ipAddress, familyId = null) => {
     await prisma.refreshToken.create({
         data: {
-            token: refreshToken,
+            token: hashToken(refreshToken),
+            familyId: familyId ?? crypto.randomUUID(),
             userId: userId,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
             createdByIp: ipAddress
         }
     });
@@ -65,16 +76,107 @@ export const createRefreshToken = async (refreshToken, userId, ipAddress) => {
 }
 
 export const getRefreshToken = async (token) => {
-    const storedToken = await prisma.refreshToken.findUnique({
-        where: {token: token},
-        include: {user: true}
+    return await prisma.refreshToken.findUnique({
+        where: { token: hashToken(token) },
+        include: { user: { select: USER_PUBLIC_SELECT } }
     });
-
-    return storedToken;
 }
 
-export const deleteRefreshToken = async (storedToken) => {
-    return await prisma.refreshToken.delete({where: {id: storedToken.id}});
+export const revokeRefreshTokenByHash = async (refreshToken, userId) => {
+    return await prisma.refreshToken.updateMany({
+        where: { token: hashToken(refreshToken), userId, isRevoked: false },
+        data: { isRevoked: true }
+    });
+}
+
+export const revokeTokenFamily = async (familyId) => {
+    return await prisma.refreshToken.updateMany({
+        where: { familyId, isRevoked: false },
+        data: { isRevoked: true }
+    });
+}
+
+export const revokeAllRefreshTokens = async (userId) => {
+    return await prisma.refreshToken.updateMany({
+        where: { userId, isRevoked: false },
+        data: { isRevoked: true }
+    });
+}
+
+/**
+ * Rotate a presented refresh token atomically and return a new token pair.
+ *
+ * The consume step is a conditional update that revokes the presented token
+ * only if it is still active; exactly one concurrent caller observes a count
+ * of one. A second caller observes a count of zero, which is treated as replay
+ * and revokes the whole token family.
+ */
+export const rotateRefreshToken = async (presentedToken) => {
+    if (typeof presentedToken !== 'string' || !REFRESH_TOKEN_PATTERN.test(presentedToken)) {
+        throw new AppError('Invalid Refresh Token', 401);
+    }
+
+    const tokenHash = hashToken(presentedToken);
+    const stored = await prisma.refreshToken.findUnique({
+        where: { token: tokenHash },
+        include: { user: { select: USER_PUBLIC_SELECT } }
+    });
+
+    if (!stored) {
+        throw new AppError('Invalid Refresh Token', 401);
+    }
+
+    if (stored.isRevoked) {
+        await revokeTokenFamily(stored.familyId);
+        throw new AppError('Invalid Refresh Token', 401);
+    }
+
+    if (stored.expiresAt < new Date()) {
+        throw new AppError('Refresh Token Expired', 401);
+    }
+
+    if (!stored.user || !stored.user.isActive) {
+        await revokeTokenFamily(stored.familyId);
+        throw new AppError('Account deactivated', 401);
+    }
+
+    const tokens = generateTokens(stored.user.id, stored.user.email);
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            const consumed = await tx.refreshToken.updateMany({
+                where: { token: tokenHash, isRevoked: false },
+                data: { isRevoked: true }
+            });
+
+            if (consumed.count === 0) {
+                const error = new Error('Refresh token reuse detected');
+                error.code = REUSE_DETECTED;
+                throw error;
+            }
+
+            await tx.refreshToken.create({
+                data: {
+                    token: hashToken(tokens.refreshToken),
+                    familyId: stored.familyId,
+                    userId: stored.user.id,
+                    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
+                }
+            });
+        });
+    } catch (error) {
+        if (error.code === REUSE_DETECTED) {
+            await revokeTokenFamily(stored.familyId);
+            throw new AppError('Invalid Refresh Token', 401);
+        }
+        throw error;
+    }
+
+    return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        userId: stored.user.id
+    };
 }
 
 export const createLoginAttempt = async ({ipAddress, userAgent, email, loginAttemptStatus, userId = null}) => {
@@ -273,7 +375,12 @@ export const updateUserPassword = async (user, password) => {
                 password: hashedPassword,
                 lastPasswordReset: new Date()
             }
-        })
+        });
+
+        await tx.refreshToken.updateMany({
+            where: {userId: user.id, isRevoked: false},
+            data: {isRevoked: true}
+        });
     });
 }
 

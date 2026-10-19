@@ -12,13 +12,13 @@ import {
     createRefreshToken,
     createUser,
     createVerificationToken,
-    deleteRefreshToken,
-    getRefreshToken,
     getUser,
     getSafeUser,
     getVerificationToken,
     refreshRecord,
     removeVerificationToken,
+    revokeRefreshTokenByHash,
+    rotateRefreshToken,
     sanitizeResponse,
     savePasswordResetToken,
     saveVerificationToken,
@@ -27,7 +27,6 @@ import {
     verifyResetPasswordToken,
 } from '../services/auth.service.js';
 import emailService from '../services/email.service.js';
-import { revokeRefreshToken } from '../services/profile.service.js';
 import AppError from '../utils/appError.js';
 import catchAsync from '../utils/catchAsync.js';
 import { generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
@@ -254,7 +253,7 @@ export const logout = catchAsync(async (request, response) => {
         throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await revokeRefreshToken(refreshToken, user.id);
+    const result = await revokeRefreshTokenByHash(refreshToken, user.id);
 
     if(result.count === 0)
         throw new AppError('Refresh token not found or already revoked', StatusCodes.NOT_FOUND);
@@ -277,29 +276,11 @@ export const refreshToken = catchAsync(async (request, response) => {
         throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST);
     }
 
-    const storedToken = await getRefreshToken(refreshToken);
+    const tokens = await rotateRefreshToken(refreshToken);
 
-    if(!storedToken || storedToken.isRevoked){
-        logger.warn("Invalid Refresh Token", {user: maskEmail(storedToken.user.email), action: AUTH_ACTIONS.TOKEN_INVALID});
-        throw new AppError("Invalid Refresh Token", StatusCodes.UNAUTHORIZED)
-    }
-
-    if(storedToken.expiresAt < new Date()){
-        await deleteRefreshToken(storedToken);
-        logger.warn("Refresh Token Expired", {user: maskEmail(storedToken.user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
-        throw new AppError("Refresh Token Expired", StatusCodes.UNAUTHORIZED);
-    }
-
-    // generate new tokens
-    const tokens = generateTokens(storedToken.user.id, storedToken.user.email);
-
-    await revokeRefreshToken(storedToken.token, storedToken.user.id);
-
-    await createRefreshToken(tokens.refreshToken, storedToken.user.id, request.ip);
-
-    logger.info('Token refreshed', { 
-        userId: storedToken.user.id,
-        action: AUTH_ACTIONS.TOKEN_REFRESHED 
+    logger.info('Token refreshed', {
+        userId: tokens.userId,
+        action: AUTH_ACTIONS.TOKEN_REFRESHED
     });
 
     response.status(StatusCodes.OK).json({

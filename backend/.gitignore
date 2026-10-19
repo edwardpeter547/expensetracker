@@ -20,6 +20,7 @@ src/environment/
 
 # Prisma generated client (should not be committed)
 src/generated/prisma
+src/generated/
 src/prisma/generated/
 src/prisma/migrations/  # Consider committing migrations instead
 

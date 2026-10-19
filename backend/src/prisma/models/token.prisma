@@ -1,6 +1,7 @@
 model RefreshToken {
     id              String              @id @default(cuid())
     token           String              @unique
+    familyId        String              @map("family_id")
     userId          Int
     user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
     // Audit fields
@@ -11,6 +12,7 @@ model RefreshToken {
 
     @@index([token])
     @@index([userId])
+    @@index([familyId])
     @@map("refresh_token")
 }
 
