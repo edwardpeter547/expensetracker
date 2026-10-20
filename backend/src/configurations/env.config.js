@@ -31,6 +31,7 @@ const Config = {
     nodeEnv: process.env.NODE_ENV || 'development',
     apiVersion: process.env.API_VERSION || 'v1',
     clientUrl: process.env.CLIENT_URL || '*',
+    enableApiDocs: process.env.ENABLE_API_DOCS === 'true',
 
     //Database Environment Variables
     databaseUrl: process.env.DATABASE_URL,

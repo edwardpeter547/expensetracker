@@ -32,6 +32,16 @@ import catchAsync from '../utils/catchAsync.js';
 import { generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
 
 
+/**
+ * Register a new account and issue an access/refresh token pair.
+ *
+ * Creates an inactive user, persists a hashed refresh token, queues a
+ * verification email, and returns the safe user projection plus tokens.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const register = catchAsync(async (request, response) => {
 
     const {email, username, password, firstName, lastName} = request.body;
@@ -65,6 +75,13 @@ export const register = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Verify an email-verification token and activate the user.
+ *
+ * @param {import('express').Request} request Express request with `query.token`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const verifyEmail = catchAsync(async (request, response) => {
 
     const { token } = request.query;
@@ -97,6 +114,13 @@ export const verifyEmail = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Resend the email-verification link for an unverified account.
+ *
+ * @param {import('express').Request} request Express request with `body.email`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const resendVerification = catchAsync(async (request, response) => {
     const { email } = request.body;
     const user = await getSafeUser({email});
@@ -126,6 +150,16 @@ export const resendVerification = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Authenticate an email/password pair and issue a new token pair.
+ *
+ * Returns 401 for an unknown email, 403 for a wrong password or deactivated
+ * account, and otherwise 200 with the sanitized user and tokens.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const login = catchAsync(async (request, response) => {
 
     const {email, password} = request.body;
@@ -176,6 +210,14 @@ export const login = catchAsync(async (request, response) => {
 
 });
 
+/**
+ * Change a password using a verified reset code, revoking all sessions.
+ *
+ * @param {import('express').Request} request Express request with `code`,
+ *   `email`, and `password`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const changePassword = catchAsync(async (request, response) => {
     const {code, email, password} = request.body;
     const user = await getUser({email});
@@ -198,6 +240,14 @@ export const changePassword = catchAsync(async (request, response) => {
 
 });
 
+/**
+ * Verify a password-reset code for an email address.
+ *
+ * @param {import('express').Request} request Express request with `code` and
+ *   `email`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const verifyToken = catchAsync(async (request, response) => {
 
     const {code, email } = request.body;
@@ -219,6 +269,13 @@ export const verifyToken = catchAsync(async (request, response) => {
 
 });
 
+/**
+ * Request a password-reset code for an email address.
+ *
+ * @param {import('express').Request} request Express request with `body.email`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const forgotPassword = catchAsync(async (request, response) => {
     const { email } = request.body;
     const user = await getSafeUser({email});
@@ -273,6 +330,17 @@ export const logout = catchAsync(async (request, response) => {
     })
 })
 
+/**
+ * Rotate a refresh token and return a new token pair.
+ *
+ * Delegates to `rotateRefreshToken`, which hashes the token, enforces atomic
+ * rotation, and revokes the family on replay.
+ *
+ * @param {import('express').Request} request Express request with
+ *   `body.refreshToken`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const refreshToken = catchAsync(async (request, response) => {
 
     const { refreshToken } = request.body;

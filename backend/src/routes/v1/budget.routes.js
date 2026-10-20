@@ -4,6 +4,10 @@ import { authenticate } from '../../middleware/auth.middleware.js';
 import { validate, validateParams } from '../../middleware/validation.middleware.js';
 import { budgetIdSchema, createBudgetSchema, updateBudgetSchema } from '../../validations/budget.validation.js';
 
+/**
+ * Budget routes mounted under `/api/v1/budgets` (authenticated).
+ */
+
 const budgetRoutes  = express.Router();
 
 budgetRoutes.use(authenticate);

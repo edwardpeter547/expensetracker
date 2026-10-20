@@ -5,6 +5,9 @@ import { getDirectory } from '../utils/helpers.js';
 import Config from './env.config.js';
 import { APPLICATION_MODE } from '../constants/audit.actions.js';
 
+/**
+ * Configure and export the shared `i18n` instance for request translation.
+ */
 
 // Configure i18n
 i18n.configure({

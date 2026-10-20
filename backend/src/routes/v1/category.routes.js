@@ -4,6 +4,9 @@ import { authenticate } from '../../middleware/auth.middleware.js';
 import { validate, validateParams } from '../../middleware/validation.middleware.js';
 import { categoryIdSchema, createCategorySchema, updateCategorySchema } from '../../validations/budget.validation.js';
 
+/**
+ * Category routes mounted under `/api/v1/categories` (authenticated).
+ */
 
 const categoryRoutes = express.Router();
 

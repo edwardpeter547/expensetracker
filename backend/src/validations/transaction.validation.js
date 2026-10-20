@@ -62,6 +62,9 @@ export const bulkCreateSchema = Joi.object({
 })
 
 
+/**
+ * Validation schema for a transaction id path parameter.
+ */
 export const transactionIdSchema = Joi.object({
     id: Joi.string().required()
 })

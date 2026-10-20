@@ -11,6 +11,13 @@ import catchAsync from "../utils/catchAsync.js";
 import { parseDate } from "../utils/helpers.js";
 
 
+/**
+ * List the authenticated user's transactions.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getTransactions = catchAsync(async (request, response) => {
     const userId = request.user?.id;
     const transactions = await getTransactionsbyUser(userId);
@@ -24,6 +31,13 @@ export const getTransactions = catchAsync(async (request, response) => {
     });
 });
 
+/**
+ * Fetch a single transaction scoped to the authenticated owner.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getTransaction = catchAsync(async (request, response) => {
     const { id } = request.params;
     const userId = request.user?.id;
@@ -43,6 +57,13 @@ export const getTransaction = catchAsync(async (request, response) => {
 
 });
 
+/**
+ * Create a transaction for the authenticated user.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const createTransaction = catchAsync(async (request, response) => {
 
     const {amount, type, category, description, recieptUrl, date, location} = request.body;
@@ -72,6 +93,13 @@ export const createTransaction = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Delete an owned transaction; a non-owned record yields a Prisma P2025.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const deleteTransaction = catchAsync(async (request, response) => {
     const {id} = request.params;
     const userId = request.user?.id;
@@ -85,6 +113,13 @@ export const deleteTransaction = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Update an owned transaction; the mutation is constrained by `{id, userId}`.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const updateTransaction = catchAsync(async (request, response) => {
     const { id } = request.params;
     const userId = request.user?.id;

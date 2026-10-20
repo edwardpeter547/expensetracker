@@ -42,6 +42,19 @@ import logger from '../configurations/logger.config.js';
 import { StatusCodes } from 'http-status-codes';
 
 
+/**
+ * Central error handler that maps operational and framework errors to the
+ * standard `{ success, status, message, errors }` error envelope.
+ *
+ * Prisma `P2025`/`P2002` and JWT errors are translated to stable HTTP codes;
+ * the stack is included only in development.
+ *
+ * @param {Error|AppError} appError The thrown error.
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @param {import('express').NextFunction} next Express next callback.
+ * @returns {void}
+ */
 export const errorHandler = (appError, request, response, next) => {
 
     let normalizedError = appError instanceof AppError

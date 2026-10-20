@@ -32,6 +32,39 @@ make test-backend               # same as backend npm test
 - Use descriptive test names and cover the failure paths, not only happy paths.
 - Keep unit tests pure (no live database); for anything requiring the DB, use a setup hook like `backend/scripts/setup.js` and the reset helpers in `backend/scripts/prepare.db.js`.
 
+## Shared test fixtures
+
+Reuse the following factory conventions instead of duplicating per-suite
+helpers. These are the target contract for a future consolidation PR; they are
+not yet implemented as shared modules.
+
+- `createTestUser(client, overrides)` — unique `crypto.randomUUID()` email and
+  username, a random password hashed with bcrypt cost 12, safe defaults, and
+  optional Prisma client/transaction injection.
+- `createAuthToken(user, options)` — sign a short-lived bearer JWT.
+- `withTestDatabase(adminUrl, callback)` — guard `RUN_DB_INTEGRATION`, reject
+  non-local `TEST_DATABASE_URL`, create a uniquely named database, run
+  `prisma db push`, and drop only what it created on teardown.
+- `makeAuthServiceMock()` / `makeResponse()` — shared Jest mock factories for
+  controller tests.
+
+Do not add new seeding helpers without first checking for an existing factory.
+
+## Database integration safety
+
+Database integration tests are gated behind `RUN_DB_INTEGRATION=1` and require
+`TEST_DATABASE_URL` to resolve to localhost. The suite treats that URL as an
+administrative connection, creates its own uniquely named databases, and drops
+only those it created. It must never run against development, staging, or
+production databases.
+
+## Regression expectations
+
+Add or update tests alongside behavior changes for authentication, token
+refresh, logout, resource ownership, validation failures, financial
+calculations, error responses, and API contract changes. Route-contract
+changes must be reflected in `backend/openapi/openapi.yaml` in the same change.
+
 ## Critical financial workflow tests (recommended, not yet present)
 
 Add these before shipping paid features. None of these currently exist; do not install or configure a new framework.

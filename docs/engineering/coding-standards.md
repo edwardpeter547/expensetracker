@@ -19,6 +19,50 @@ These standards describe how code is written in this repository today and how it
 - Keep documentation synchronized with the implementation.
 - Review documentation compliance before declaring a task complete.
 
+### Object-oriented design and SOLID
+
+The backend uses plain named-function modules, not classes, except where
+stateful behavior genuinely benefits (for example, `EmailService` and
+`EmailTemplateService`). SOLID is guidance, not a mandate to create classes.
+
+- **Single responsibility:** routes declare intent, controllers translate HTTP
+  to service calls, services own business rules and persistence, and Prisma is
+  confined to services.
+- **Open/closed:** extend behavior through small composable units instead of
+  editing unrelated modules.
+- **Liskov substitution:** apply only where polymorphism or interchangeable
+  implementations actually exist; do not add inheritance to demonstrate LSP.
+- **Interface segregation:** keep module contracts focused and avoid exposing
+  unrelated responsibilities.
+- **Dependency inversion:** depend on stable boundaries where it aids
+  testability (for example, accepting a Prisma transaction client). Do not
+  introduce a dependency-injection container.
+- **Composition over inheritance:** prefer composed functions and plain
+  objects; use a class only when mutable state and identity are central to the
+  behavior.
+
+### DRY, KISS, and YAGNI
+
+- Inspect existing utilities, validators, middleware, and test helpers before
+  writing a new one. Reuse is required for genuine shared behavior; do not
+  abstract coincidental similarity.
+- Prefer straightforward code over wrappers, indirection, and overly generic
+  utilities.
+- Do not build speculative functionality or abstractions for hypothetical
+  integrations, and never document proposed capabilities as implemented.
+
+### API documentation
+
+- Every implemented Express route must be represented in
+  `backend/openapi/openapi.yaml` (OpenAPI 3.1) with a unique `operationId`.
+- Validate the specification with `npm run docs:validate`; the route-coverage
+  test (`backend/src/docs/__tests__/apiDocs.test.js`) fails when implemented
+  routes and documented operations drift.
+- Document actual behavior, including known defects and contract
+  inconsistencies, rather than an idealized contract.
+- Serve the specification and Swagger UI only through the gated
+  `/api/openapi.json` and `/api/docs` endpoints (see `ENABLE_API_DOCS`).
+
 ### Naming
 
 **Existing**

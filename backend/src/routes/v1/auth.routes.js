@@ -23,6 +23,9 @@ import {
     verificationTokenSchema
 } from '../../validations/auth.validation.js';
 
+/**
+ * Authentication routes mounted under `/api/v1/auth`.
+ */
 
 const authRoutes = express.Router();
 

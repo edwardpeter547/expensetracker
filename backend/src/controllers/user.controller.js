@@ -3,6 +3,16 @@ import { getUserSummary, userProfile } from "../services/profile.service.js";
 import catchAsync from "../utils/catchAsync.js";
 
 
+/**
+ * Return the authenticated user's profile.
+ *
+ * Note: the not-found branch references symbols that are not imported in this
+ * module; the success path is unaffected.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getProfile = catchAsync(async (request, response) => {
     
     const user = request.user;
@@ -24,6 +34,13 @@ export const getProfile = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Return the authenticated user's dashboard summary.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getDashboard = catchAsync(async (request, response) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -47,6 +64,16 @@ export const getDashboard = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Update the authenticated user's profile.
+ *
+ * Currently an unimplemented placeholder: the handler body is commented out
+ * and the endpoint sends no response. No validation is applied on the route.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const updateProfile = catchAsync(async (request, response) => {
 
 //     export const updateProfile = catchAsync(async (request, response) => {

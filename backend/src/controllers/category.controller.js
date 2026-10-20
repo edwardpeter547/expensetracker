@@ -18,6 +18,13 @@ import catchAsync from "../utils/catchAsync.js";
 import { maskEmail } from "../utils/helpers.js";
 
 
+/**
+ * List system categories plus the authenticated user's categories.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getCategories = catchAsync(async (request, response) => {
     const userId = request.user?.id;
 
@@ -30,6 +37,13 @@ export const getCategories = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Fetch a single owned or system category.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getCategory = catchAsync(async (request, response) => {
     const categoryId = request.params?.id;
     const userId = request.user?.id;
@@ -49,6 +63,13 @@ export const getCategory = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Create a user category.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const createCategory = catchAsync(async (request, response) => {
     console.log("I never made it to this point");
     const {name, icon} = request.body;
@@ -77,6 +98,13 @@ export const createCategory = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Update an owned category; the mutation is constrained by `{id, userId}`.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const updateCategory = catchAsync(async (request, response) => {
     const {name, icon } = request.body;
     const categoryId  = request.params?.id;
@@ -114,6 +142,13 @@ export const updateCategory = catchAsync(async (request, response) => {
 });
 
 
+/**
+ * Delete an owned category that is not in use by the owner.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const deleteCategory = catchAsync(async (request, response) => {
     const categoryId = request.params?.id;
     const userId = request.user?.id;

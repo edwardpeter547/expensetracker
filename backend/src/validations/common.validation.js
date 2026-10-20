@@ -1,10 +1,53 @@
 import Joi from "joi";
 
+/**
+ * Build a UUID id schema.
+ *
+ * Note: currently returns a function reference rather than an invoked schema;
+ * this builder is unused.
+ *
+ * @returns {*} A Joi schema value.
+ */
 export const id = () => Joi.string().uuid().required;
+
+/**
+ * Build a required email schema.
+ *
+ * @returns {import('joi').StringSchema} A required email string schema.
+ */
 export const email = () => Joi.string().email().required();
+
+/**
+ * Build a password string schema with length bounds.
+ *
+ * @param {number} [min=8] Minimum length.
+ * @param {number} [max=128] Maximum length.
+ * @returns {import('joi').StringSchema} A required password string schema.
+ */
 export const password = (min = 8, max = 128) => Joi.string().min(min).max(max).required();
+
+/**
+ * Build an alphanumeric one-time-code schema.
+ *
+ * @param {number} [minLength=6] Exact code length.
+ * @returns {import('joi').StringSchema} A required alphanumeric code schema.
+ */
 export const otpToken = (minLength = 6) => Joi.string().alphanum().length(minLength).required();
+
+/**
+ * Build an optional free-text schema with length bounds.
+ *
+ * @param {number} [min=1] Minimum length.
+ * @param {number} [max=50] Maximum length.
+ * @returns {import('joi').StringSchema} An optional string schema.
+ */
 export const text = (min = 1, max = 50) => Joi.string().min(min).max(max);
+
+/**
+ * Build a required generic token string schema.
+ *
+ * @returns {import('joi').StringSchema} A required string schema.
+ */
 export const token = () => Joi.string().required();
 
 /**
