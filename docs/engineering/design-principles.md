@@ -22,6 +22,23 @@ These principles guide future development without imposing a rewrite or unnecess
 - Shared code goes down into `utils`, `services`, or `hooks`, never sideways between sibling controllers.
 - Mobile components should not import directly from other screens.
 
+## SOLID in practice
+
+SOLID principles are applied pragmatically in a functional JavaScript codebase:
+single responsibility maps to the route/controller/service split; open/closed
+and dependency inversion favor composing small functions and accepting a Prisma
+transaction client where atomicity matters; Liskov substitution applies only
+where interchangeable implementations exist; interface segregation keeps module
+contracts narrow. None of these require classes or a dependency-injection
+framework.
+
+## Composition over inheritance
+
+Prefer plain functions and small modules over classes. A class is justified
+only when mutable state and identity are central (as in the existing email
+services). Do not convert working functions into classes to satisfy object-
+oriented terminology.
+
 ## Boundaries and contracts
 - Treat the response envelope and route contracts as stable; changing them requires an ADR (see `docs/decisions/README.md`).
 - Data validation happens at the API boundary (Joi) and again at the client UI; backend remains authoritative.

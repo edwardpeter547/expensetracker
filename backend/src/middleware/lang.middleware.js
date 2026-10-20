@@ -6,6 +6,14 @@ import { getAppLocale } from "../utils/helpers.js";
 
 
 
+/**
+ * Set the request locale from the `Accept-Language` header.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @param {import('express').NextFunction} next Express next callback.
+ * @returns {void}
+ */
 export const langHandler = (request, response, next) => {
 
     const lang = getAppLocale(request);

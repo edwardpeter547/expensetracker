@@ -7,12 +7,20 @@ import { APPLICATION_MODE } from '../constants/audit.actions.js';
 import i18n from '../configurations/i18n.config.js';
 
 
+/**
+ * Send transactional email through a lazily created nodemailer transporter.
+ */
 class EmailService {
 
     constructor(){
         this.transporter = null;
     }
 
+    /**
+     * Lazily create and cache the nodemailer transporter.
+     *
+     * @returns {Promise<object>} The configured transporter.
+     */
     async _getTransporter(){
         if(!this.transporter){
             this.transporter = await createTransporter();
@@ -20,6 +28,12 @@ class EmailService {
         return this.transporter;
     }
 
+    /**
+     * Mask an email address for log output.
+     *
+     * @param {string} emailAddress The address to mask.
+     * @returns {string} The masked address.
+     */
     _maskEmail(emailAddress){
         if(!emailAddress || !emailAddress.includes('@')) return emailAddress;
 
@@ -28,6 +42,18 @@ class EmailService {
         return `${local.slice(0, 2)}***${local.slice(-2)}@${domain}`;
     }
 
+    /**
+     * Render a template and send one email.
+     *
+     * @param {object} options Send options.
+     * @param {string} options.to Recipient address.
+     * @param {string} options.subject Email subject.
+     * @param {string} options.template Template name.
+     * @param {object} options.data Template variables.
+     * @param {string} [options.locale] Render locale.
+     * @param {object[]} [options.attachments] Attachments.
+     * @returns {Promise<object>} The nodemailer send result.
+     */
     async _send({to, subject, template, data, locale=Config.defaultLocale, attachments=[]}){
         try{
             const transporter = await this._getTransporter();
@@ -69,6 +95,13 @@ class EmailService {
         }
     }
 
+    /**
+     * Send the registration welcome/verification email.
+     *
+     * @param {object} user The recipient user.
+     * @param {string} token The raw verification token.
+     * @returns {Promise<object>} The send result.
+     */
     async sendRegistrationComplete(user, token){
 
         const locale = user.language || Config.defaultLocale;
@@ -87,6 +120,12 @@ class EmailService {
         });
     }
 
+    /**
+     * Send the verification-complete confirmation email.
+     *
+     * @param {object} user The recipient user.
+     * @returns {Promise<object>} The send result.
+     */
     async sendVerificationConfirmation(user){
         const locale = user.language || Config.defaultLocale;
 
@@ -102,6 +141,13 @@ class EmailService {
         });
     }
 
+    /**
+     * Send a new email-verification link.
+     *
+     * @param {object} user The recipient user.
+     * @param {string} token The raw verification token.
+     * @returns {Promise<object>} The send result.
+     */
     async resendEmailVerificationLink(user, token){
         const locale = user.language || Config.defaultLocale;
         return this._send({
@@ -119,6 +165,13 @@ class EmailService {
         });
     }
 
+    /**
+     * Send the password-reset code email.
+     *
+     * @param {object} user The recipient user.
+     * @param {string} resetPasswordCode The raw reset code.
+     * @returns {Promise<object>} The send result.
+     */
     async sendPasswordResetCode(user, resetPasswordCode){
         const locale = user.language || Config.defaultLocale;
         console.log(`This is the locale: ${user.locale}`);

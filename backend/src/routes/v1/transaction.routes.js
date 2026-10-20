@@ -10,6 +10,9 @@ import { authenticate } from '../../middleware/auth.middleware.js';
 import { validate, validateParams } from '../../middleware/validation.middleware.js';
 import { createTransactionSchema, transactionIdSchema, updateTransactionSchema } from '../../validations/transaction.validation.js';
 
+/**
+ * Transaction routes mounted under `/api/v1/transactions` (authenticated).
+ */
 
 const transactionRoutes = express.Router()
 

@@ -1,4 +1,11 @@
 
+/**
+ * Shared application constants.
+ *
+ * Includes calendar boundary values and the refresh-token security constants
+ * used by token hashing, rotation, and replay detection.
+ */
+
 export const LAST_DAY_OF_MONTH = 31;
 export const FIRST_DAY_OF_MONTH = 1;
 export const FIRST_MONTH_OF_YEAR = 0;

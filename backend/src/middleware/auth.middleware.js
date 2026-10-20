@@ -5,6 +5,18 @@ import { userProfile } from '../services/profile.service.js';
 import AppError from '../utils/appError.js';
 
 
+/**
+ * Verify a bearer access token and attach the authenticated user.
+ *
+ * Decodes and verifies the JWT, loads a safe user projection, and rejects
+ * missing, invalid, expired, or inactive users with a 401. On success
+ * `request.user` is populated from `userProfile` (no password field).
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @param {import('express').NextFunction} next Express next callback.
+ * @returns {Promise<void>}
+ */
 export const authenticate = async (request, response, next) => {
     try {
 

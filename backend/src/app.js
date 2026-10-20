@@ -21,6 +21,7 @@ import path from 'path';
 import Config from './configurations/env.config.js';
 import i18n from './configurations/i18n.config.js';
 import { morganMiddleware } from './configurations/morgan.config.js';
+import { registerApiDocs } from './docs/apiDocs.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { langHandler } from './middleware/lang.middleware.js';
 import router from './routes/index.js';
@@ -56,6 +57,7 @@ const limiter = rateLimit({
 app.use('/static', express.static(path.join(getDirectory(import.meta.url), '../public')));
 app.use('/api', limiter);
 app.use('/api/v1', router);
+registerApiDocs(app);
 
 // 404 handler
 app.use(notFoundHandler);

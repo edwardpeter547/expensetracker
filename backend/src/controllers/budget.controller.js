@@ -7,6 +7,13 @@ import catchAsync from "../utils/catchAsync.js";
 import { maskEmail } from "../utils/helpers.js";
 
 
+/**
+ * List the authenticated user's budgets with computed spending.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getBudgets = catchAsync(async (request, response) => {
     const userId = request.user?.id; 
     const budgets = await getBudgetList(userId);
@@ -24,6 +31,13 @@ export const getBudgets = catchAsync(async (request, response) => {
 })
 
 
+/**
+ * Fetch a single budget scoped to the authenticated owner.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const getBudget = catchAsync(async (request, response) => {
     const userId = request.user?.id;
     const budgetId = request.params?.id;
@@ -41,6 +55,13 @@ export const getBudget = catchAsync(async (request, response) => {
 })
 
 
+/**
+ * Create a budget for the authenticated user.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const createBudget = catchAsync(async (request, response) => {
     const { amount, categoryId, period = "MONTHLY", startDate, endDate, alertThreshold = 80 } = request.body;
     const userId = request.user?.id;
@@ -76,6 +97,13 @@ export const createBudget = catchAsync(async (request, response) => {
 })
 
 
+/**
+ * Update an owned budget; the mutation is constrained by `{id, userId}`.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const updateBudget = catchAsync(async (request, response) => {
     const { amount, period, startDate, endDate, alertThreshold, isActive} = request.body;
     const userId = request.user?.id;
@@ -108,6 +136,13 @@ export const updateBudget = catchAsync(async (request, response) => {
 })
 
 
+/**
+ * Soft-delete an owned budget by marking it inactive.
+ *
+ * @param {import('express').Request} request Express request with `params.id`.
+ * @param {import('express').Response} response Express response.
+ * @returns {Promise<void>}
+ */
 export const deleteBudget = catchAsync(async (request, response) => {
     const userId = request.user?.id;
     const budgetId = request.params?.id;

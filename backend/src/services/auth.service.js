@@ -9,6 +9,13 @@ import AppError from "../utils/appError.js";
 import { generateTokens } from "../utils/helpers.js";
 import { REFRESH_TOKEN_TTL_MS, REFRESH_TOKEN_PATTERN, REUSE_DETECTED } from "../constants/app.constants.js";
 
+/**
+ * Find an existing user by email or username.
+ *
+ * @param {string} email The email to check.
+ * @param {string} username The username to check.
+ * @returns {Promise<object|null>} A matching user or null.
+ */
 export const checkExistingUser = async (email, username) => {
     
     const existingUser = await prisma.user.findFirst({
@@ -18,6 +25,18 @@ export const checkExistingUser = async (email, username) => {
     return existingUser;
 }
 
+/**
+ * Create an inactive user with a safe projection (no password in the result).
+ *
+ * @param {string} email The user's email.
+ * @param {string} username The user's username.
+ * @param {string} password The plaintext password to hash.
+ * @param {string} firstname The user's first name.
+ * @param {string} lastname The user's last name.
+ * @param {string} language The preferred locale.
+ * @returns {Promise<object>} The safe created-user projection.
+ * @throws {AppError} If the email or username already exists.
+ */
 export const createUser = async (email, username, password, firstname, lastname, language) => {
 
     const isExistingUser = await checkExistingUser(email, username);
@@ -75,6 +94,12 @@ export const createRefreshToken = async (refreshToken, userId, ipAddress, family
     logger.info("Refresh Token generated", {userId: userId, action: AUTH_ACTIONS.REFRESH_TOKEN_CREATED});
 }
 
+/**
+ * Load a refresh token by hashing the presented raw token.
+ *
+ * @param {string} token The raw refresh token.
+ * @returns {Promise<object|null>} The token record with a safe user, or null.
+ */
 export const getRefreshToken = async (token) => {
     return await prisma.refreshToken.findUnique({
         where: { token: hashToken(token) },
@@ -101,6 +126,14 @@ export const revokeRefreshTokenByHash = async (refreshToken, userId) => {
     });
 }
 
+/**
+ * Revoke every active token in a refresh-token family.
+ *
+ * Used by replay detection so a reused token invalidates the whole session.
+ *
+ * @param {string} familyId The token family identifier.
+ * @returns {Promise<{count: number}>} The number of tokens revoked.
+ */
 export const revokeTokenFamily = async (familyId) => {
     return await prisma.refreshToken.updateMany({
         where: { familyId, isRevoked: false },
@@ -108,6 +141,12 @@ export const revokeTokenFamily = async (familyId) => {
     });
 }
 
+/**
+ * Revoke every active refresh token for a user.
+ *
+ * @param {number} userId The user whose sessions should be revoked.
+ * @returns {Promise<{count: number}>} The number of tokens revoked.
+ */
 export const revokeAllRefreshTokens = async (userId) => {
     return await prisma.refreshToken.updateMany({
         where: { userId, isRevoked: false },
@@ -191,6 +230,17 @@ export const rotateRefreshToken = async (presentedToken) => {
     };
 }
 
+/**
+ * Record a login attempt for audit and lockout tracking.
+ *
+ * @param {object} params Attempt details.
+ * @param {string} [params.ipAddress] The request IP.
+ * @param {string} [params.userAgent] The request user agent.
+ * @param {string} params.email The attempted email.
+ * @param {boolean} params.loginAttemptStatus Whether the attempt succeeded.
+ * @param {number|null} [params.userId=null] The resolved user id, if any.
+ * @returns {Promise<void>}
+ */
 export const createLoginAttempt = async ({ipAddress, userAgent, email, loginAttemptStatus, userId = null}) => {
 
     await prisma.loginAttempt.create({
@@ -212,6 +262,14 @@ export const createLoginAttempt = async ({ipAddress, userAgent, email, loginAtte
     );
 }
 
+/**
+ * Persist an email-verification token for a user.
+ *
+ * @param {object} user The user to verify.
+ * @param {string} token The raw verification token.
+ * @param {object} [tx=prisma] An optional Prisma transaction client.
+ * @returns {Promise<void>}
+ */
 export const createVerificationToken = async (user, token, tx = prisma) => {
     await tx.verificationToken.create({
         data: {
@@ -222,6 +280,14 @@ export const createVerificationToken = async (user, token, tx = prisma) => {
     });
 }
 
+/**
+ * Load a verification token with its safe user projection.
+ *
+ * The raw verification token is not returned in the result.
+ *
+ * @param {string} token The raw verification token.
+ * @returns {Promise<object|null>} The token record (id, expiresAt, user).
+ */
 export const getVerificationToken = async (token) => {
     return await prisma.verificationToken.findUnique({
         where: { token },
@@ -233,10 +299,23 @@ export const getVerificationToken = async (token) => {
     });
 }
 
+/**
+ * Delete a verification token by id.
+ *
+ * @param {string} tokenId The verification token id.
+ * @returns {Promise<void>}
+ */
 export const removeVerificationToken = async(tokenId) => {
     await prisma.verificationToken.delete({where: {id: tokenId}});
 }
 
+/**
+ * Mark a user verified and consume the verification token atomically.
+ *
+ * @param {string} verificationId The verification token id.
+ * @param {number} userId The user to activate.
+ * @returns {Promise<void>}
+ */
 export const confirmVerification = async(verificationId, userId) => {
     
     await prisma.$transaction(async (tx) => {
@@ -251,6 +330,13 @@ export const confirmVerification = async(verificationId, userId) => {
     });
 }
 
+/**
+ * Reset verification state and issue a new verification token atomically.
+ *
+ * @param {object} user The user to re-verify.
+ * @param {string} verificationToken The new raw verification token.
+ * @returns {Promise<void>}
+ */
 export const saveVerificationToken = async(user, verificationToken) => {
     await prisma.$transaction(async (tx) => {
         await tx.verificationToken.deleteMany({
@@ -268,6 +354,14 @@ export const saveVerificationToken = async(user, verificationToken) => {
     });
 }
 
+/**
+ * Persist a password-reset token for a user.
+ *
+ * @param {object} user The user requesting the reset.
+ * @param {string} passwordResetToken The raw reset token.
+ * @param {string} [ipAddress] The request IP.
+ * @returns {Promise<void>}
+ */
 export const savePasswordResetToken = async (user, passwordResetToken, ipAddress) => {
     await prisma.passwordResetToken.create({
         data: {
@@ -279,6 +373,14 @@ export const savePasswordResetToken = async (user, passwordResetToken, ipAddress
     });
 }
 
+/**
+ * Load a full user row by arbitrary filters, attaching an internal `_meta`
+ * marker for later `refreshRecord` use.
+ *
+ * @param {object} params Prisma `where` filters.
+ * @returns {Promise<object|null>} The full user row (including password), or
+ *   null. Callers must sanitize before returning it to a client.
+ */
 export const getUser = async(params) => {
     const user =  await prisma.user.findFirst({
         where: {...params}
@@ -313,6 +415,12 @@ export const getSafeUser = async (params) => {
     return user || null;
 }
 
+/**
+ * Load a user's safe public profile by filters.
+ *
+ * @param {object} params Prisma `where` filters.
+ * @returns {Promise<object|null>} The safe user projection or null.
+ */
 export const getProfile = async(params) => {
     const user = await prisma.user.findFirst({
         where: {...params},
@@ -340,6 +448,14 @@ export const getProfile = async(params) => {
     return user;
 }
 
+/**
+ * Verify an unexpired password-reset code for a user.
+ *
+ * @param {string} code The presented reset code.
+ * @param {object} user The user attempting the reset.
+ * @returns {Promise<{valid: boolean, code: object|null}>} Validity and the
+ *   matching token record, if any.
+ */
 export const verifyResetPasswordToken = async (code, user) => {
 
     const tokenData = await prisma.passwordResetToken.findFirst({
@@ -368,6 +484,14 @@ const getCurrentPaswordHash = async (email) => {
     return user.password;
 }
 
+/**
+ * Hash and persist a new password, record history, and revoke all sessions
+ * atomically.
+ *
+ * @param {object} user The user whose password changes.
+ * @param {string} password The new plaintext password.
+ * @returns {Promise<void>}
+ */
 export const updateUserPassword = async (user, password) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -396,6 +520,12 @@ export const updateUserPassword = async (user, password) => {
     });
 }
 
+/**
+ * Update a user's last-login timestamp.
+ *
+ * @param {object} user The user to update.
+ * @returns {Promise<void>}
+ */
 export const updateLastLogin = async (user) => {
     await prisma.user.update({
         where: {email: user.email, id: user.id},
@@ -404,6 +534,13 @@ export const updateLastLogin = async (user) => {
 }
 
 
+/**
+ * Reload a user by email (currently returns null; the returned body is
+ * commented out).
+ *
+ * @param {object} user A user object with an `email`.
+ * @returns {Promise<null>}
+ */
 export const sanitizeUser = async (user) => {
     const refreshedUser = await getUser(user.email);
     if(!refreshedUser) return null;
@@ -418,6 +555,13 @@ export const sanitizeUser = async (user) => {
 }
 
 
+/**
+ * Re-run the Prisma operation captured in a `_meta` marker.
+ *
+ * @param {object} _meta The Prisma model, method, and arguments to replay.
+ * @returns {Promise<object>} The re-fetched record.
+ * @throws {AppError} If `_meta` is missing a model or method.
+ */
 export const refreshRecord = async (_meta) => {
     if(!_meta || !_meta.model || !_meta.method)
         throw new AppError('Invalid _meta: model and method are required');
@@ -430,6 +574,13 @@ export const refreshRecord = async (_meta) => {
 }
 
 
+/**
+ * Copy an object while omitting the keys in the exclusion list.
+ *
+ * @param {object} obj The source object.
+ * @param {object} excludeList A map whose keys should be omitted.
+ * @returns {object} The sanitized shallow copy.
+ */
 const sanitizeObject = (obj, excludeList) => {
     const sanitized = {};
     for (const [key, value] of Object.entries(obj)){
@@ -440,10 +591,24 @@ const sanitizeObject = (obj, excludeList) => {
     return sanitized;
 }
 
+/**
+ * Sanitize every object in an array.
+ *
+ * @param {object[]} arr The source array.
+ * @param {object} excludeList A map whose keys should be omitted.
+ * @returns {object[]} The sanitized copies.
+ */
 const sanitizeArray = (arr, excludeList) => {
     return arr.map(item => sanitizeObject(item, excludeList));
 }
 
+/**
+ * Remove excluded fields from a value before serializing it to a client.
+ *
+ * @param {object|object[]|null} data The value to sanitize.
+ * @param {object} excludeList A map whose keys should be omitted.
+ * @returns {object|object[]|null} The sanitized value.
+ */
 export const sanitizeResponse = (data, excludeList) => {
     if(!data) return null;
     

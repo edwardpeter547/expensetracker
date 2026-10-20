@@ -1,0 +1,1011 @@
+openapi: 3.1.0
+info:
+  title: ExpenseTracker API
+  version: 1.0.0
+  description: |
+    Public contract for the implemented ExpenseTracker backend. Generated from
+    the actual route, Joi, controller, and service behavior; it does not invent
+    capabilities. Endpoints are versioned under `/api/v1`.
+
+    Known implementation discrepancies are noted inline and are intentionally
+    documented rather than silently corrected:
+    - Transaction create returns `error` (singular) instead of `errors`.
+    - Category responses omit the `errors` field.
+    - The transaction receipt request field is spelled `recieptUrl`.
+    - `PUT /api/v1/user/profile` is an unimplemented stub.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: Auth
+    description: Registration, verification, login, password recovery, token refresh, and logout.
+  - name: Transactions
+    description: User-scoped transaction CRUD.
+  - name: Categories
+    description: System and user category CRUD.
+  - name: Budgets
+    description: User-scoped budget CRUD and spending summaries.
+  - name: Users
+    description: Authenticated profile and dashboard.
+  - name: Health
+    description: Service liveness check.
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: API health check
+      security: []
+      responses:
+        "200":
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp, environment]
+                properties:
+                  status: { type: string }
+                  timestamp: { type: string, format: date-time }
+                  environment: { type: string }
+                  info: { type: string }
+  /api/v1/auth/register:
+    post:
+      operationId: register
+      tags: [Auth]
+      summary: Register a new account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email: { type: string, format: email }
+                username: { type: string, minLength: 3, maxLength: 30 }
+                password: { type: string, minLength: 8, maxLength: 100 }
+                firstName: { type: string, maxLength: 50 }
+                lastName: { type: string, maxLength: 50 }
+      responses:
+        "201":
+          description: Account created; an access/refresh token pair is issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenIssueEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          description: Email or username already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/verify-email:
+    get:
+      operationId: verifyEmail
+      tags: [Auth]
+      summary: Verify a registration email token
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Email verified; user activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/resend-verification:
+    post:
+      operationId: resendVerification
+      tags: [Auth]
+      summary: Resend the verification email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Verification link re-sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+        "400":
+          description: Email already verified or request invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Authenticate with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        "200":
+          description: Login succeeded; access/refresh token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenIssueEnvelope"
+        "401":
+          description: Unknown email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Wrong password or deactivated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [Auth]
+      summary: Request a password-reset code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Reset code sent (generic message for existing accounts)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [Auth]
+      summary: Verify a password-reset code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, email]
+              properties:
+                code: { type: string, minLength: 6, maxLength: 6 }
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Reset code accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+        "401":
+          description: Invalid reset code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [Auth]
+      summary: Change a password using a verified reset code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, email, password]
+              properties:
+                code: { type: string, minLength: 6, maxLength: 6 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8, maxLength: 100 }
+      responses:
+        "200":
+          description: Password changed; all sessions revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data: { type: "null" }
+                  errors: { type: "null" }
+        "401":
+          description: Expired reset token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/refresh-token:
+    post:
+      operationId: refreshToken
+      tags: [Auth]
+      summary: Rotate a refresh token
+      security: []
+      description: |
+        Presents an opaque refresh token and receives a new access/refresh
+        token pair. Refresh tokens are hashed at rest and rotated atomically;
+        reuse of a rotated token revokes the token family.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New token pair issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data, errors]
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/TokenPair"
+                  errors: { type: "null" }
+        "401":
+          description: Invalid, expired, revoked, or nonexistent token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      summary: Revoke the presented refresh-token session
+      description: |
+        Authenticated and idempotent. Revokes only the presented token owned by
+        the authenticated user. Access JWTs are not blacklisted and remain
+        valid until expiry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, minLength: 80, maxLength: 80 }
+      responses:
+        "200":
+          description: Logout succeeded (idempotent)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data, errors]
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/User"
+                  errors: { type: "null" }
+        "401":
+          description: Missing or invalid access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/transactions:
+    get:
+      operationId: listTransactions
+      tags: [Transactions]
+      summary: List the authenticated user's transactions
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Transaction"
+                  errors: { type: "null" }
+    post:
+      operationId: createTransaction
+      tags: [Transactions]
+      summary: Create a transaction for the authenticated user
+      description: |
+        Note: the implemented handler responds `200` (not `201`) and uses the
+        singular `error` field instead of `errors`. The returned record omits
+        `amount` and `transactionDate` because the service select does not
+        include them.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, type, category]
+              properties:
+                amount: { type: number, exclusiveMinimum: 0 }
+                type: { type: string, enum: [INCOME, EXPENSE] }
+                category: { type: string }
+                description: { type: string, maxLength: 500 }
+                date: { type: string, format: date-time }
+                recieptUrl: { type: string, format: uri }
+                location: { type: string }
+      responses:
+        "200":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      record:
+                        $ref: "#/components/schemas/Transaction"
+                  error: { type: "null" }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [Transactions]
+      summary: Get a single owned transaction
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Transaction detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: "#/components/schemas/Transaction"
+                  errors: { type: "null" }
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    put:
+      operationId: updateTransaction
+      tags: [Transactions]
+      summary: Update an owned transaction
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                amount: { type: number, exclusiveMinimum: 0 }
+                type: { type: string, enum: [INCOME, EXPENSE] }
+                category: { type: string }
+                description: { type: string, maxLength: 500 }
+                date: { type: string, format: date-time }
+                receiptUrl: { type: string, format: uri }
+                location: { type: string }
+      responses:
+        "200":
+          description: Transaction updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: "#/components/schemas/Transaction"
+                  errors: { type: "null" }
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      operationId: deleteTransaction
+      tags: [Transactions]
+      summary: Delete an owned transaction
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Transaction deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data: { type: "null" }
+                  errors: { type: "null" }
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/categories:
+    get:
+      operationId: listCategories
+      tags: [Categories]
+      summary: List system and user categories
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [Categories]
+      summary: Create a user category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 50 }
+                icon: { type: string, maxLength: 50 }
+                isSystem: { type: boolean, default: false }
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/Category"
+        "409":
+          description: Category name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/categories/{id}:
+    get:
+      operationId: getCategory
+      tags: [Categories]
+      summary: Get a single owned or system category
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Category detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/Category"
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    put:
+      operationId: updateCategory
+      tags: [Categories]
+      summary: Update an owned category
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name: { type: string, minLength: 1, maxLength: 50 }
+                icon: { type: string, maxLength: 50 }
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/Category"
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Name conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      operationId: deleteCategory
+      tags: [Categories]
+      summary: Delete an owned category
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204":
+          description: Category deleted
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Category is in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/budgets:
+    get:
+      operationId: listBudgets
+      tags: [Budgets]
+      summary: List the authenticated user's budgets with spending
+      responses:
+        "200":
+          description: Budget list with computed spending
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Budget"
+                  errors: { type: "null" }
+    post:
+      operationId: createBudget
+      tags: [Budgets]
+      summary: Create a budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, categoryId]
+              properties:
+                amount: { type: number, exclusiveMinimum: 0 }
+                categoryId: { type: string }
+                period: { type: string, enum: [WEEKLY, MONTHLY, YEARLY], default: MONTHLY }
+                startDate: { type: string, format: date-time }
+                endDate: { type: string, format: date-time }
+                alertThreshold: { type: integer, minimum: 1, maximum: 100, default: 80 }
+      responses:
+        "201":
+          description: Budget created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/Budget"
+                  errors: { type: "null" }
+        "409":
+          description: Budget already exists for category and period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/budgets/{id}:
+    get:
+      operationId: getBudget
+      tags: [Budgets]
+      summary: Get a single owned budget
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Budget detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/Budget"
+                  errors: { type: "null" }
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    put:
+      operationId: updateBudget
+      tags: [Budgets]
+      summary: Update an owned budget
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                amount: { type: number, exclusiveMinimum: 0 }
+                period: { type: string, enum: [WEEKLY, MONTHLY, YEARLY] }
+                startDate: { type: string, format: date-time }
+                endDate: { type: string, format: date-time }
+                alertThreshold: { type: integer, minimum: 1, maximum: 100 }
+                isActive: { type: boolean }
+      responses:
+        "200":
+          description: Budget updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    $ref: "#/components/schemas/Budget"
+                  errors: { type: "null" }
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      operationId: deleteBudget
+      tags: [Budgets]
+      summary: Soft-delete an owned budget
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204":
+          description: Budget deactivated
+        "404":
+          description: Not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/user/profile:
+    get:
+      operationId: getUserProfile
+      tags: [Users]
+      summary: Get the authenticated user's profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      profile:
+                        $ref: "#/components/schemas/User"
+                  errors: { type: "null" }
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateUserProfile
+      tags: [Users]
+      summary: Update the authenticated user's profile (unimplemented stub)
+      description: |
+        This route exists but its controller handler is a placeholder that
+        currently returns no response and applies no validation.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        default:
+          description: Placeholder handler; the endpoint currently returns no response.
+  /api/v1/user/dashboard:
+    get:
+      operationId: getUserDashboard
+      tags: [Users]
+      summary: Get the authenticated user's dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      balance: { type: number }
+                      totalIncome: { type: number }
+                      totalExpenses: { type: number }
+                      recentTransactions:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Transaction"
+                  errors: { type: "null" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    ValidationError:
+      description: Request failed Joi validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [success, status, message]
+      properties:
+        success: { type: boolean }
+        status: { type: integer }
+        message: { type: string }
+        errors: {}
+        stack: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        username: { type: string }
+        firstname: { type: string }
+        lastname: { type: string }
+        avatar: { type: [string, "null"] }
+        dateOfBirth: { type: [string, "null"], format: date-time }
+        mobileNumber: { type: [string, "null"] }
+        isActive: { type: boolean }
+        isEmailVerified: { type: boolean }
+        emailVerifiedAt: { type: [string, "null"], format: date-time }
+        isPhoneVerified: { type: boolean }
+        phoneVerifiedAt: { type: [string, "null"], format: date-time }
+        lastPasswordReset: { type: [string, "null"], format: date-time }
+        currency: { type: string }
+        timezone: { type: string }
+        language: { type: string }
+        theme: { type: string }
+        lastLoginAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+    TokenIssueEnvelope:
+      type: object
+      required: [success, message, data, errors]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/User"
+            accessToken: { type: string }
+            refreshToken: { type: string }
+        errors: { type: "null" }
+    UserEnvelope:
+      type: object
+      required: [success, message, data, errors]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/User"
+        errors: { type: "null" }
+    Transaction:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: integer }
+        amount: { type: number }
+        transType: { type: string, enum: [INCOME, EXPENSE] }
+        category: { type: string }
+        description: { type: [string, "null"] }
+        receiptUrl: { type: [string, "null"] }
+        location: { type: [string, "null"] }
+        transactionDate: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        user:
+          $ref: "#/components/schemas/User"
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        icon: { type: [string, "null"] }
+        isSystem: { type: boolean }
+        userId: { type: [integer, "null"] }
+    Budget:
+      type: object
+      properties:
+        id: { type: string }
+        amount: { type: number }
+        period: { type: string, enum: [WEEKLY, MONTHLY, YEARLY] }
+        startDate: { type: string, format: date-time }
+        endDate: { type: [string, "null"], format: date-time }
+        alertThreshold: { type: integer }
+        isActive: { type: boolean }
+        userId: { type: integer }
+        categoryId: { type: string }
+        category:
+          $ref: "#/components/schemas/Category"
+        spent: { type: number }
+        remaining: { type: number }
+        percentage: { type: integer }
+        isOverBudget: { type: boolean }
