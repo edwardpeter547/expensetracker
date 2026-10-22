@@ -1,0 +1,26 @@
+version: '3'
+
+tasks:
+  lint:
+    desc: Lint the mobile app
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run lint
+
+  backend:check:
+    desc: Run backend quality checks
+    deps:
+      - test
+      - prisma:validate
+      - docs:validate
+      - docs:test
+
+  mobile:check:
+    desc: Run mobile quality checks
+    deps:
+      - lint
+
+  check:
+    desc: Run backend + mobile quality checks
+    deps:
+      - backend:check
+      - mobile:check

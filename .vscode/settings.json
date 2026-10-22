@@ -9,5 +9,12 @@
     "editor.codeActionsOnSave": {
         "source.organizeImports": "never",
         "source.sortmembers": "never"
+    },
+    "yaml.schemas": {
+        "https://taskfile.dev/schema.json": [
+            "Taskfile.yml",
+            "build/Taskfile.yml",
+            "build/tasks/*.yml"
+        ]
     }
 }

@@ -54,9 +54,9 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 ### API documentation
 
 - Every implemented Express route must be represented in
-  `backend/openapi/openapi.yaml` (OpenAPI 3.1) with a unique `operationId`.
+  `src/backend/openapi/openapi.yaml` (OpenAPI 3.1) with a unique `operationId`.
 - Validate the specification with `npm run docs:validate`; the route-coverage
-  test (`backend/src/docs/__tests__/apiDocs.test.js`) fails when implemented
+  test (`src/backend/src/docs/__tests__/apiDocs.test.js`) fails when implemented
   routes and documented operations drift.
 - Document actual behavior, including known defects and contract
   inconsistencies, rather than an idealized contract.
@@ -68,7 +68,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 **Existing**
 - Files: kebab-case (`.js`, `.ts`, `.tsx`, `.prisma`).
 - Backend functions/variables: camelCase; exported service functions use verb-first names (`getTransactionsbyUser`, `createTransactionRecord`).
-- Constants: `UPPER_SNAKE_CASE` in `backend/src/constants`.
+- Constants: `UPPER_SNAKE_CASE` in `src/backend/src/constants`.
 - React components: PascalCase; hooks: `useX`; contexts end in `Context`; types/interfaces: PascalCase.
 
 **Proposed**
@@ -85,7 +85,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 **Existing**
 - Controllers and services export small named functions rather than classes.
-- Reusable helpers are pure functions in `backend/src/utils`.
+- Reusable helpers are pure functions in `src/backend/src/utils`.
 
 **Proposed**
 - One responsibility per function; keep functions short and testable.
@@ -96,7 +96,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 ### Routing and HTTP semantics
 
-- Version routes under `/api/v1`; mount route modules from `backend/src/routes/index.js`.
+- Version routes under `/api/v1`; mount route modules from `src/backend/src/routes/index.js`.
 - Use RESTful verbs and return appropriate status codes via `http-status-codes` (`201` for create, `204` for delete, `404` for missing records).
 - Keep route files thin: middleware composition + controller reference.
 
@@ -104,7 +104,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 - Validate every public input with Joi at the route boundary using `validate`, `validateParams`, or `validateQuery`.
 - Use `abortEarly: false` and `stripUnknown: true` (already the default in the middleware).
-- Define reusable field builders in `backend/src/validations/common.validation.js`.
+- Define reusable field builders in `src/backend/src/validations/common.validation.js`.
 
 ### Controllers
 
@@ -114,7 +114,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 ### Services and data access
 
-- Keep Prisma calls in `backend/src/services`; controllers should not import Prisma directly.
+- Keep Prisma calls in `src/backend/src/services`; controllers should not import Prisma directly.
 - Scope user-owned data by `userId` in queries; do not trust a bare id from the URL.
 - Use Prisma `select`/`include` to avoid returning password hashes or token fields.
 
@@ -126,12 +126,12 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 ### Logging
 
-- Use `winston` via `backend/src/configurations/logger.config.js` with structured metadata.
+- Use `winston` via `src/backend/src/configurations/logger.config.js` with structured metadata.
 - Log at the appropriate level and mask PII (e.g. `maskEmail`). Do not log tokens, passwords, or reset codes.
 
 ### Configuration
 
-- Centralize environment access in `backend/src/configurations/env.config.js`; avoid reading `process.env` directly elsewhere.
+- Centralize environment access in `src/backend/src/configurations/env.config.js`; avoid reading `process.env` directly elsewhere.
 - Keep new env values documented and provide sane defaults.
 
 ## Expo and React Native frontend
@@ -139,8 +139,8 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 ### Components
 
 - Use functional components with typed props.
-- Reuse primitives from `mobile/src/components/ui` (Button, Input, SafeScreen) before writing new ones.
-- Keep screens in `mobile/app` thin; extract repeated UI into `mobile/src/components`.
+- Reuse primitives from `src/mobile/src/components/ui` (Button, Input, SafeScreen) before writing new ones.
+- Keep screens in `src/mobile/app` thin; extract repeated UI into `src/mobile/src/components`.
 - Separate UI from business logic: network calls belong in the API client or a hook, not inline in JSX.
 
 ### Props and interfaces
@@ -163,7 +163,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 ### API integration
 
-- Send all requests through `mobile/src/api/client.ts`; do not create ad-hoc Axios instances.
+- Send all requests through `src/mobile/src/api/client.ts`; do not create ad-hoc Axios instances.
 - The interceptor already handles `401` refresh; keep token storage in `expo-secure-store`.
 - Handle `loading`, `error`, and `empty` states explicitly in screens; show user-facing error text from `error.response.data.message` where available.
 

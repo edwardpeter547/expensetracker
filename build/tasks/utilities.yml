@@ -1,0 +1,18 @@
+version: '3'
+
+tasks:
+  status:
+    desc: Show development environment status
+    cmds:
+      - "{{.ROOT_DIR}}/build/scripts/utilities/status.sh"
+
+  git:status:
+    desc: Show git status
+    cmds:
+      - git status
+
+  install:
+    desc: Install backend + mobile dependencies
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && npm install
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm install

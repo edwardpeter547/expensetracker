@@ -12,7 +12,9 @@ node_modules/
 .env.*
 !.env.example
 !.env.template
-src/environment/
+src/environment/*
+!src/environment/integration.env.example
+!src/environment/dev.env.example
 
 # ============================================
 # Prisma
