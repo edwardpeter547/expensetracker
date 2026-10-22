@@ -13,18 +13,18 @@ ExpenseTracker is a personal finance application. The current implementation cov
 Routes for `recurring` and `notifications` exist but are empty, and the mobile screens for transactions, budgets, and profile are not yet implemented.
 
 ## Package layout
-The repository is a two-package monorepo coordinated by a `Makefile`. It is **not** an npm workspace: each package has independent `package.json`, lockfile, and dependencies.
+The repository is a two-package monorepo coordinated by Go Task. It is **not** an npm workspace: each package has independent `package.json`, lockfile, and dependencies.
 
-- `backend/` — Express API.
-- `mobile/` — Expo mobile app.
+- `src/backend/` — Express API.
+- `src/mobile/` — Expo mobile app.
 - `.github/ISSUE_TEMPLATE/` — issue templates (no CI/CD workflows are present).
-- `Makefile` — install/run/test helpers.
+- `Taskfile.yml` — entry point for developer commands; orchestration lives under `build/`.
 
 ## Backend
 
 ### Entry points and middleware chain
-- `backend/src/server.js` connects Prisma and starts the HTTP server; it also registers graceful shutdown handlers.
-- `backend/src/app.js` builds the Express app. Middleware order:
+- `src/backend/src/server.js` connects Prisma and starts the HTTP server; it also registers graceful shutdown handlers.
+- `src/backend/src/app.js` builds the Express app. Middleware order:
   1. `helmet`, CORS (configured origin + credentials), `compression`.
   2. JSON and URL-encoded body parsing (10 MB limit), cookie parsing.
   3. `morgan` request logging.
@@ -37,13 +37,13 @@ The repository is a two-package monorepo coordinated by a `Makefile`. It is **no
 ### Layers
 The backend uses a conventional layered structure:
 
-- **Routes** (`backend/src/routes/v1/*.routes.js`) declare HTTP verbs and attach validation/authentication middleware.
-- **Controllers** (`backend/src/controllers`) parse request data, call services, and build responses.
-- **Services** (`backend/src/services`) contain business logic and Prisma calls.
-- **Validation** (`backend/src/validations`) holds reusable Joi schemas.
-- **Middleware** (`backend/src/middleware`) holds auth, validation factories, language handling, and error handling.
-- **Utilities** (`backend/src/utils`) provides `AppError`, `catchAsync`, and shared helpers.
-- **Configurations** (`backend/src/configurations`) initializes env, logger, i18n, email, and Prisma.
+- **Routes** (`src/backend/src/routes/v1/*.routes.js`) declare HTTP verbs and attach validation/authentication middleware.
+- **Controllers** (`src/backend/src/controllers`) parse request data, call services, and build responses.
+- **Services** (`src/backend/src/services`) contain business logic and Prisma calls.
+- **Validation** (`src/backend/src/validations`) holds reusable Joi schemas.
+- **Middleware** (`src/backend/src/middleware`) holds auth, validation factories, language handling, and error handling.
+- **Utilities** (`src/backend/src/utils`) provides `AppError`, `catchAsync`, and shared helpers.
+- **Configurations** (`src/backend/src/configurations`) initializes env, logger, i18n, email, and Prisma.
 
 This layering is preserved as-is; no repository or DI layer is introduced.
 
@@ -64,7 +64,7 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 6. `POST /api/v1/auth/forgot-password` creates a 6-digit reset code and emails it; `POST /api/v1/auth/verify-otp` verifies it; `POST /api/v1/auth/change-password` resets the password and writes a password-history record.
 
 ### Data model
-The Prisma schema is split across `backend/src/prisma/schema.prisma` (generator + datasource) and fragments in `backend/src/prisma/models`. The generated client is emitted to `backend/src/prisma/generated`.
+The Prisma schema is split across `src/backend/src/prisma/schema.prisma` (generator + datasource) and fragments in `src/backend/src/prisma/models`. The generated client is emitted to `src/backend/src/prisma/generated`.
 
 Core models:
 
@@ -77,14 +77,23 @@ Core models:
 
 ### Persistence
 - PostgreSQL via Prisma 7 and `@prisma/adapter-pg`; the connection string comes from `DATABASE_URL`.
-- `backend/src/prisma/generated` is the generated client and is gitignored.
-- Database reset/cleanup utilities exist in `backend/scripts/prepare.db.js` and `backend/scripts/resetdb.sh` for the test database.
+- Local development uses a persistent Docker-hosted PostgreSQL 16 instance
+  (container `expensetracker-postgres`, named volume
+  `expensetracker-postgres-data`) instead of a Neon-hosted database. The
+  runtime role is `expensetracker_app` and schema management uses
+  `expensetracker_migrate`; integration tests create their own disposable
+  databases and never touch `expensetracker_dev`.
+- Committed Prisma migrations (`src/backend/src/prisma/migrations`) are the
+  authoritative schema mechanism; a fresh database is reconstructed with
+  `task prisma:deploy`.
+- `src/backend/src/prisma/generated` is the generated client and is gitignored.
+- Database reset/cleanup utilities exist in `src/backend/scripts/prepare.db.js` and `src/backend/scripts/resetdb.sh` for the test database.
 
 ## Mobile
 
 ### Entry point and routing
-- Entry point is `expo-router/entry` (`mobile/package.json`).
-- File-based routes live in `mobile/app`:
+- Entry point is `expo-router/entry` (`src/mobile/package.json`).
+- File-based routes live in `src/mobile/app`:
   - `app/_layout.tsx` — root layout; wraps the app in `ThemeProvider` and `AuthProvider`.
   - `app/index.tsx` — splash/redirect based on auth state.
   - `app/(auth)/` — login and registration (other auth screens are stubs).
@@ -92,12 +101,12 @@ Core models:
   - `app/connection.tsx` — API connectivity checker.
 
 ### State and data flow
-- `AuthContext` (`mobile/src/contexts/AuthContext.tsx`) manages the user, login/register/logout, and token storage in `expo-secure-store`.
-- `ThemeContext` (`mobile/src/contexts/ThemeContext.tsx`) manages a named theme persisted in AsyncStorage.
-- `mobile/src/api/client.ts` is an Axios instance; a response interceptor retries `401` responses once by refreshing the token.
-- `mobile/src/api/config.ts` derives the API base URL from `expo-constants` extra config (environment-driven).
-- Reusable UI primitives live in `mobile/src/components/ui`; forms use `mobile/src/components/forms`.
-- Styles are generated by the `useStyles` hook from `mobile/src/constants/*.styles.ts` and `mobile/src/types/StyleScheme.ts`.
+- `AuthContext` (`src/mobile/src/contexts/AuthContext.tsx`) manages the user, login/register/logout, and token storage in `expo-secure-store`.
+- `ThemeContext` (`src/mobile/src/contexts/ThemeContext.tsx`) manages a named theme persisted in AsyncStorage.
+- `src/mobile/src/api/client.ts` is an Axios instance; a response interceptor retries `401` responses once by refreshing the token.
+- `src/mobile/src/api/config.ts` derives the API base URL from `expo-constants` extra config (environment-driven).
+- Reusable UI primitives live in `src/mobile/src/components/ui`; forms use `src/mobile/src/components/forms`.
+- Styles are generated by the `useStyles` hook from `src/mobile/src/constants/*.styles.ts` and `src/mobile/src/types/StyleScheme.ts`.
 
 ### Primary data flow
 1. `app/(tabs)/index.tsx` (Dashboard) reads `useAuth()` and fetches `/user/dashboard`.
@@ -105,10 +114,10 @@ Core models:
 3. Auth screens call `login`/`register` in `AuthContext`, which stores tokens and sets the Axios authorization header.
 
 ## Environment and configuration
-- Backend loads env files by `NODE_ENV`: `development` -> `dev.env`, `testing` -> `test.env`, otherwise `.env`, all under `backend/src/environment/` (gitignored).
-- Backend config is centralized in `backend/src/configurations/env.config.js`.
+- Backend loads env files by `NODE_ENV`: `development` -> `dev.env`, `testing` -> `test.env`, otherwise `.env`, all under `src/backend/src/environment/` (gitignored).
+- Backend config is centralized in `src/backend/src/configurations/env.config.js`.
 - Mobile uses `.env` (gitignored) with `.env.example` documenting `LOCAL_SERVER_IP`, `LOCAL_SERVER_PORT`, and `API_URL`.
-- `mobile/.npmrc` is gitignored with `.npmrc.example` provided.
+- `src/mobile/.npmrc` is gitignored with `.npmrc.example` provided.
 
 > Mobile baseline (verified 2026-10-13): `expo@57.0.27`, `expo-router@57.0.25`, `react-native@0.86.3`, `react@19.2.3`. The SDK 57 upgrade is committed on the current branch (`9ce1a1c`).
 
@@ -123,6 +132,6 @@ These are observations only; no behavior has been changed.
 - **Category linkage:** `Budget` references `Category`, but `Transaction.category` is a free-form string, and `budget.service.js` filters spending by a `categoryId` field that does not exist on `Transaction`. Budget spending aggregation is likely broken until this is aligned.
 - **Ownership scoping:** `getTransactionById` reads by id only without checking `userId`, and update/delete use compound `where` clauses that Prisma's `update`/`delete` do not accept for non-unique fields. Transaction ownership checks need review.
 - **API naming drift:** validation uses `recieptUrl` while the database field is `receiptUrl`; `category.routes.js` `PUT /` lacks an `:id` parameter.
-- **Unused tooling:** `backend/tsconfig.json` and `ts-jest` exist but backend source is JavaScript; `mobile/eslint.config.js` is empty, so `expo lint` is not meaningfully configured.
-- **Test targets:** `make test-mobile` and `make test-all` invoke `npm run test` in `mobile`, but no such script exists.
+- **Unused tooling:** `src/backend/tsconfig.json` and `ts-jest` exist but backend source is JavaScript; `src/mobile/eslint.config.js` is empty, so `expo lint` is not meaningfully configured.
+- **Test targets:** the mobile package has no `test` script, so only `task lint` (via `expo lint`) is available; backend tests run with `task test`.
 - **Secrets in logs:** some dev-only `console.log` calls print tokens/codes or full objects; these should be removed before production.

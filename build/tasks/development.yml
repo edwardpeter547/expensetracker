@@ -1,0 +1,34 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: Start backend and mobile together
+    interactive: true
+    cmds:
+      - "{{.ROOT_DIR}}/build/scripts/development/dev.sh"
+
+  backend:dev:
+    desc: Start the backend dev server (PORT= override)
+    interactive: true
+    cmds:
+      - |
+        cd "{{.ROOT_DIR}}/src/backend"
+        {{if .PORT}}PORT='{{.PORT}}' {{end}}npm run start:dev
+
+  mobile:dev:
+    desc: Start the Expo app
+    interactive: true
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run start
+
+  mobile:web:
+    desc: Start the Expo app in web mode
+    interactive: true
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run start:web
+
+  backend:docs:
+    desc: Start the backend with Swagger enabled
+    interactive: true
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && ENABLE_API_DOCS=true npm run start:dev

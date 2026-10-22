@@ -1,7 +1,7 @@
 /**
  * OpenAPI/Swagger documentation loader and route registration.
  *
- * Loads the committed `backend/openapi/openapi.yaml` once and, when API
+ * Loads the committed `src/backend/openapi/openapi.yaml` once and, when API
  * documentation is enabled, exposes:
  * - `GET /api/docs` (interactive Swagger UI), and
  * - `GET /api/openapi.json` (the machine-readable specification).

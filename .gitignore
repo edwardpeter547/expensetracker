@@ -8,6 +8,10 @@ node_modules/
 .yarn/
 .pnpm-store/
 
+# Task CLI (local developer tooling; not committed)
+.tools/
+.task/
+
 # Environment variables
 .env
 .env.*
@@ -18,9 +22,9 @@ node_modules/
 .env.test.local
 .env.production.local
 
-# Build outputs
+# Build outputs (the root build/ directory is tracked orchestration and is
+# re-included at the bottom of this file)
 dist/
-build/
 out/
 .next/
 .nuxt/
@@ -144,25 +148,25 @@ credentials/
 # ============================================
 
 # Backend logs
-backend/logs/
-backend/*.log
+src/backend/logs/
+src/backend/*.log
 
 # Backend temp files
-backend/tmp/
-backend/temp/
+src/backend/tmp/
+src/backend/temp/
 
 # ============================================
 # Mobile Specific
 # ============================================
 
 # Mobile build outputs
-mobile/dist/
-mobile/web-build/
-mobile/.expo/
+src/mobile/dist/
+src/mobile/web-build/
+src/mobile/.expo/
 
 # Mobile native builds (if ejected)
-mobile/android/
-mobile/ios/
+src/mobile/android/
+src/mobile/ios/
 
 # ============================================
 # Infrastructure / Docker
@@ -181,6 +185,16 @@ volumes/
 # Ansible
 *.retry
 *.log
+
+# ============================================
+# Repository orchestration (tracked despite the generic build-output ignores)
+# ============================================
+!build/
+!build/Taskfile.yml
+!build/tasks/
+!build/tasks/*.yml
+!build/scripts/
+!build/scripts/**
 
 # Kubernetes
 *.kubeconfig

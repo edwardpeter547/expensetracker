@@ -4,33 +4,38 @@
 
 ### Backend
 - Framework: **Jest 30** with `@jest/globals`, `supertest`, and `NODE_OPTIONS=--experimental-vm-modules` for ESM.
-- Config: `backend/jest.config.js` — one `UNIT` project matching `src/**/__tests__/*.test.js`.
-- Coverage: enabled with HTML/LCov/JSON reporters and a global threshold of 80% (branches, functions, lines, statements). Coverage output is written to `backend/coverage/` (gitignored).
+- Config: `src/backend/jest.config.js` — one `UNIT` project matching `src/**/__tests__/*.test.js`.
+- Coverage: enabled with HTML/LCov/JSON reporters and a global threshold of 80% (branches, functions, lines, statements). Coverage output is written to `src/backend/coverage/` (gitignored).
 - Test env: `NODE_ENV=testing` is set by the npm scripts so config loads `test.env`.
 
 ### Existing coverage areas
-- `backend/src/middleware/__tests__` — error middleware, language middleware, validation middleware.
-- `backend/src/utils/__tests__` — `AppError`, `catchAsync`, helpers.
-- `backend/src/validations/__tests__` — auth, general, and transaction validation schemas.
+- `src/backend/src/middleware/__tests__` — error middleware, language middleware, validation middleware.
+- `src/backend/src/utils/__tests__` — `AppError`, `catchAsync`, helpers.
+- `src/backend/src/validations/__tests__` — auth, general, and transaction validation schemas.
 
 There are no controller, service, or route integration tests yet, and no mobile tests.
 
 ## Commands
 
 ```bash
-cd backend && npm test          # Jest with coverage, verbose
-cd backend && npm run test:watch # watch mode
-make test-backend               # same as backend npm test
+cd src/backend && npm test           # Jest with coverage, verbose
+cd src/backend && npm run test:watch # watch mode
+task test                            # same as backend npm test
+task test:unit                       # alias for the standard suite
+task test:auth                       # auth-related tests
+task test:refresh                    # refresh-token tests
+task test:logout                     # logout tests
 ```
 
-`make test-all` and `make test-mobile` currently reference `cd mobile && npm run test`, but `mobile/package.json` has no `test` script — those targets are expected to fail until mobile testing is added.
+The mobile package has no `test` script yet, so there is no `task test:mobile`
+target; mobile quality checks currently mean `task lint` (`expo lint`).
 
 ## Conventions for new tests
 
 - Colocate tests in `__tests__` next to the module they test.
 - Import from `@jest/globals` (`describe`, `test`, `expect`, `jest`) to match existing files.
 - Use descriptive test names and cover the failure paths, not only happy paths.
-- Keep unit tests pure (no live database); for anything requiring the DB, use a setup hook like `backend/scripts/setup.js` and the reset helpers in `backend/scripts/prepare.db.js`.
+- Keep unit tests pure (no live database); for anything requiring the DB, use a setup hook like `src/backend/scripts/setup.js` and the reset helpers in `src/backend/scripts/prepare.db.js`.
 
 ## Shared test fixtures
 
@@ -56,14 +61,17 @@ Database integration tests are gated behind `RUN_DB_INTEGRATION=1` and require
 `TEST_DATABASE_URL` to resolve to localhost. The suite treats that URL as an
 administrative connection, creates its own uniquely named databases, and drops
 only those it created. It must never run against development, staging, or
-production databases.
+production databases. The development database (`expensetracker_dev`) and its
+application role (`expensetracker_app`) are never used for integration tests;
+the harness keeps its administrative credentials separate from application
+credentials.
 
 ## Regression expectations
 
 Add or update tests alongside behavior changes for authentication, token
 refresh, logout, resource ownership, validation failures, financial
 calculations, error responses, and API contract changes. Route-contract
-changes must be reflected in `backend/openapi/openapi.yaml` in the same change.
+changes must be reflected in `src/backend/openapi/openapi.yaml` in the same change.
 
 ## Critical financial workflow tests (recommended, not yet present)
 
@@ -85,6 +93,6 @@ Add these before shipping paid features. None of these currently exist; do not i
 
 - **Adopt now:** add tests alongside any new backend behavior; keep the 80% coverage threshold in mind for touched modules.
 - **Adopt when touching relevant code:** add controller/service tests for auth, transactions, and budgets, using mocked Prisma or a test database; add `supertest` integration tests for the API contract.
-- **Evaluate later:** introduce a minimal mobile test setup (the Expo docs recommend Jest + `jest-expo`), and add a real `test` script before relying on `make test-all`.
+- **Evaluate later:** introduce a minimal mobile test setup (the Expo docs recommend Jest + `jest-expo`), and add a real `test` script before relying on a combined `task check`.
 
 No new test framework or runner is being introduced in this phase.

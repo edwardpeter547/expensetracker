@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import { Client } from 'pg';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import request from 'supertest';
 
 const RUN_DB = process.env.RUN_DB_INTEGRATION === '1';

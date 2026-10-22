@@ -4,11 +4,11 @@
 ExpenseTracker is a personal finance app with an Expo/React Native mobile client and a Node.js/Express API. It tracks income and expenses, supports categories and budgets, and includes email-based registration/verification and password reset.
 
 ## Repo layout
-This is a **two-package monorepo orchestrated by a `Makefile`** — it is **not** an npm workspace. Each package has its own `package.json`, `package-lock.json`, and `node_modules`.
+This is a **two-package monorepo orchestrated by Go Task** — it is **not** an npm workspace. Each package has its own `package.json`, `package-lock.json`, and `node_modules`.
 
-- `backend/` — Express API (`"type": "module"`, plain JavaScript with JSDoc, not TypeScript).
-- `mobile/` — Expo app (SDK 57) using TypeScript and `expo-router` file-based routing.
-- `Makefile` — install/run/test helpers for both packages.
+- `src/backend/` — Express API (`"type": "module"`, plain JavaScript with JSDoc, not TypeScript).
+- `src/mobile/` — Expo app (SDK 57) using TypeScript and `expo-router` file-based routing.
+- `Taskfile.yml` — entry point for developer commands (orchestration lives under `build/`).
 - `.github/` — issue templates only (no CI workflows yet).
 - `docs/` — architecture and engineering guidance written during Phase 0.
 
@@ -16,9 +16,36 @@ This is a **two-package monorepo orchestrated by a `Makefile`** — it is **not*
 - **Backend:** Node.js, Express 5, Prisma 7 with `@prisma/adapter-pg` (PostgreSQL), Joi validation, JWT auth, `winston` logging, `i18n` localization, `nodemailer` + Handlebars email templates.
 - **Mobile:** Expo SDK 57, React Native 0.86, React 19, `expo-router`, React Navigation 7 (tabs), Axios, `expo-secure-store` (tokens), AsyncStorage (theme), TypeScript.
 
+## Local PostgreSQL database
+Development uses a persistent local PostgreSQL 16 instance in Docker (Docker CLI
+only — no Docker Compose yet). The container is `expensetracker-postgres`
+(image `postgres:16-alpine`), its data lives in the named volume
+`expensetracker-postgres-data`, and it binds only to `127.0.0.1:5432`.
+
+- `expensetracker_dev` — persistent development database; never used for tests.
+- `expensetracker_app` — runtime role (login only; no SUPERUSER, no CREATEDB).
+- `expensetracker_migrate` — migration role (owns the schema; may create
+  Prisma shadow databases for `migrate dev`).
+- Integration tests use a separate administrative role and their own disposable
+  databases; they never touch `expensetracker_dev`.
+
+Environment files live in `src/backend/src/environment/`:
+- `dev.env` (from `dev.env.example`) — runtime `DATABASE_URL` plus the
+  provisioning and migration-role credentials.
+- `integration.env` (from `integration.env.example`) — the container/administrative
+  credentials shared by `task db:up` and the integration harness.
+
+Workflows:
+- One-time setup: `task db:up`, `task db:create-dev`, `task prisma:deploy`.
+- Daily: `task db:up`, `task backend:dev`.
+- Migrations: `task prisma:migrate -- --name <name>` (create/apply),
+  `task prisma:deploy` (apply committed migrations only),
+  `task prisma:status` (inspect state).
+- Never point integration tests at `expensetracker_dev` or any remote database.
+
 ## Where code belongs
-- **Backend:** routes in `backend/src/routes/v1`, controllers in `backend/src/controllers`, business logic in `backend/src/services`, validation in `backend/src/validations`, middleware in `backend/src/middleware`, Prisma schema in `backend/src/prisma/schema.prisma` plus model fragments in `backend/src/prisma/models`.
-- **Mobile:** screens in `mobile/app` (file-based routes), API access in `mobile/src/api`, state in `mobile/src/contexts`, reusable hooks in `mobile/src/hooks`, components in `mobile/src/components`, theming styles in `mobile/src/constants` and `mobile/src/types`.
+- **Backend:** routes in `src/backend/src/routes/v1`, controllers in `src/backend/src/controllers`, business logic in `src/backend/src/services`, validation in `src/backend/src/validations`, middleware in `src/backend/src/middleware`, Prisma schema in `src/backend/src/prisma/schema.prisma` plus model fragments in `src/backend/src/prisma/models`.
+- **Mobile:** screens in `src/mobile/app` (file-based routes), API access in `src/mobile/src/api`, state in `src/mobile/src/contexts`, reusable hooks in `src/mobile/src/hooks`, components in `src/mobile/src/components`, theming styles in `src/mobile/src/constants` and `src/mobile/src/types`.
 
 ## Existing conventions to preserve
 - Backend layers follow `route -> Joi validation -> controller -> service -> Prisma`.
@@ -40,7 +67,7 @@ This is a **two-package monorepo orchestrated by a `Makefile`** — it is **not*
 10. Never `git commit`, `git push`, or create branches unless explicitly instructed.
 11. Python code follows `docs/engineering/coding-standards.md`: Google-style docstrings, Python 3.9 type annotations, colocated tests, and explanatory comments for non-obvious or security-sensitive logic.
 12. All new or modified JavaScript functions, including Jest test callbacks and test helpers, must follow the mandatory documentation rules in `docs/engineering/coding-standards.md`. Missing required documentation is an implementation defect and must be corrected before completion.
-13. Keep API contracts documented: every implemented Express route must be in `backend/openapi/openapi.yaml`, validated with `npm run docs:validate`, and covered by the route-coverage test. Before adding a test fixture or helper, inspect existing utilities and factories for reuse.
+13. Keep API contracts documented: every implemented Express route must be in `src/backend/openapi/openapi.yaml`, validated with `task docs:validate`, and covered by the route-coverage test. Before adding a test fixture or helper, inspect existing utilities and factories for reuse.
 
 ## Implementation protocol
 Before implementing and before declaring a task complete, Codex must:
@@ -66,10 +93,11 @@ Workflow: **validate → plan → human review → hash-bound approval → separ
 - See `tickets/README.md` for package structure, commands, and safety rules.
 
 ## Commands
-- Backend tests: `cd backend && npm test` (or `make test-backend`).
-- Backend dev server: `make start-backend-dev` (`cd backend && npm run start:dev`).
-- Mobile: `cd mobile && npm start`; lint via `cd mobile && npm run lint`.
-- Regenerate i18n JSON after editing `backend/translations/*.js`: `node --experimental-vm-modules backend/scripts/generate.locales.js`.
+- Backend tests: `task test` (or `cd src/backend && npm test`).
+- Backend dev server: `task backend:dev` (`cd src/backend && npm run start:dev`).
+- Mobile: `task mobile:dev`; lint via `task lint`.
+- Full command list: `task --list` (or `task`).
+- Regenerate i18n JSON after editing `src/backend/translations/*.js`: `node --experimental-vm-modules src/backend/scripts/generate.locales.js`.
 - Python automation tests: `python3 -m unittest discover -s scripts/github_tickets/tests -v`.
 - Validate a ticket package: `python scripts/github_tickets.py validate --manifest <manifest.json>`.
 

@@ -1,0 +1,24 @@
+version: '3'
+
+includes:
+  development:
+    taskfile: ./tasks/development.yml
+    flatten: true
+  database:
+    taskfile: ./tasks/database.yml
+    flatten: true
+  prisma:
+    taskfile: ./tasks/prisma-tasks.yml
+    flatten: true
+  testing:
+    taskfile: ./tasks/testing.yml
+    flatten: true
+  documentation:
+    taskfile: ./tasks/documentation.yml
+    flatten: true
+  quality:
+    taskfile: ./tasks/quality.yml
+    flatten: true
+  utilities:
+    taskfile: ./tasks/utilities.yml
+    flatten: true

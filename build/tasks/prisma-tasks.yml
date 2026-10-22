@@ -1,0 +1,35 @@
+version: '3'
+
+tasks:
+  prisma:generate:
+    desc: Generate the Prisma client
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && npx prisma generate
+
+  prisma:validate:
+    desc: Validate the Prisma schema (read-only)
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && npx prisma validate
+
+  prisma:migrate:
+    desc: Create and apply a new migration (uses the migration role)
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && NODE_ENV=development npx prisma migrate dev {{.CLI_ARGS}}
+      - "{{.ROOT_DIR}}/build/scripts/database/postgres.sh finalize-dev"
+
+  prisma:deploy:
+    desc: Apply committed migrations without creating new ones (noninteractive)
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && NODE_ENV=development npx prisma migrate deploy
+      - "{{.ROOT_DIR}}/build/scripts/database/postgres.sh finalize-dev"
+
+  prisma:status:
+    desc: Show Prisma migration status for the development database
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && NODE_ENV=development npx prisma migrate status
+
+  prisma:studio:
+    desc: Launch Prisma Studio
+    interactive: true
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/backend" && npx prisma studio

@@ -1,0 +1,13 @@
+version: '3'
+
+includes:
+  build:
+    taskfile: ./build/Taskfile.yml
+    flatten: true
+
+tasks:
+  default:
+    desc: Show available commands
+    silent: true
+    cmds:
+      - task --list

@@ -232,7 +232,14 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
         expect(active).toBe(0);
     });
 
-    test('migration invalidates plaintext rows and adds family_id', async () => {
+    /**
+     * The committed baseline migration must reconstruct the refresh_token
+     * schema from an empty database with a NOT NULL family_id column plus the
+     * family and token indexes. The migration history was rebaselined after the
+     * Neon-hosted development database was abandoned, so this asserts the full
+     * baseline rather than an incremental ALTER.
+     */
+    test('baseline migration creates the refresh_token schema with family_id and indexes', async () => {
         const migrationDbName = uniqueDbName('expensetracker_migration');
         await createDatabaseAndTrack(adminClient, migrationDbName);
 
@@ -241,41 +248,26 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
         );
 
         try {
-            await migrationClient.query(`
-                CREATE TABLE "refresh_token" (
-                    "id" TEXT PRIMARY KEY,
-                    "token" TEXT NOT NULL,
-                    "userId" INTEGER NOT NULL,
-                    "expiresAt" TIMESTAMP(3) NOT NULL,
-                    "isRevoked" BOOLEAN NOT NULL DEFAULT false,
-                    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    "createdByIp" TEXT
-                );
-                INSERT INTO "refresh_token" ("id", "token", "userId", "expiresAt")
-                VALUES ('legacy-1', 'plaintext-legacy-token', 1, NOW() + INTERVAL '1 day');
-            `);
-
             const migrationSql = await readFile(
-                path.join(backendRoot, 'src/prisma/migrations/20261018120000_refresh_token_family_id/migration.sql'),
+                path.join(backendRoot, 'src/prisma/migrations/20261018000000_init/migration.sql'),
                 'utf8'
             );
             await migrationClient.query(migrationSql);
-
-            const legacy = await migrationClient.query(
-                'SELECT count(*)::int AS n FROM "refresh_token" WHERE "token" = $1',
-                ['plaintext-legacy-token']
-            );
-            expect(legacy.rows[0].n).toBe(0);
 
             const column = await migrationClient.query(
                 "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'refresh_token' AND column_name = 'family_id'"
             );
             expect(column.rows[0].is_nullable).toBe('NO');
 
-            const index = await migrationClient.query(
+            const familyIndex = await migrationClient.query(
                 "SELECT count(*)::int AS n FROM pg_indexes WHERE tablename = 'refresh_token' AND indexname = 'refresh_token_family_id_idx'"
             );
-            expect(index.rows[0].n).toBe(1);
+            expect(familyIndex.rows[0].n).toBe(1);
+
+            const tokenUniqueIndex = await migrationClient.query(
+                "SELECT count(*)::int AS n FROM pg_indexes WHERE tablename = 'refresh_token' AND indexname = 'refresh_token_token_key'"
+            );
+            expect(tokenUniqueIndex.rows[0].n).toBe(1);
         } finally {
             // Close the connection into the migration DB before dropping it.
             await migrationClient.end().catch(() => {});
