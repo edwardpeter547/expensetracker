@@ -9,7 +9,7 @@ ExpenseTracker is a personal finance application for tracking income and expense
 | `src/backend/` | Express 5 API in ES modules, Prisma 7 + PostgreSQL, JWT auth |
 | `src/mobile/` | Expo SDK 57 app with TypeScript and `expo-router` |
 | `build/` | Go Task orchestration and Bash helper scripts |
-| `docs/` | Architecture and engineering guidance |
+| `docs/` | Architecture, engineering, product, and infrastructure guidance |
 | `Taskfile.yml` | Entry point for developer commands |
 
 The two packages are independent (separate `package.json` files); Go Task orchestrates them. There is no root npm workspace.
@@ -151,6 +151,7 @@ task lint              # mobile lint (no mobile test script yet)
 - [Coding standards](docs/engineering/coding-standards.md)
 - [Design principles](docs/engineering/design-principles.md)
 - [Testing strategy](docs/engineering/testing-strategy.md)
+- [Infrastructure & CI/CD](docs/infrastructure/README.md)
 - [Backend API documentation](docs/backend-documentation.md)
 - [Architecture decisions](docs/decisions/README.md)
 - [GitHub ticket automation](tickets/README.md)

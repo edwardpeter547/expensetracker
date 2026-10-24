@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "repo": "edwardpeter547/expensetracker",
+  "package": "infrastructure-roadmap-alignment",
+  "tickets": [
+    {
+      "id": "INFRA-EPIC-29",
+      "type": "epic",
+      "title": "[FEATURE] Project Infrastructure Development",
+      "body": "epics/epic-29-project-infrastructure.md",
+      "parent": null,
+      "labels": [
+        "EPIC",
+        "Tooling"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": 29
+    },
+    {
+      "id": "INFRA-DOC-01",
+      "type": "task",
+      "title": "[TASK] Commit Infrastructure Audit and CI/CD Roadmap Alignment Documentation",
+      "body": "tasks/infra-doc-01-audit-and-roadmap-alignment.md",
+      "parent": "INFRA-EPIC-29",
+      "labels": [
+        "TASK",
+        "Tooling"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    }
+  ]
+}
