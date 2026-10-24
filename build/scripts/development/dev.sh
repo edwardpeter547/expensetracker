@@ -7,6 +7,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+RESOLVED_API_URL="$( "$SCRIPT_DIR/../network/resolved-url.sh" 2>/dev/null || true )"
+if [ -n "$RESOLVED_API_URL" ]; then
+    echo "Mobile API endpoint: $RESOLVED_API_URL"
+fi
+
 BACKEND_PID=""
 MOBILE_PID=""
 
