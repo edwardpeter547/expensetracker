@@ -1,5 +1,6 @@
-
 import prisma from "../configurations/prisma.connect.js"
+import { StatusCodes } from "http-status-codes";
+import AppError from "../utils/appError.js";
 
 /**
  * List system categories plus the user's own categories.
@@ -110,17 +111,30 @@ export const checkConflict = async(categoryId, categoryName, userId) => {
 
 
 /**
- * Atomically update an owned category using `{id, userId}`.
+ * Atomically update an owned category.
+ *
+ * `updateMany` applies the non-unique `{id, userId}` ownership filter and is
+ * followed by a scoped `findFirst` so the response describes the caller's own
+ * record.
  *
  * @param {object} categoryData The fields to update.
  * @param {string} categoryId The category id.
  * @param {number} userId The owning user id.
  * @returns {Promise<object>} The updated category.
+ * @throws {AppError} If no owned record matches the id.
  */
 export const updateCategoryRecord = async (categoryData, categoryId, userId) => {
-    return await prisma.category.update({
+    const {count} = await prisma.category.updateMany({
         where: {id: categoryId, userId: userId},
         data: categoryData
+    });
+
+    if(count === 0){
+        throw new AppError('Category not found', StatusCodes.NOT_FOUND);
+    }
+
+    return prisma.category.findFirst({
+        where: {id: categoryId, userId: userId}
     });
 } 
 
@@ -158,16 +172,24 @@ export const countTransaction = async (userId, categoryName) => {
 
 
 /**
- * Atomically delete an owned category using `{id, userId}`.
+ * Atomically delete an owned category.
+ *
+ * `deleteMany` accepts the non-unique `{id, userId}` ownership filter, so a
+ * caller can never delete another user's category.
  *
  * @param {string} categoryId The category id.
  * @param {number} userId The owning user id.
- * @returns {Promise<object>} The deleted category.
+ * @returns {Promise<void>}
+ * @throws {AppError} If no owned record matches the id.
  */
 export const deleteCategoryRecord = async (categoryId, userId) => {
-    return await prisma.category.delete({
+    const {count} = await prisma.category.deleteMany({
         where: {id: categoryId, userId: userId}
     });
+
+    if(count === 0){
+        throw new AppError('Category not found', StatusCodes.NOT_FOUND);
+    }
 }
 
 

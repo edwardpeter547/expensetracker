@@ -2,6 +2,7 @@ import Button from "@/components/ui/Button";
 import InputField from "@/components/ui/Input";
 import KeyboardAvoidWrapper from "@/components/ui/KeyboardAvoidWrapper";
 import Logo from "@/components/ui/Logo";
+import { normalizeApiError } from "@/api/errors";
 import { useAuth } from "@/hooks/useAuth";
 import useStyles from "@/hooks/useStyles";
 import useTheme from "@/hooks/useTheme";
@@ -14,7 +15,6 @@ const LoginScreen = () => {
     const {login, user} = useAuth();
 
     useEffect(() => {
-        console.log(JSON.stringify(user));
         if(user) {
             router.replace("/(tabs)")
         }
@@ -51,8 +51,8 @@ const LoginScreen = () => {
         try {
             await login(email, password);
             router.replace("/(tabs)");
-        }catch(error: any){
-            error.response?.data?.message || "An error occurred. Please try again.";
+        }catch(error){
+            setError(normalizeApiError(error).message);
         }
         finally{
             setLoading(false);
@@ -110,7 +110,7 @@ const LoginScreen = () => {
 
                 <View style={styles.footer}>
                     <Text style={[styles.footerText, { color: colors.textLight }]}>
-                        Don't have an account?
+                        Don&apos;t have an account?
                     </Text>
                     <Link
                         href="/(auth)/register"

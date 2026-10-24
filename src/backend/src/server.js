@@ -72,9 +72,10 @@ const startServer = async () => {
     try{
         await prisma.$connect();
         logger.info('Database connected successfully');
-        server = app.listen(Config.port, () => {
+        server = app.listen(Config.port, Config.host, () => {
             const serverInfo = {
                 port: Config.port,
+                host: Config.host,
                 environment: Config.nodeEnv,
                 apiUrl: `http://localhost:${Config.port}/api/${Config.apiVersion}`
             }
@@ -83,7 +84,7 @@ const startServer = async () => {
 
             console.log(`Server running on port ${Config.port}`);
             console.log(`Environment: ${Config.nodeEnv}`);
-            console.log(`API URL: http//localhost:${Config.port}/api/${Config.apiVersion}`);
+            console.log(`API URL: http://localhost:${Config.port}/api/${Config.apiVersion}`);
             logger.info("Application Started");
         })
 

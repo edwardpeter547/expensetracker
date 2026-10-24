@@ -64,7 +64,7 @@ const logger = winston.createLogger({
 });
 
 // Add console transport only in non-production environments
-if(Config.nodeEnv !== APPLICATION_MODE.PRODUCTION || config.nodeEnv === APPLICATION_MODE.TESTING){
+if(Config.nodeEnv !== APPLICATION_MODE.PRODUCTION || Config.nodeEnv === APPLICATION_MODE.TESTING){
     logger.add(new winston.transports.Console({
         format: consoleFormat,
     }))

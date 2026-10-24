@@ -142,11 +142,10 @@ describe('auth controller logout', () => {
     });
 
     /**
-     * The logout response must never include the raw refresh token and must
-     * return only the already-safe authenticated user projection (which has no
-     * password field).
+     * The logout response must never include the raw refresh token or echo the
+     * authenticated user back to the client.
      */
-    test('does not leak token material and returns only the safe user projection', async () => {
+    test('does not leak token material and returns no user payload', async () => {
         mockAuthService.revokeRefreshTokenByHash.mockResolvedValue({ count: 1 });
         const { json, status } = makeResponse();
         const token = 'b'.repeat(80);
@@ -162,7 +161,6 @@ describe('auth controller logout', () => {
 
         const payload = json.mock.calls[0][0];
         expect(JSON.stringify(payload)).not.toContain(token);
-        expect(payload.data).toEqual(safeUser);
-        expect(payload.data).not.toHaveProperty('password');
+        expect(payload.data).toBeNull();
     });
 });

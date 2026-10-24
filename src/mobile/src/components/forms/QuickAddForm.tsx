@@ -1,14 +1,14 @@
 import { apiClient } from "@/api/client";
+import { normalizeApiError } from "@/api/errors";
+import { useLocale } from "@/contexts/LocaleContext";
 import useStyles from "@/hooks/useStyles";
 import useTheme from "@/hooks/useTheme";
+import { parseMoneyInput } from "@/localization/format";
+import { SYSTEM_CATEGORIES, systemCategoryLabel } from "@/localization/systemCategories";
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import InputField from "../ui/Input";
-
-
-const INCOME_CATEGORIES = ["Salary", "Investment", "Freelancing", "Gifts", "Bonus", ]
-const EXPENSE_CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Health"];
 
 
 interface QuickAddFormProps {
@@ -23,6 +23,7 @@ const QuickAddForm = ({formType, onClose, onSuccess} : QuickAddFormProps) => {
     const { colors } = useTheme();
     const homeStyles = useStyles("home");
     const authStyles = useStyles("auth");
+    const { language } = useLocale();
 
     const [amount, setAmount] = useState<string>("");
     const [category, setCategory] =  useState<string>("");
@@ -32,11 +33,17 @@ const QuickAddForm = ({formType, onClose, onSuccess} : QuickAddFormProps) => {
     const [error, setError] = useState<string>("");
     
 
-    const CATEGORIES = formType === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+    const categories = SYSTEM_CATEGORIES.filter((item) => item.type === formType);
 
     const handleSubmit = async () => {
         if(!amount){
             setError("Amount is required");
+            return;
+        }
+
+        const normalizedAmount = parseMoneyInput(amount, language);
+        if(!normalizedAmount){
+            setError("Enter a valid amount");
             return;
         }
 
@@ -50,15 +57,16 @@ const QuickAddForm = ({formType, onClose, onSuccess} : QuickAddFormProps) => {
 
         try {
             await apiClient.post("/transactions", {
-                amount: parseFloat(amount),
+                amount: normalizedAmount,
                 type: formType,
-                category,
+                category: systemCategoryLabel(category, language),
+                categoryId: category,
                 description,
                 location
             });
             onSuccess();
-        }catch(error: any){
-            setError(error.response?.data?.message || "Failed to add transaction");
+        }catch(error){
+            setError(normalizeApiError(error).message);
         }finally {
             setSubmitting(false);
         }
@@ -91,21 +99,21 @@ const QuickAddForm = ({formType, onClose, onSuccess} : QuickAddFormProps) => {
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16}}>
 
-                { CATEGORIES.map((cat) => (
+                { categories.map((cat) => (
                     <TouchableOpacity
-                        key={cat}
-                        onPress={() => {setCategory(cat); setError(""); }}
+                        key={cat.id}
+                        onPress={() => {setCategory(cat.id); setError(""); }}
                         style={{
                             paddingHorizontal: 16,
                             paddingVertical: 8,
                             borderRadius: 20,
-                            backgroundColor: category === cat ? colors.primary : colors.card,
+                            backgroundColor: category === cat.id ? colors.primary : colors.card,
                             borderWidth: 1,
-                            borderColor: category === cat ? colors.primary : colors.border,
+                            borderColor: category === cat.id ? colors.primary : colors.border,
                         }}
                     >
-                        <Text style={{ color: category === cat ? colors.white : colors.text }}>
-                            {cat}
+                        <Text style={{ color: category === cat.id ? colors.white : colors.text }}>
+                            {systemCategoryLabel(cat.id, language)}
                         </Text>
                     </TouchableOpacity>
                 ))}

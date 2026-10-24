@@ -2,9 +2,11 @@
 
 model Transaction {
     id                      String          @id @default(cuid())
-    amount                  Float           
+    amount                  Decimal         @db.Decimal(19, 4)
+    currency                String?
     transType               TransactionType
     category                String
+    categoryId              String?
     description             String?
     receiptUrl              String?
     location                String?
@@ -17,12 +19,14 @@ model Transaction {
     // Relationships
     userId                  Int
     user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    categoryLink            Category?       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
 
     @@index([userId])
     @@index([userId, transactionDate])
     @@index([transType])
     @@index([category])
+    @@index([categoryId])
     @@map("transaction")
 }
 

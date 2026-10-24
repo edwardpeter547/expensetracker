@@ -1,5 +1,5 @@
-import { apiClient } from '@/api/client';
-import * as SecureStore from 'expo-secure-store';
+import { apiClient, clearStoredTokens, readStoredTokens, setAccessToken, storeTokens } from '@/api/client';
+import { useLocale } from '@/contexts/LocaleContext';
 import { createContext, ReactNode, useEffect, useState } from "react";
 
 
@@ -10,6 +10,8 @@ interface User {
     username: string;
     firstname: string;
     lastname: string;
+    language?: string;
+    currency?: string;
 }
 
 
@@ -37,28 +39,26 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { language, currency, applyRemotePreferences } = useLocale();
 
     useEffect(() => {
         const loadTokens = async () => {
             try{
-                const accessToken = await SecureStore.getItemAsync('accessToken');
-                const refreshToken = await SecureStore.getItemAsync('refreshToken');
+                const { accessToken, refreshToken } = await readStoredTokens();
 
                 if(accessToken && refreshToken){
-                    // Set default header
-                    apiClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-                    console.log(`Here is the access token: ${accessToken}`);
+                    setAccessToken(accessToken);
 
                     // fetch user profile to verify token is still valid
                     const response = await apiClient.get('/user/profile');
-                    console.log("This is the data", JSON.stringify(response.data.data));
-                    setUser(response.data.data);
+                    const profile = response.data.data.profile;
+                    setUser(profile);
+                    applyRemotePreferences(profile.language, profile.currency);
                 }
             }
-            catch(error){
+            catch{
                 // Token has expired
-                await SecureStore.deleteItemAsync('accessToken');
-                await SecureStore.deleteItemAsync('refreshToken');
+                await clearStoredTokens();
             }
             finally{
                 setIsLoading(false);
@@ -66,44 +66,41 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
         }
 
         loadTokens();
-    }, []);
+    }, [applyRemotePreferences]);
 
 
     const login = async (email: string, password: string) => {
         const response = await apiClient.post("/auth/login", { email, password });
         const {user, accessToken, refreshToken} = response.data.data;
 
-        // Lets store the auth loadTokens
-        await SecureStore.setItemAsync('accessToken', accessToken);
-        await SecureStore.setItemAsync('refreshToken', refreshToken);
-
-        apiClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        await storeTokens(accessToken, refreshToken);
         setUser(user);
+        applyRemotePreferences(user.language, user.currency);
     }
 
     const register = async(data: RegisterData) => {
-        const response = await apiClient.post('/auth/register', data);
+        const response = await apiClient.post('/auth/register', {
+            ...data,
+            language,
+            currency,
+        });
         const { user, accessToken, refreshToken } = response.data.data;
 
-        await SecureStore.setItemAsync('accessToken', accessToken);
-        await SecureStore.setItemAsync('refreshToken', refreshToken);
-
-        apiClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        await storeTokens(accessToken, refreshToken);
         setUser(user);
+        applyRemotePreferences(user.language, user.currency);
     }
 
     const logout = async () => {
         try{
-            const refreshToken = await SecureStore.getItemAsync('refreshToken');
-            const response = await apiClient.post('/auth/logout', {refreshToken});
+            const { refreshToken } = await readStoredTokens();
+            await apiClient.post('/auth/logout', {refreshToken});
         }
-        catch(error){
+        catch{
 
         }
 
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        delete apiClient.defaults.headers.common["Authorization"];
+        await clearStoredTokens();
         setUser(null);
     }
 

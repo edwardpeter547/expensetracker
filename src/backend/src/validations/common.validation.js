@@ -1,14 +1,15 @@
 import Joi from "joi";
+import { toCanonicalDecimal } from "../utils/money.js";
 
 /**
  * Build a UUID id schema.
  *
- * Note: currently returns a function reference rather than an invoked schema;
- * this builder is unused.
+ * Note: this builder is currently unused; it is kept available for future
+ * id-parameter schemas.
  *
  * @returns {*} A Joi schema value.
  */
-export const id = () => Joi.string().uuid().required;
+export const id = () => Joi.string().uuid().required();
 
 /**
  * Build a required email schema.
@@ -61,3 +62,22 @@ export const token = () => Joi.string().required();
  * @returns {import('joi').StringSchema} A required Joi string schema.
  */
 export const refreshToken = () => Joi.string().length(80).pattern(/^[0-9a-f]{80}$/i).required();
+
+/**
+ * Build a positive-money schema that accepts a number or canonical decimal
+ * string and normalizes it to a canonical decimal string.
+ *
+ * @returns {import('joi').Schema} The money schema.
+ */
+export const decimalAmount = () => Joi.alternatives()
+    .try(
+        Joi.number().positive(),
+        Joi.string().pattern(/^\d+(\.\d{1,4})?$/),
+    )
+    .custom((value, helpers) => {
+        try {
+            return toCanonicalDecimal(value);
+        } catch {
+            return helpers.error('any.invalid');
+        }
+    });

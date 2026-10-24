@@ -1,6 +1,11 @@
-const API_URL = process.env.API_URL;
-const LOCAL_SERVER_IP = process.env.LOCAL_SERVER_IP;
-const LOCAL_SERVER_PORT = process.env.LOCAL_SERVER_PORT;
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '7001';
+const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV || 'development';
+
+const normalizedApiUrl = (() => {
+    if (!API_URL) return undefined;
+    return API_URL.replace(/\/+$/, '');
+})();
 
 export default {
   "expo": {
@@ -44,7 +49,8 @@ export default {
       "expo-font",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -54,9 +60,9 @@ export default {
       "eas": {
         "projectId": "be526f99-7f66-43ed-8711-cf0312476fa9"
       },
-      apiUrl: API_URL || `http://${LOCAL_SERVER_IP}:${LOCAL_SERVER_PORT}/api/v1`,
-      serverIp: LOCAL_SERVER_IP,
-      serverPort: LOCAL_SERVER_PORT
+      apiUrl: normalizedApiUrl,
+      apiPort: Number.parseInt(API_PORT, 10) || 7001,
+      environment: APP_ENV
     },
     "owner": "edwardpeter547"
   }

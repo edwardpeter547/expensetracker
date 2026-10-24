@@ -15,17 +15,17 @@ import { bulkCreateSchema, createTransactionSchema, updateTransactionSchema } fr
 describe('Create Transaction Schema Test Suite - createTransactionSchema', () => {
 
     const transactionData = {
-        amount: 500.00,
+        amount: '500',
         type: 'INCOME',
         category: 'Salary',
         description: `My salary for the month of ${new Date().toISOString().split('T')}`,
         date: new Date().toISOString(),
-        recieptUrl: 'http://localhost:800/api/reports/reciept.jpg',
+        receiptUrl: 'http://localhost:800/api/reports/reciept.jpg',
         location: 'United Kingdom'
     }
 
     const requiredFields = ['amount', 'type', 'category'];
-    const optionalFields = ['description', 'date', 'recieptUrl', 'location'];
+    const optionalFields = ['description', 'date', 'receiptUrl', 'location'];
 
     /**
      * Validates that validation fails when any required field (amount, type, category)
@@ -151,10 +151,10 @@ describe('Create Transaction Schema Test Suite - createTransactionSchema', () =>
     test('fails if reciept url is not a valid uri', () => {
         const { error } = createTransactionSchema.validate({
             ...transactionData,
-            recieptUrl: 'welcome'
+            receiptUrl: 'welcome'
         });
         expect(error).toBeDefined();
-        expect(error.message).toContain('recieptUrl');
+        expect(error.message).toContain('receiptUrl');
     })
 
 
@@ -173,17 +173,17 @@ describe('Create Transaction Schema Test Suite - createTransactionSchema', () =>
 describe('Update Transaction Schema Test Suite - updateTransactionSchema', () => {
 
     const transactionData = {
-        amount: 500.00,
+        amount: '500',
         type: 'INCOME',
         category: 'Salary',
         description: `My salary for the month of ${new Date().toISOString().split('T')}`,
         date: new Date().toISOString(),
-        recieptUrl: 'http://localhost:800/api/reports/reciept.jpg',
+        receiptUrl: 'http://localhost:800/api/reports/reciept.jpg',
         location: 'United Kingdom'
     }
 
     const requiredFields = ['amount', 'type', 'category'];
-    const optionalFields = ['description', 'date', 'recieptUrl', 'location'];
+    const optionalFields = ['description', 'date', 'receiptUrl', 'location'];
 
 
     /**
@@ -297,10 +297,10 @@ describe('Update Transaction Schema Test Suite - updateTransactionSchema', () =>
     test('update transaction fails if reciept url is not a valid uri', () => {
         const { error } = updateTransactionSchema.validate({
             ...transactionData,
-            recieptUrl: 'welcome'
+            receiptUrl: 'welcome'
         });
         expect(error).toBeDefined();
-        expect(error.message).toContain('recieptUrl');
+        expect(error.message).toContain('receiptUrl');
     })
 
 
@@ -323,7 +323,7 @@ describe('Bulk Create Schema Validation - bulkCreateSchema', () => {
         category: 'Salary',
         description: `My salary for the month of ${new Date().toISOString().split('T')}`,
         date: new Date().toISOString(),
-        recieptUrl: 'http://localhost:800/api/reports/reciept.jpg',
+        receiptUrl: 'http://localhost:800/api/reports/reciept.jpg',
         location: 'United Kingdom'
     }
 

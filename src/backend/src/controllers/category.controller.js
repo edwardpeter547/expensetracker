@@ -33,6 +33,7 @@ export const getCategories = catchAsync(async (request, response) => {
         success: true,
         message: "Category List",
         data: categories,
+        errors: null,
     })
 });
 
@@ -58,7 +59,8 @@ export const getCategory = catchAsync(async (request, response) => {
     response.status(StatusCodes.OK).json({
         success: true,
         message: "Category Record",
-        data: category
+        data: category,
+        errors: null,
     })
 });
 
@@ -71,7 +73,6 @@ export const getCategory = catchAsync(async (request, response) => {
  * @returns {Promise<void>}
  */
 export const createCategory = catchAsync(async (request, response) => {
-    console.log("I never made it to this point");
     const {name, icon} = request.body;
     const userId = request.user?.id;
 
@@ -93,7 +94,8 @@ export const createCategory = catchAsync(async (request, response) => {
     response.status(StatusCodes.CREATED).json({
         success: true,
         message: "Category created",
-        data: category
+        data: category,
+        errors: null,
     })
 });
 
@@ -137,7 +139,8 @@ export const updateCategory = catchAsync(async (request, response) => {
     response.status(StatusCodes.OK).json({
         success: true,
         message: "Category Updated",
-        data: updated
+        data: updated,
+        errors: null,
     });
 });
 
@@ -174,9 +177,5 @@ export const deleteCategory = catchAsync(async (request, response) => {
 
     await deleteCategoryRecord(categoryId, userId);
 
-    response.status(StatusCodes.NO_CONTENT).json({
-        success: true,
-        message: "Category Deleted.",
-        data: null
-    });
+    response.sendStatus(StatusCodes.NO_CONTENT);
 })

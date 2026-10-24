@@ -1,6 +1,7 @@
 model Budget {
     id                  String              @id @default(cuid())
-    amount              Float               
+    amount              Decimal             @db.Decimal(19, 4)
+    currency            String?
     period              BudgetPeriod        @default(MONTHLY)
     startDate           DateTime            @default(now())
     endDate             DateTime?
@@ -11,7 +12,7 @@ model Budget {
     userId              Int
     user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
     categoryId          String
-    category            Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    category            Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
     // Timestamps
     createdAt           DateTime            @default(now())

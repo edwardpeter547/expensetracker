@@ -11,7 +11,7 @@ import {
     verifyToken
 } from '../../controllers/auth.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
-import { validate } from '../../middleware/validation.middleware.js';
+import { validate, validateQuery } from '../../middleware/validation.middleware.js';
 import {
     changePasswordSchema,
     emailVerificationSchema,
@@ -31,7 +31,7 @@ const authRoutes = express.Router();
 
 // Public routes
 authRoutes.post('/register', validate(registerSchema), register);
-authRoutes.get('/verify-email', validate(verificationTokenSchema), verifyEmail);
+authRoutes.get('/verify-email', validateQuery(verificationTokenSchema), verifyEmail);
 authRoutes.post('/resend-verification', validate(emailVerificationSchema), resendVerification);
 authRoutes.post('/login', validate(loginSchema), login);
 authRoutes.post('/forgot-password', validate(emailVerificationSchema), forgotPassword);

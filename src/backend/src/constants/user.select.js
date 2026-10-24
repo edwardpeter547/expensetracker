@@ -22,6 +22,7 @@ export const USER_PUBLIC_SELECT = {
     isEmailVerified: true,
     emailVerifiedAt: true,
     language: true,
+    currency: true,
 };
 
 /**
@@ -36,4 +37,23 @@ export const USER_OWNER_SELECT = {
     firstname: true,
     lastname: true,
     avatar: true,
+};
+
+/**
+ * Projection for the authenticated user's own profile and profile updates.
+ * It includes editable preferences but omits verification status, personal
+ * identifiers such as date of birth and phone number, and all credentials.
+ */
+export const USER_PROFILE_SELECT = {
+    id: true,
+    email: true,
+    username: true,
+    firstname: true,
+    lastname: true,
+    avatar: true,
+    language: true,
+    currency: true,
+    timezone: true,
+    theme: true,
+    updatedAt: true,
 };

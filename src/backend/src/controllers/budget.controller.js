@@ -1,7 +1,8 @@
 import { StatusCodes } from "http-status-codes";
 import logger from "../configurations/logger.config.js";
 import { BUDGET_ACTIONS } from "../constants/audit.actions.js";
-import { addBudget, budgetExists, checkBudget, deleteBudgetRecord, getBudgetList, getBudgetRecord, getBudgetWithSpending } from "../services/budget.service.js";
+import { addBudget, budgetExists, checkBudget, deleteBudgetRecord, getBudgetList, getBudgetRecord, getBudgetWithSpending, updateBudgetRecord } from "../services/budget.service.js";
+import { getCategoryRecord } from "../services/category.service.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { maskEmail } from "../utils/helpers.js";
@@ -63,8 +64,13 @@ export const getBudget = catchAsync(async (request, response) => {
  * @returns {Promise<void>}
  */
 export const createBudget = catchAsync(async (request, response) => {
-    const { amount, categoryId, period = "MONTHLY", startDate, endDate, alertThreshold = 80 } = request.body;
+    const { amount, categoryId, currency, period = "MONTHLY", startDate, endDate, alertThreshold = 80 } = request.body;
     const userId = request.user?.id;
+
+    const category = await getCategoryRecord(categoryId, userId);
+    if(!category){
+        throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+    }
 
     const existing = await checkBudget(userId, categoryId, period);
     if(existing) {
@@ -82,7 +88,8 @@ export const createBudget = catchAsync(async (request, response) => {
         endDate: endDate ? new Date(endDate) : undefined,
         alertThreshold,
         userId,
-        categoryId
+        categoryId,
+        currency: currency || request.user?.currency || 'USD',
     }
 
     const budget = await addBudget(budgetData);
@@ -105,20 +112,21 @@ export const createBudget = catchAsync(async (request, response) => {
  * @returns {Promise<void>}
  */
 export const updateBudget = catchAsync(async (request, response) => {
-    const { amount, period, startDate, endDate, alertThreshold, isActive} = request.body;
+    const { amount, currency, period, startDate, endDate, alertThreshold, isActive} = request.body;
     const userId = request.user?.id;
     const budgetId = request.params?.id;
 
     const budget = await budgetExists(userId, budgetId);
 
     if(!budget){
-        logger.error("Budget not found", {user: request.user?.email, action: BUDGET_ACTIONS.NOT_FOUND});
+        logger.error("Budget not found", {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.NOT_FOUND});
         throw new AppError("Budget not found", StatusCodes.NOT_FOUND);
     }
 
     const budgetData = {
         ...(amount !== undefined && { amount }),
-        ...(period !== undefined && { amount }),
+        ...(currency !== undefined && { currency }),
+        ...(period !== undefined && { period }),
         ...(startDate !== undefined && { startDate: new Date(startDate)}),
         ...(endDate !== undefined && { endDate: new Date(endDate)}),
         ...(alertThreshold !== undefined && {alertThreshold }),
@@ -150,16 +158,11 @@ export const deleteBudget = catchAsync(async (request, response) => {
     const budget = await budgetExists(userId, budgetId);
 
     if(!budget){
-        logger.error("Budget not found", {user: request.user?.email, action: BUDGET_ACTIONS.NOT_FOUND});
+        logger.error("Budget not found", {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.NOT_FOUND});
         throw new AppError("Budget not found", StatusCodes.NOT_FOUND);
     }
 
     await deleteBudgetRecord(budgetId, userId);
 
-    response.status(StatusCodes.NO_CONTENT).json({
-        success: true,
-        message: "Budget Deleted",
-        data: null,
-        errors: null
-    })
+    response.sendStatus(StatusCodes.NO_CONTENT);
 })

@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { decimalAmount } from "./common.validation.js";
 
 /**
  * Schema for validating transaction creation requests
@@ -9,16 +10,17 @@ import Joi from "joi";
  * @property {string} category - Transaction category. Required.
  * @property {string} [description] - Optional transaction description (max 500 characters).
  * @property {Date} [date] - Optional transaction date in ISO 8601 format.
- * @property {string} [recieptUrl] - Optional receipt URL (must be valid URI).
+ * @property {string} [receiptUrl] - Optional receipt URL (must be valid URI).
  * @property {string} [location] - Optional transaction location.
  */
 export const createTransactionSchema = Joi.object({
-    amount: Joi.number().positive().required(),
+    amount: decimalAmount().required(),
     type: Joi.string().valid('INCOME', 'EXPENSE').required(),
     category: Joi.string().required(),
+    categoryId: Joi.string(),
     description: Joi.string().max(500),
     date: Joi.date().iso(),
-    recieptUrl: Joi.string().uri(),
+    receiptUrl: Joi.string().uri(),
     location: Joi.string()
 });
 
@@ -33,16 +35,17 @@ export const createTransactionSchema = Joi.object({
  * @property {string} [category] - Transaction category. Optional.
  * @property {string} [description] - Optional transaction description (max 500 characters).
  * @property {Date} [date] - Optional transaction date in ISO 8601 format.
- * @property {string} [recieptUrl] - Optional receipt URL (must be valid URI).
+ * @property {string} [receiptUrl] - Optional receipt URL (must be valid URI).
  * @property {string} [location] - Optional transaction location.
  */
 export const updateTransactionSchema = Joi.object({
-    amount: Joi.number().positive(),
+    amount: decimalAmount(),
     type: Joi.string().valid('INCOME', 'EXPENSE'),
     category: Joi.string(),
+    categoryId: Joi.string(),
     description: Joi.string().max(500),
     date: Joi.date().iso(),
-    recieptUrl: Joi.string().uri(),
+    receiptUrl: Joi.string().uri(),
     location: Joi.string()
 });
 

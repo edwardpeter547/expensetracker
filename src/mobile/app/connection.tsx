@@ -1,4 +1,5 @@
 import { apiClient } from "@/api/client";
+import { normalizeApiError } from "@/api/errors";
 import SafeScreen from "@/components/SafeScreen";
 import useStyles from "@/hooks/useStyles";
 import useTheme from "@/hooks/useTheme";
@@ -28,7 +29,7 @@ const ConnectionChecker = () => {
             const elapsed = Date.now() - start;
             setResponseTime(elapsed);
             setStatus("error");
-            setErrorMessage(error.message || "Connection failure");
+            setErrorMessage(normalizeApiError(error).message);
         }
     }
 
@@ -47,6 +48,9 @@ const ConnectionChecker = () => {
                     <Text style={styles.appName}>ExpenseTracker</Text>
                     <Text style={styles.tagline}>API Connection Tester</Text>
                 </View>
+                <Text style={[styles.statusLabel, { marginBottom: 8 }]}>
+                    Target: {String(apiClient.defaults.baseURL ?? '')}
+                </Text>
 
                 <View style={styles.card}>
                     <View style={styles.statusRow}>

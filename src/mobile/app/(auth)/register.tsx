@@ -2,6 +2,7 @@ import Button from "@/components/ui/Button";
 import InputField from "@/components/ui/Input";
 import KeyboardAvoidWrapper from "@/components/ui/KeyboardAvoidWrapper";
 import Logo from "@/components/ui/Logo";
+import { normalizeApiError } from "@/api/errors";
 import { useAuth } from "@/hooks/useAuth";
 import useStyles from "@/hooks/useStyles";
 import useTheme from "@/hooks/useTheme";
@@ -60,11 +61,10 @@ const RegisterScreen = () => {
             return;
         }
 
-        setLoading(true),
+        setLoading(true);
         setError("");
 
         try {
-            console.log("Lastname: ", lastname);
             await register({
                 email: email,
                 firstName: firstname,
@@ -73,8 +73,8 @@ const RegisterScreen = () => {
                 password: password
             });
             router.replace("/(tabs)");
-        }catch(error: any){
-            error.response?.data?.message || "An error occurred. Please try again.";
+        }catch(error){
+            setError(normalizeApiError(error).message);
         }
         finally{
             setLoading(false);

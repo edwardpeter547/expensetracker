@@ -1,5 +1,4 @@
 import express from 'express';
-import Config from '../configurations/env.config.js';
 import authRoutes from './v1/auth.routes.js';
 import budgetRoutes from './v1/budget.routes.js';
 import categoryRoutes from './v1/category.routes.js';
@@ -20,14 +19,23 @@ router.use('/recurring', recurringRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/user', userRoutes);
 
-// Api Health check endpoint
-router.get('/health', (request, response) => {
+/**
+ * Lightweight process-liveness endpoint.
+ *
+ * This intentionally reports only process liveness and service identity; it
+ * performs no database check and discloses no infrastructure details.
+ *
+ * @param {import('express').Request} request Express request.
+ * @param {import('express').Response} response Express response.
+ * @returns {void}
+ */
+export const healthHandler = (request, response) => {
     response.status(200).json({
-        status: 'OK',
-        timestamp: new Date(),
-        environment: Config.nodeEnv,
-        info: request.__('HEALTH_MSG'),
+        status: 'ok',
+        service: 'expensetracker-api',
     });
-});
+};
+
+router.get('/health', healthHandler);
 
 export default router;

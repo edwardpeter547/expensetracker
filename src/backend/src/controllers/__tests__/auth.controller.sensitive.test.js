@@ -147,7 +147,7 @@ describe('auth.controller sensitive-data responses', () => {
         expect(payload.data.user).toHaveProperty('email', 'a@b.c');
     });
 
-    test('forgotPassword returns a user without a password hash or reset-token material', async () => {
+    test('forgotPassword returns a generic response with no user or token material', async () => {
         mockAuthService.getSafeUser.mockResolvedValue({
             id: 1,
             email: 'a@b.c',
@@ -167,12 +167,10 @@ describe('auth.controller sensitive-data responses', () => {
 
         expect(mockAuthService.getSafeUser).toHaveBeenCalledWith({ email: 'a@b.c' });
         const payload = json.mock.calls[0][0];
-        expect(payload.data.user).not.toHaveProperty('password');
-        expect(payload.data.user).not.toHaveProperty('dateOfBirth');
-        expect(payload.data.user).not.toHaveProperty('mobileNumber');
-        expect(payload.data.user).not.toHaveProperty('resetToken');
-        expect(payload.data.user).not.toHaveProperty('passwordResetToken');
-        expect(payload.data.user).not.toHaveProperty('verificationToken');
+        expect(payload.data).toBeNull();
+        expect(JSON.stringify(payload)).not.toContain('password');
+        expect(JSON.stringify(payload)).not.toContain('resetToken');
+        expect(JSON.stringify(payload)).not.toContain('verificationToken');
     });
 
     test('verifyEmail error path does not serialize user data', async () => {
