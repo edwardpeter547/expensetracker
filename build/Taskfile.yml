@@ -19,6 +19,9 @@ includes:
   quality:
     taskfile: ./tasks/quality.yml
     flatten: true
+  network:
+    taskfile: ./tasks/network.yml
+    flatten: true
   utilities:
     taskfile: ./tasks/utilities.yml
     flatten: true

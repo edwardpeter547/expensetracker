@@ -8,12 +8,12 @@ tasks:
       - "{{.ROOT_DIR}}/build/scripts/development/dev.sh"
 
   backend:dev:
-    desc: Start the backend dev server (PORT= override)
+    desc: Start the backend dev server (PORT= and HOST= overrides)
     interactive: true
     cmds:
       - |
         cd "{{.ROOT_DIR}}/src/backend"
-        {{if .PORT}}PORT='{{.PORT}}' {{end}}npm run start:dev
+        {{if .PORT}}PORT='{{.PORT}}' {{end}}{{if .HOST}}HOST='{{.HOST}}' {{end}}npm run start:dev
 
   mobile:dev:
     desc: Start the Expo app

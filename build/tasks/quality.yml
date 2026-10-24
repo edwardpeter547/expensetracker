@@ -6,6 +6,16 @@ tasks:
     cmds:
       - cd "{{.ROOT_DIR}}/src/mobile" && npm run lint
 
+  test:mobile:
+    desc: Run mobile configuration and networking tests
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm test
+
+  test:typecheck:
+    desc: Type-check mobile unit tests with Node type definitions
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run test:typecheck
+
   backend:check:
     desc: Run backend quality checks
     deps:
@@ -18,6 +28,8 @@ tasks:
     desc: Run mobile quality checks
     deps:
       - lint
+      - test:mobile
+      - test:typecheck
 
   check:
     desc: Run backend + mobile quality checks

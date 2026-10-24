@@ -1,0 +1,22 @@
+version: '3'
+
+tasks:
+  network:ip:
+    desc: Print the active LAN address used for local device testing
+    cmds:
+      - "{{.ROOT_DIR}}/build/scripts/network/local-ip.sh"
+
+  network:url:
+    desc: Print the API base URL the mobile app will resolve
+    cmds:
+      - "{{.ROOT_DIR}}/build/scripts/network/resolved-url.sh"
+
+  network:check:
+    desc: Check that the backend health endpoint is reachable from this host
+    cmds:
+      - "{{.ROOT_DIR}}/build/scripts/network/check-backend.sh"
+
+  env:validate:
+    desc: Validate required local development environment files
+    cmds:
+      - "{{.ROOT_DIR}}/build/scripts/network/validate-env.sh"
