@@ -26,7 +26,8 @@ tickets/packages/<package-name>/
 - `type` — one of `epic`, `story`, or `task`.
 - `title` — the GitHub issue title.
 - `body` — a relative path to the Markdown body file.
-- `parent` — the parent ticket id (Epic → Story → Task).
+- `parent` — the optional parent ticket id. Omit it (or set `null`) for a
+  standalone ticket.
 - `labels`, `depends_on`, `related` — metadata used by validation and planning.
 - `issue_number` — an explicit mapping to an existing GitHub issue, when one
   exists. Leave `null` for tickets not yet reconciled.
@@ -36,10 +37,25 @@ tickets/packages/<package-name>/
 `validate` checks, offline and without credentials:
 
 - Required fields, unique ids, supported types.
-- Parent type rules (Epic has no parent; Story under Epic; Task under Story).
+- Parent type rules: Epic has no parent; Story is standalone or under an Epic;
+  Task is standalone or under an Epic or a Story.
 - Reference integrity, cycles, body-file existence, and safe paths (no
   traversal, absolute paths, or symlinks).
 - Required Markdown headings from `.github/ISSUE_TEMPLATE/` for each type.
+
+Allowed hierarchies are:
+
+```text
+Epic                    # standalone Epic
+Story                   # standalone Story
+Task                    # standalone Task
+Epic -> Story
+Epic -> Task
+Epic -> Story -> Task
+```
+
+Invalid relationships include Task -> Task, Story -> Task, and any Epic with a
+parent, as well as circular parent/dependency chains.
 
 Markdown bodies are never rewritten by the tool.
 

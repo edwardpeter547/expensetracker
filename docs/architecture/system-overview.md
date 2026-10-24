@@ -64,7 +64,7 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 6. `POST /api/v1/auth/forgot-password` creates a 6-digit reset code and emails it; `POST /api/v1/auth/verify-otp` verifies it; `POST /api/v1/auth/change-password` resets the password and writes a password-history record.
 
 ### Data model
-The Prisma schema is split across `src/backend/src/prisma/schema.prisma` (generator + datasource) and fragments in `src/backend/src/prisma/models`. The generated client is emitted to `src/backend/src/prisma/generated`.
+The Prisma schema is split across `src/backend/src/prisma/schema.prisma` (generator + datasource) and fragments in `src/backend/src/prisma/models`. The generated client is emitted to `src/backend/src/generated` (gitignored; regenerated via `prisma generate`).
 
 Core models:
 
@@ -86,7 +86,7 @@ Core models:
 - Committed Prisma migrations (`src/backend/src/prisma/migrations`) are the
   authoritative schema mechanism; a fresh database is reconstructed with
   `task prisma:deploy`.
-- `src/backend/src/prisma/generated` is the generated client and is gitignored.
+- `src/backend/src/generated` is the generated client and is gitignored.
 - Database reset/cleanup utilities exist in `src/backend/scripts/prepare.db.js` and `src/backend/scripts/resetdb.sh` for the test database.
 
 ## Mobile

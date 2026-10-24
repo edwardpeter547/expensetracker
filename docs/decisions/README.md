@@ -1,6 +1,12 @@
 # Architecture Decision Records
 
-This directory holds Architecture Decision Records (ADRs) for significant, hard-to-reverse choices. No ADRs exist yet; this file defines how future ones are written.
+This directory holds Architecture Decision Records (ADRs) for significant, hard-to-reverse choices.
+
+## Records
+
+- [0001 — Authentication and Authorization Architecture (Epic #7)](0001-authentication-and-authorization-architecture.md) — Accepted
+- [0002 — Container-First Backend Development and CI](0002-container-first-backend-development-and-ci.md) — Proposed
+- [0003 — Independent Backend and Mobile Versioning](0003-independent-backend-and-mobile-versioning.md) — Proposed
 
 ## When to write an ADR
 
@@ -53,6 +59,11 @@ Important unresolved decisions that may warrant ADRs once made. These are **not*
 - Subscription entitlement enforcement model and tier launch sequencing.
 - Household data ownership, roles, and dissolution policy.
 - Web application architecture (single API client vs separate financial system — proposal is to reuse the backend API).
+- Cloud provider selection and managed-vs-self-hosted PostgreSQL.
+- Docker Hub repository name and credential ownership verification (issue #6).
+- Terraform vs OpenTofu adoption for Infrastructure as Code.
+- Self-hosted runner hardware, network, and label/group model.
+- EAS build profiles and remote build-number management.
 
 ## Rules
 
