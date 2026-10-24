@@ -29,7 +29,9 @@ class Ticket:
         type: One of ``epic``, ``story``, or ``task``.
         title: GitHub issue title.
         body: Repo-relative path to the Markdown body file.
-        parent: Parent ticket identifier, or ``None`` for an Epic.
+        parent: Parent ticket identifier, or ``None`` for a standalone ticket.
+            An Epic must have no parent; a Story may parent to an Epic; a Task
+            may parent to an Epic or a Story.
         labels: GitHub labels to apply on creation.
         depends_on: Ticket identifiers that must exist before this one.
         related: Loosely related ticket identifiers.

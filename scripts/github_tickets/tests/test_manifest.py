@@ -93,6 +93,50 @@ def _real_manifest_path() -> pathlib.Path:
     )
 
 
+def _infrastructure_manifest_path() -> pathlib.Path:
+    """
+    Locate the committed Infrastructure Roadmap Alignment package manifest.
+
+    The search walks upward from this test file and also checks the current
+    working directory, matching the behavior of :func:`_real_manifest_path`.
+
+    Returns:
+        The resolved manifest path.
+
+    Raises:
+        FileNotFoundError: If the fixture is not present under any repository
+            root candidate.
+    """
+    relative = (
+        pathlib.Path("tickets")
+        / "packages"
+        / "infrastructure-roadmap-alignment"
+        / "manifest.json"
+    )
+    candidates = []
+    seen = set()
+    current = pathlib.Path(__file__).resolve().parent
+    while True:
+        candidate = current / relative
+        if candidate not in seen:
+            candidates.append(candidate)
+            seen.add(candidate)
+        if current.parent == current:
+            break
+        current = current.parent
+    cwd_candidate = pathlib.Path.cwd() / relative
+    if cwd_candidate not in seen:
+        candidates.append(cwd_candidate)
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(
+        "infrastructure-roadmap-alignment manifest not found under any "
+        "repository root candidate"
+    )
+
+
 def body(*headings: str) -> str:
     """
     Build a Markdown body containing exactly the supplied headings.
@@ -266,6 +310,19 @@ class ManifestTestCase(unittest.TestCase):
         self.assertEqual(errors, [], errors)
         self.assertEqual(len(manifest.tickets), 8)
 
+    def test_infrastructure_manifest_epic_direct_task_parent_validates(self) -> None:
+        """INFRA-DOC-01 validates with INFRA-EPIC-29 as its direct parent."""
+        path = _infrastructure_manifest_path()
+        manifest = manifest_module.load_manifest(str(path))
+        errors, warnings = manifest_module.validate_manifest(manifest)
+        self.assertEqual(errors, [], errors)
+        by_id = {ticket.id: ticket for ticket in manifest.tickets}
+        self.assertIn("INFRA-DOC-01", by_id)
+        self.assertIn("INFRA-EPIC-29", by_id)
+        self.assertEqual(by_id["INFRA-DOC-01"].parent, "INFRA-EPIC-29")
+        self.assertEqual(by_id["INFRA-DOC-01"].type, "task")
+        self.assertEqual(by_id["INFRA-EPIC-29"].type, "epic")
+
     def test_duplicate_ids_are_rejected(self) -> None:
         """Two tickets with the same id are rejected."""
         builder = PackageBuilder(self.tmp.name)
@@ -285,13 +342,54 @@ class ManifestTestCase(unittest.TestCase):
         self.assertTrue(any("unknown parent" in e for e in errors), errors)
 
     def test_invalid_hierarchy_is_rejected(self) -> None:
-        """A Task with an Epic parent violates the hierarchy rules."""
+        """A Task with a Task parent violates the hierarchy rules."""
+        builder = PackageBuilder(self.tmp.name)
+        data = builder.valid_manifest()
+        data["tickets"].append(
+            {
+                "id": "TASK-2",
+                "type": "task",
+                "title": "Task Two",
+                "body": "tasks/task-two.md",
+                "parent": "TASK-1",
+                "labels": ["TASK"],
+                "depends_on": [],
+                "related": [],
+                "issue_number": None,
+            }
+        )
+        manifest = self.load(data)
+        errors, _ = manifest_module.validate_manifest(manifest)
+        self.assertTrue(
+            any("must have an Epic or Story parent" in e for e in errors), errors
+        )
+
+    def test_task_with_epic_parent_is_allowed(self) -> None:
+        """A Task whose direct parent is an Epic validates successfully."""
         builder = PackageBuilder(self.tmp.name)
         data = builder.valid_manifest()
         data["tickets"][2]["parent"] = "EPIC-1"
         manifest = self.load(data)
         errors, _ = manifest_module.validate_manifest(manifest)
-        self.assertTrue(any("must have a Story parent" in e for e in errors), errors)
+        self.assertEqual(errors, [], errors)
+
+    def test_story_with_task_parent_is_rejected(self) -> None:
+        """A Story with a Task parent violates the hierarchy rules."""
+        builder = PackageBuilder(self.tmp.name)
+        data = builder.valid_manifest()
+        data["tickets"][1]["parent"] = "TASK-1"
+        manifest = self.load(data)
+        errors, _ = manifest_module.validate_manifest(manifest)
+        self.assertTrue(any("must have an Epic parent" in e for e in errors), errors)
+
+    def test_epic_with_parent_is_rejected(self) -> None:
+        """An Epic with any parent is rejected."""
+        builder = PackageBuilder(self.tmp.name)
+        data = builder.valid_manifest()
+        data["tickets"][0]["parent"] = "STORY-1"
+        manifest = self.load(data)
+        errors, _ = manifest_module.validate_manifest(manifest)
+        self.assertTrue(any("cannot have a parent" in e for e in errors), errors)
 
     def test_dependency_cycle_is_detected(self) -> None:
         """A dependency cycle across parent and depends_on edges is detected."""
@@ -493,25 +591,23 @@ class ManifestTestCase(unittest.TestCase):
         errors, _ = manifest_module.validate_manifest(manifest)
         self.assertTrue(any("depends_on entries must be strings" in e for e in errors), errors)
 
-    def test_story_missing_parent_is_rejected(self) -> None:
-        """A Story with no parent is rejected."""
+    def test_story_without_parent_is_allowed(self) -> None:
+        """A standalone Story with no parent validates successfully."""
         builder = PackageBuilder(self.tmp.name)
         data = builder.valid_manifest()
         data["tickets"][1]["parent"] = None
-        path = self.rewrite_manifest(data)
-        manifest = manifest_module.load_manifest(path)
+        manifest = self.load(data)
         errors, _ = manifest_module.validate_manifest(manifest)
-        self.assertTrue(any("Story 'STORY-1' is missing a required Epic parent" in e for e in errors), errors)
+        self.assertEqual(errors, [], errors)
 
-    def test_task_missing_parent_is_rejected(self) -> None:
-        """A Task with no parent is rejected."""
+    def test_task_without_parent_is_allowed(self) -> None:
+        """A standalone Task with no parent validates successfully."""
         builder = PackageBuilder(self.tmp.name)
         data = builder.valid_manifest()
         data["tickets"][2]["parent"] = None
-        path = self.rewrite_manifest(data)
-        manifest = manifest_module.load_manifest(path)
+        manifest = self.load(data)
         errors, _ = manifest_module.validate_manifest(manifest)
-        self.assertTrue(any("Task 'TASK-1' is missing a required Story parent" in e for e in errors), errors)
+        self.assertEqual(errors, [], errors)
 
     def test_invalid_type_values_are_rejected_without_exception(self) -> None:
         """Invalid ``type`` values (array/object/number/bool/null) error safely."""
