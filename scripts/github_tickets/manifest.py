@@ -354,7 +354,12 @@ def _validate_references(manifest: Manifest, ids: Dict[str, Ticket], errors: Lis
 
 def _validate_hierarchy(manifest: Manifest, ids: Dict[str, Ticket], errors: List[str]) -> None:
     """
-    Enforce mandatory type rules for Epic, Story, and Task parents.
+    Enforce the allowed parent types for Epic, Story, and Task tickets.
+
+    Supported structures are: standalone Epic, standalone Story, standalone
+    Task, Epic -> Story, Epic -> Task, and Epic -> Story -> Task. A Story's
+    parent, when present, must be an Epic; a Task's parent, when present, must
+    be an Epic or a Story. Epics may not have a parent.
 
     Tickets whose type is not ``epic``, ``story``, or ``task`` are skipped
     here because the invalid type is already reported by field validation.
@@ -379,19 +384,16 @@ def _validate_hierarchy(manifest: Manifest, ids: Dict[str, Ticket], errors: List
                 errors.append(f"Epic {ticket.id!r} cannot have a parent")
             continue
 
-        # Only Story and Task have parent rules; any other type is already
-        # reported by _validate_ticket_fields and must not reach the string
-        # formatting below (a non-string type has no .capitalize()).
+        # Only Story and Task may carry an optional parent; any other type is
+        # already reported by _validate_ticket_fields and must not reach the
+        # string formatting below (a non-string type has no .capitalize()).
         if ticket.type not in ("story", "task"):
             continue
 
         type_name = ticket.type.capitalize()
         parent_id = ticket.parent
         if parent_id is None:
-            expected = "Epic" if ticket.type == "story" else "Story"
-            errors.append(
-                f"{type_name} {ticket.id!r} is missing a required {expected} parent"
-            )
+            # Standalone Story and standalone Task are valid.
             continue
         if not isinstance(parent_id, str):
             errors.append(
@@ -409,9 +411,9 @@ def _validate_hierarchy(manifest: Manifest, ids: Dict[str, Ticket], errors: List
                 f"Story {ticket.id!r} must have an Epic parent, got {parent_id!r} "
                 f"({parent.type})"
             )
-        if ticket.type == "task" and parent.type != "story":
+        if ticket.type == "task" and parent.type not in ("epic", "story"):
             errors.append(
-                f"Task {ticket.id!r} must have a Story parent, got {parent_id!r} "
+                f"Task {ticket.id!r} must have an Epic or Story parent, got {parent_id!r} "
                 f"({parent.type})"
             )
 
