@@ -34,6 +34,7 @@ const mockBudgetService = {
     getBudgetList: jest.fn(),
     getBudgetRecord: jest.fn(),
     getBudgetWithSpending: jest.fn(),
+    updateBudgetRecord: jest.fn(),
 };
 
 const mockCategoryService = {
@@ -65,7 +66,8 @@ const categoryController = await import('../category.controller.js');
 const makeResponse = () => {
     const json = jest.fn();
     const status = jest.fn(() => ({ json }));
-    return { json, status };
+    const sendStatus = jest.fn();
+    return { json, status, sendStatus };
 };
 
 const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
@@ -137,6 +139,36 @@ describe('transaction controller ownership', () => {
         expect(mockTransactionService.updateTransactionRecord).toHaveBeenCalledWith('t1', 1, expect.any(Object));
         expect(status).toHaveBeenCalledWith(200);
     });
+
+    /**
+     * Transaction creation maps the corrected receipt field name, derives the
+     * user from auth context, and responds 201 with the standard envelope.
+     */
+    test('createTransaction maps receiptUrl and responds 201', async () => {
+        mockTransactionService.createTransactionRecord.mockResolvedValue({ id: 't1' });
+        const { json, status } = makeResponse();
+        const req = {
+            body: {
+                amount: 100,
+                type: 'EXPENSE',
+                category: 'Food',
+                receiptUrl: 'https://example.com/receipt.png',
+                date: '2026-01-01T00:00:00.000Z',
+            },
+            user: { id: 1 },
+        };
+
+        await transactionController.createTransaction(req, { status, json }, jest.fn());
+        await flushAsync();
+
+        expect(mockTransactionService.createTransactionRecord).toHaveBeenCalledWith(expect.objectContaining({
+            userId: 1,
+            transType: 'EXPENSE',
+            receiptUrl: 'https://example.com/receipt.png',
+        }));
+        expect(status).toHaveBeenCalledWith(201);
+        expect(json.mock.calls[0][0].errors).toBeNull();
+    });
 });
 
 describe('budget controller ownership', () => {
@@ -181,17 +213,52 @@ describe('budget controller ownership', () => {
         expect(next.mock.calls[0][0].statusCode).toBe(404);
     });
 
+    /**
+     * A period-only update must persist `period`, never mistakenly write the
+     * period string into the numeric `amount` field.
+     */
+    test('updateBudget maps period to the period field', async () => {
+        mockBudgetService.budgetExists.mockResolvedValue({ id: 'b1', userId: 1 });
+        mockBudgetService.updateBudgetRecord.mockResolvedValue({ id: 'b1' });
+        const { json, status } = makeResponse();
+        const req = { params: { id: 'b1' }, body: { period: 'WEEKLY' }, user: { id: 1 } };
+
+        await budgetController.updateBudget(req, { status, json }, jest.fn());
+        await flushAsync();
+
+        expect(mockBudgetService.updateBudgetRecord).toHaveBeenCalledWith('b1', 1, expect.objectContaining({ period: 'WEEKLY' }));
+        expect(mockBudgetService.updateBudgetRecord.mock.calls[0][2]).not.toHaveProperty('amount');
+    });
+
+    /**
+     * Budget creation must reject a category the user cannot access rather
+     * than silently linking the budget to another user's category.
+     */
+    test('createBudget rejects a category the user cannot access', async () => {
+        mockCategoryService.getCategoryRecord.mockResolvedValue(null);
+        const { json, status } = makeResponse();
+        const next = jest.fn();
+        const req = { body: { amount: 100, categoryId: 'other', period: 'MONTHLY' }, user: { id: 1 } };
+
+        await budgetController.createBudget(req, { status, json }, next);
+        await flushAsync();
+
+        expect(json).not.toHaveBeenCalled();
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next.mock.calls[0][0].statusCode).toBe(404);
+    });
+
     test('deleteBudget passes the trusted userId into the soft delete', async () => {
         mockBudgetService.budgetExists.mockResolvedValue({ id: 'b1', userId: 1 });
         mockBudgetService.deleteBudgetRecord.mockResolvedValue(undefined);
-        const { json, status } = makeResponse();
+        const { json, sendStatus } = makeResponse();
         const req = { params: { id: 'b1' }, user: { id: 1 } };
 
-        await budgetController.deleteBudget(req, { status, json }, jest.fn());
+        await budgetController.deleteBudget(req, { sendStatus, json }, jest.fn());
         await flushAsync();
 
         expect(mockBudgetService.deleteBudgetRecord).toHaveBeenCalledWith('b1', 1);
-        expect(status).toHaveBeenCalledWith(204);
+        expect(sendStatus).toHaveBeenCalledWith(204);
     });
 
     test('deleteBudget rejects a non-owned budget with 404', async () => {
@@ -268,16 +335,16 @@ describe('category controller ownership', () => {
         mockCategoryService.countTransaction.mockResolvedValue(0);
         mockCategoryService.countBudget.mockResolvedValue(0);
         mockCategoryService.deleteCategoryRecord.mockResolvedValue({ id: 'c1' });
-        const { json, status } = makeResponse();
+        const { json, sendStatus } = makeResponse();
         const req = { params: { id: 'c1' }, user: { id: 1 } };
 
-        await categoryController.deleteCategory(req, { status, json }, jest.fn());
+        await categoryController.deleteCategory(req, { sendStatus, json }, jest.fn());
         await flushAsync();
 
         expect(mockCategoryService.deleteCategoryRecord).toHaveBeenCalledWith('c1', 1);
         expect(mockCategoryService.countTransaction).toHaveBeenCalledWith(1, 'Groceries');
         expect(mockCategoryService.countBudget).toHaveBeenCalledWith(1, 'c1');
-        expect(status).toHaveBeenCalledWith(204);
+        expect(sendStatus).toHaveBeenCalledWith(204);
     });
 
     test('deleteCategory rejects a non-owned category with 404', async () => {

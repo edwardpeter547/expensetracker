@@ -1,5 +1,7 @@
 import prisma from "../configurations/prisma.connect.js";
+import { StatusCodes } from "http-status-codes";
 import { USER_OWNER_SELECT } from "../constants/user.select.js";
+import AppError from "../utils/appError.js";
 
 /**
  * Create a transaction record for its owner.
@@ -11,10 +13,7 @@ import { USER_OWNER_SELECT } from "../constants/user.select.js";
  * @returns {Promise<object>} The created transaction.
  */
 export const createTransactionRecord = async (transactionData) => {
-
-    console.log(JSON.stringify(transactionData));
-
-    const record = prisma.transaction.create({
+    return prisma.transaction.create({
         data: {...transactionData},
         select: {
             id: true,
@@ -22,16 +21,15 @@ export const createTransactionRecord = async (transactionData) => {
             userId: true,
             transType: true,
             category: true,
+            categoryId: true,
+            currency: true,
             description: true,
             receiptUrl: true,
             location: true,
             createdAt: true,
             updatedAt: true,
         }
-    })
-
-    return record;
-
+    });
 }
 
 /**
@@ -42,8 +40,7 @@ export const createTransactionRecord = async (transactionData) => {
  */
 export const getTransactionsbyUser = async (userId) => {
     const transactions = await prisma.transaction.findMany({where: {userId: userId}});
-    if(!transactions) return [];
-    return transactions;
+    return transactions ?? [];
 }
 
 /**
@@ -54,45 +51,67 @@ export const getTransactionsbyUser = async (userId) => {
  * @returns {Promise<object|null>} The transaction or null.
  */
 export const getTransactionById = async (transactionId, userId) => {
-    const transaction = await prisma.transaction.findUnique({where: {id: transactionId, userId: userId}});
-    if(!transaction) return null;
-    return transaction;
+    const transaction = await prisma.transaction.findFirst({
+        where: {id: transactionId, userId: userId}
+    });
+    return transaction ?? null;
 }
 
 /**
- * Atomically delete an owned transaction using `{id, userId}`.
+ * Atomically delete an owned transaction.
  *
- * A non-owned or missing record raises a Prisma `P2025` error, which the
- * central error handler maps to 404.
+ * `deleteMany` accepts the non-unique `{id, userId}` ownership filter, so a
+ * caller can never delete another user's record. A non-owned or missing record
+ * matches zero rows and is reported as a 404.
  *
  * @param {string} transactionId The transaction id.
  * @param {number} userId The owning user id.
- * @returns {Promise<object>} The deleted transaction.
+ * @returns {Promise<void>}
+ * @throws {AppError} If no owned record matches the id.
  */
 export const deleteTransactionById = async (transactionId, userId) => {
-    
-    return await prisma.transaction.delete({ where: {id: transactionId, userId: userId}});
+    const {count} = await prisma.transaction.deleteMany({
+        where: {id: transactionId, userId: userId}
+    });
+
+    if(count === 0){
+        throw new AppError('Transaction not found', StatusCodes.NOT_FOUND);
+    }
 }
 
 
 /**
- * Atomically update an owned transaction using `{id, userId}`.
+ * Atomically update an owned transaction.
+ *
+ * `updateMany` applies the non-unique `{id, userId}` ownership filter and is
+ * followed by a scoped `findFirst` so the response always describes the
+ * caller's own record.
  *
  * @param {string} transactionId The transaction id.
  * @param {number} userId The owning user id.
  * @param {object} transactionData The fields to update.
  * @returns {Promise<object>} The updated transaction.
+ * @throws {AppError} If no owned record matches the id.
  */
 export const updateTransactionRecord = async (transactionId, userId, transactionData) => {
-    
-    const updatedTransaction = prisma.transaction.update({
+    const {count} = await prisma.transaction.updateMany({
         where: {id: transactionId, userId: userId},
         data: transactionData,
+    });
+
+    if(count === 0){
+        throw new AppError('Transaction not found', StatusCodes.NOT_FOUND);
+    }
+
+    return prisma.transaction.findFirst({
+        where: {id: transactionId, userId: userId},
         select: {
             id: true,
             amount: true,
             transType: true,
             category: true,
+            categoryId: true,
+            currency: true,
             description: true,
             receiptUrl: true,
             location: true,
@@ -101,7 +120,5 @@ export const updateTransactionRecord = async (transactionId, userId, transaction
             updatedAt: true,
         }
     });
-    if(!updatedTransaction) return null;
-    return updatedTransaction;
 }
 

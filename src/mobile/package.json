@@ -12,6 +12,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "test": "node --test src/api/__tests__/*.test.ts src/localization/__tests__/*.test.ts",
+    "test:typecheck": "tsc -p tsconfig.node.json",
     "clean": "rm -rf node_modules/"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "expo-image": "~57.0.5",
     "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.12",
+    "expo-localization": "~57.0.2",
     "expo-router": "~57.0.25",
     "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
@@ -36,6 +39,7 @@
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
+    "http-status-codes": "^2.3.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -48,7 +52,11 @@
     "typescript": "~6.0.3"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
+    "jest-expo": "~57.0.5",
     "typescript": "~5.9.2"
   },
   "expo": {

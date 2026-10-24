@@ -34,10 +34,11 @@ export const checkExistingUser = async (email, username) => {
  * @param {string} firstname The user's first name.
  * @param {string} lastname The user's last name.
  * @param {string} language The preferred locale.
+ * @param {string} [currency='USD'] The preferred currency code.
  * @returns {Promise<object>} The safe created-user projection.
  * @throws {AppError} If the email or username already exists.
  */
-export const createUser = async (email, username, password, firstname, lastname, language) => {
+export const createUser = async (email, username, password, firstname, lastname, language, currency = 'USD') => {
 
     const isExistingUser = await checkExistingUser(email, username);
     if(isExistingUser){
@@ -55,6 +56,7 @@ export const createUser = async (email, username, password, firstname, lastname,
             firstname: firstname,
             lastname: lastname,
             language,
+            currency,
             isEmailVerified: false,
             isPhoneVerified: false,
             isActive: false
@@ -66,6 +68,7 @@ export const createUser = async (email, username, password, firstname, lastname,
             firstname: true,
             lastname: true,
             language: true,
+            currency: true,
             createdAt: true
         }
     });
@@ -81,6 +84,18 @@ export const hashToken = (token) => {
     return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+/**
+ * Persist a SHA-256 digest of a refresh token for a user.
+ *
+ * The raw token is never stored; only its digest is written. `familyId` links
+ * rotated tokens so replay of any member can revoke the whole family.
+ *
+ * @param {string} refreshToken The raw refresh token to hash and persist.
+ * @param {number} userId The owning user id.
+ * @param {string} [ipAddress] The issuing request IP.
+ * @param {string|null} [familyId=null] The token family id, or null to create one.
+ * @returns {Promise<void>}
+ */
 export const createRefreshToken = async (refreshToken, userId, ipAddress, familyId = null) => {
     await prisma.refreshToken.create({
         data: {
@@ -528,7 +543,7 @@ export const updateUserPassword = async (user, password) => {
  */
 export const updateLastLogin = async (user) => {
     await prisma.user.update({
-        where: {email: user.email, id: user.id},
+        where: {id: user.id},
         data: {lastLoginAt: new Date()}
     });
 }

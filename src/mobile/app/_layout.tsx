@@ -1,5 +1,6 @@
 import SafeScreen from "@/components/SafeScreen";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LocaleProvider } from "@/contexts/LocaleContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Stack } from "expo-router";
@@ -33,9 +34,11 @@ const RootLayoutContent = () => {
 export default function RootLayout() {
     return (
         <ThemeProvider>
-            <AuthProvider>
-                <RootLayoutContent />
-            </AuthProvider>
+            <LocaleProvider>
+                <AuthProvider>
+                    <RootLayoutContent />
+                </AuthProvider>
+            </LocaleProvider>
         </ThemeProvider>
     )
 }

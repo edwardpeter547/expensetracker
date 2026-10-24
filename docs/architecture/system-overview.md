@@ -116,8 +116,9 @@ Core models:
 ## Environment and configuration
 - Backend loads env files by `NODE_ENV`: `development` -> `dev.env`, `testing` -> `test.env`, otherwise `.env`, all under `src/backend/src/environment/` (gitignored).
 - Backend config is centralized in `src/backend/src/configurations/env.config.js`.
-- Mobile uses `.env` (gitignored) with `.env.example` documenting `LOCAL_SERVER_IP`, `LOCAL_SERVER_PORT`, and `API_URL`.
+- Mobile uses `.env` (gitignored) with `.env.example` documenting `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_API_PORT`, and `EXPO_PUBLIC_APP_ENV`.
 - `src/mobile/.npmrc` is gitignored with `.npmrc.example` provided.
+- API base-URL resolution and network troubleshooting are documented in `docs/engineering/api-connectivity.md`.
 
 > Mobile baseline (verified 2026-10-13): `expo@57.0.27`, `expo-router@57.0.25`, `react-native@0.86.3`, `react@19.2.3`. The SDK 57 upgrade is committed on the current branch (`9ce1a1c`).
 
@@ -126,12 +127,12 @@ Core models:
 - Product strategy: `docs/product/` (vision, inventory, roadmap, subscription strategy).
 
 ## Known risks and gaps
-These are observations only; no behavior has been changed.
+These are the remaining observations after the Phase 0 stabilization pass.
 
-- **Monetary precision:** `Transaction.amount` and `Budget.amount` are Prisma `Float`. Floating-point arithmetic on financial values can drift; an integer/cents or `Decimal` representation should be evaluated.
-- **Category linkage:** `Budget` references `Category`, but `Transaction.category` is a free-form string, and `budget.service.js` filters spending by a `categoryId` field that does not exist on `Transaction`. Budget spending aggregation is likely broken until this is aligned.
-- **Ownership scoping:** `getTransactionById` reads by id only without checking `userId`, and update/delete use compound `where` clauses that Prisma's `update`/`delete` do not accept for non-unique fields. Transaction ownership checks need review.
-- **API naming drift:** validation uses `recieptUrl` while the database field is `receiptUrl`; `category.routes.js` `PUT /` lacks an `:id` parameter.
-- **Unused tooling:** `src/backend/tsconfig.json` and `ts-jest` exist but backend source is JavaScript; `src/mobile/eslint.config.js` is empty, so `expo lint` is not meaningfully configured.
-- **Test targets:** the mobile package has no `test` script, so only `task lint` (via `expo lint`) is available; backend tests run with `task test`.
-- **Secrets in logs:** some dev-only `console.log` calls print tokens/codes or full objects; these should be removed before production.
+- **Monetary precision:** `Transaction.amount` and `Budget.amount` are now Prisma `Decimal` / PostgreSQL `NUMERIC(19, 4)` in the schema. Apply the `20261023000000_decimal_and_currency` migration before running against an existing database; API responses serialize money as canonical decimal strings.
+- **Category linkage:** `Transaction.categoryId` now references `Category.id` with `ON DELETE RESTRICT`. New transactions validate category ownership; historical rows are backfilled only when exactly one system or user-owned category matches the old name. The legacy `Transaction.category` string remains for display and backward compatibility.
+- **Ownership scoping:** Transaction, budget, and category single-record mutations now use `findFirst` reads plus `updateMany`/`deleteMany` conditional on `{id, userId}`, so cross-user reads and mutations are denied and missing records return 404.
+- **Profile update:** `PUT /api/v1/user/profile` is now implemented and validated.
+- **Unused tooling:** `src/backend/tsconfig.json` and `ts-jest` exist but backend source is JavaScript. Mobile lint and Node-based unit tests are now configured.
+- **Test targets:** backend tests run with `task test`, but the documented 80% coverage threshold is not currently enforced by Jest (the suite exits 0 well below 80%).
+- **Enumeration surfaces:** `resendVerification` still distinguishes unknown versus already-verified accounts; `forgotPassword` now returns a generic response.

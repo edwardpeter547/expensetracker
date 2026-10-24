@@ -19,8 +19,6 @@ if(nodeEnvironment === 'development'){
 
 const envPath = resolve(__dirname, '..', 'environment', environ);
 
-console.log(`Environment variable path: ${envPath}`)
-
 dotenv.config({path: envPath});
 
 
@@ -28,6 +26,10 @@ const Config = {
 
     // Server Environment Variables
     port: process.env.PORT || 3000,
+    // Development binds all interfaces so physical devices on the LAN can
+    // reach the API. Staging/production default to loopback and are expected
+    // to sit behind a reverse proxy or be explicitly configured.
+    host: process.env.HOST || (nodeEnvironment === 'development' ? '0.0.0.0' : '127.0.0.1'),
     nodeEnv: process.env.NODE_ENV || 'development',
     apiVersion: process.env.API_VERSION || 'v1',
     clientUrl: process.env.CLIENT_URL || '*',
@@ -38,7 +40,7 @@ const Config = {
 
     // Auth Environment variables
     jwtSecret: process.env.JWT_SECRET,
-    jwtExpiresIn: process.env.jwtExpiresIn || "15m",
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || process.env.jwtExpiresIn || "15m",
 
     // Logging Environment Variables
     serverLogFile: process.env.SERVER_LOG_FILENAME || "server.log",

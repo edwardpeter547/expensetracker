@@ -6,14 +6,17 @@ export type childrenNodes = {
 }
 
 export interface DashboardData {
-    balance: number;
-    totalIncome: number;
-    totalExpenses: number;
+    currency: string;
+    balance: string;
+    totalIncome: string;
+    totalExpenses: string;
     recentTransactions: Array<{
         id: string;
-        amount: number;
+        amount: string;
+        currency: string;
         transType: "INCOME" | "EXPENSE";
         category: string;
+        categoryId?: string | null;
         description: string | null;
         transactionDate: string;
     }>;

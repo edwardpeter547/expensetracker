@@ -1,5 +1,8 @@
 import prisma from "../configurations/prisma.connect.js";
+import { StatusCodes } from "http-status-codes";
 import { FIRST_DAY_OF_MONTH, FIRST_MONTH_OF_YEAR } from "../constants/app.constants.js";
+import { Prisma } from "../generated/client.js";
+import AppError from "../utils/appError.js";
 
 /**
  * List active budgets for a user, including their category.
@@ -51,25 +54,38 @@ export const getBudgetWithSpending = async (budgets, currentDate, userId) => {
             if(budget.startDate > startDate) startDate = budget.startDate;
             if(budget.endDate) nextPeriod = new Date(budget.endDate.getTime() + 86400000)
 
-            const spending = await prisma.transaction.aggregate({
-                where: {
-                    userId: userId,
-                    categoryId: budget.categoryId,
-                    transType: "EXPENSE",
-                    transactionDate: {gte: startDate, lt: nextPeriod },
-                },
-                _sum: {amount: true },
-            });
+            // Spending is matched by categoryId and the budget's own currency,
+            // so different currencies are never summed. Historical rows with a
+            // missing categoryId or currency contribute zero spending until
+            // they are reconciled.
+            let spent = new Prisma.Decimal(0);
+            const categoryId = budget.categoryId;
+            if(categoryId && budget.currency){
+                const spending = await prisma.transaction.aggregate({
+                    where: {
+                        userId: userId,
+                        categoryId: categoryId,
+                        transType: "EXPENSE",
+                        currency: budget.currency,
+                        transactionDate: {gte: startDate, lt: nextPeriod },
+                    },
+                    _sum: {amount: true },
+                });
 
-            const spent = spending._sum.amount || 0;
-            const percentage = budget.amount > 0 ? Math.round((spent / budget.amount) * 100) : 0;
+                spent = new Prisma.Decimal(spending._sum?.amount ?? 0);
+            }
+
+            const amount = new Prisma.Decimal(budget.amount);
+            const percentage = amount.greaterThan(0)
+                ? Math.round(spent.dividedBy(amount).times(100).toNumber())
+                : 0;
 
             return {
                 ...budget,
-                spent,
-                remaining: budget.amount - spent,
+                spent: spent.toString(),
+                remaining: amount.minus(spent).toString(),
                 percentage,
-                isOverBudget: spent > budget.amount,
+                isOverBudget: spent.greaterThan(amount),
             };
         })
     )
@@ -137,17 +153,30 @@ export const budgetExists = async (userId, budgetId) => {
 }
 
 /**
- * Atomically update an owned budget using `{id, userId}`.
+ * Atomically update an owned budget.
+ *
+ * `updateMany` applies the non-unique `{id, userId}` ownership filter and is
+ * followed by a scoped `findFirst` so the response describes the caller's own
+ * record.
  *
  * @param {string} budgetId The budget id.
  * @param {number} userId The owning user id.
  * @param {object} budgetData The fields to update.
  * @returns {Promise<object>} The updated budget.
+ * @throws {AppError} If no owned record matches the id.
  */
 export const updateBudgetRecord = async (budgetId, userId, budgetData) => {
-    return await prisma.budget.update({
+    const {count} = await prisma.budget.updateMany({
         where: {id: budgetId, userId: userId},
         data: budgetData,
+    });
+
+    if(count === 0){
+        throw new AppError('Budget not found', StatusCodes.NOT_FOUND);
+    }
+
+    return prisma.budget.findFirst({
+        where: {id: budgetId, userId: userId},
         include: {category: true}
     });
 }
@@ -159,10 +188,15 @@ export const updateBudgetRecord = async (budgetId, userId, budgetData) => {
  * @param {string} budgetId The budget id.
  * @param {number} userId The owning user id.
  * @returns {Promise<void>}
+ * @throws {AppError} If no owned record matches the id.
  */
 export const deleteBudgetRecord = async (budgetId, userId) => {
-    await prisma.budget.update({
+    const {count} = await prisma.budget.updateMany({
         where: {id: budgetId, userId: userId},
         data: {isActive: false}
     });
+
+    if(count === 0){
+        throw new AppError('Budget not found', StatusCodes.NOT_FOUND);
+    }
 }

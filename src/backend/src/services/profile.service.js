@@ -1,4 +1,6 @@
 import prisma from "../configurations/prisma.connect.js";
+import { USER_PROFILE_SELECT } from "../constants/user.select.js";
+import { Prisma } from "../generated/client.js";
 
 /**
  * Load a user's safe public profile by id.
@@ -7,7 +9,6 @@ import prisma from "../configurations/prisma.connect.js";
  * @returns {Promise<object|null>} The safe user projection.
  */
 export const userProfile = async (userData) => {
-    console.log('this is decoded', JSON.stringify(userData));
     return await prisma.user.findUnique({
         where: {id: userData.userId},
         select: {
@@ -32,22 +33,42 @@ export const userProfile = async (userData) => {
     });
 }
 
+/**
+ * Update the authenticated user's editable profile fields.
+ *
+ * Only preferences and display fields are accepted; credentials and
+ * verification state can never be changed through this path.
+ *
+ * @param {number} userId The owning user id.
+ * @param {object} profileData The fields to update.
+ * @returns {Promise<object>} The safely projected updated user.
+ */
+export const updateUserProfile = async (userId, profileData) => {
+    return prisma.user.update({
+        where: {id: userId},
+        data: profileData,
+        select: USER_PROFILE_SELECT
+    });
+}
+
 
 /**
- * Aggregate a user's month-to-date income, expenses, and recent transactions.
+ * Aggregate a user's month-to-date income, expenses, and recent transactions
+ * for a single currency.
  *
  * @param {number} userId The owning user id.
  * @param {Date} startOfMonth The start of the current month.
+ * @param {string} currency The currency to aggregate.
  * @param {number} [limit=5] Maximum recent transactions to return.
- * @returns {Promise<[object, object, object[]]>} Income aggregate, expense
- *   aggregate, and recent transactions.
+ * @returns {Promise<object>} Canonical string totals and recent transactions.
  */
-export const getUserSummary = async (userId, startOfMonth, limit = 5) => {
-    return await Promise.all([
+export const getUserSummary = async (userId, startOfMonth, currency, limit = 5) => {
+    const [income, expenses, recentTransactions] = await Promise.all([
         prisma.transaction.aggregate({
             where: {
                 userId: userId,
                 transType: 'INCOME',
+                currency: currency,
                 transactionDate: {gte: startOfMonth}
             },
             _sum: {amount: true}
@@ -57,6 +78,7 @@ export const getUserSummary = async (userId, startOfMonth, limit = 5) => {
             where: {
                 userId: userId,
                 transType: "EXPENSE",
+                currency: currency,
                 transactionDate: { gte: startOfMonth}
             },
             _sum:  {amount: true}
@@ -66,6 +88,16 @@ export const getUserSummary = async (userId, startOfMonth, limit = 5) => {
             orderBy: {transactionDate: 'desc'},
             take: limit,
         })
-    ])
+    ]);
 
+    const incomeTotal = new Prisma.Decimal(income._sum.amount ?? 0);
+    const expenseTotal = new Prisma.Decimal(expenses._sum.amount ?? 0);
+
+    return {
+        currency,
+        totalIncome: incomeTotal.toString(),
+        totalExpenses: expenseTotal.toString(),
+        balance: incomeTotal.minus(expenseTotal).toString(),
+        recentTransactions,
+    };
 }

@@ -14,11 +14,11 @@ describe('Register Schema Validation - registerSchema', () => {
         email: 'test@example.com',
         username: 'testuser',
         firstName: 'First',
-        lastName: 'John'
+        lastName: 'John',
+        password: 'secretPassword123'
     }
 
-    const requiredFields = ['username', 'password', 'email'];
-    const optionalFields = ['firstName', 'lastName'];
+    const requiredFields = ['username', 'password', 'email', 'firstName', 'lastName'];
 
     /**
      * Validates that username only accepts alphanumeric characters.
@@ -93,21 +93,6 @@ describe('Register Schema Validation - registerSchema', () => {
 
             expect(error).toBeDefined();
             expect(error.message).toContain(`${field}`);
-        });
-    });
-
-    /**
-     * Validates that validation succeeds when any optional field (firstName, lastName)
-     * is omitted from the registration payload. The omitted field should not appear
-     * in the validated output.
-     */
-    test('passes when any optional field is not present', () => {
-        optionalFields.forEach(field => {
-            const password = 'secretPassword123';
-            const {[field]: removedField, ...inputWithoutField} = registrationData;
-            const { error, value } = registerSchema.validate({password, ...inputWithoutField});
-            expect(error).toBeUndefined();
-            expect(Object.keys(value)).not.toContain(field);
         });
     });
 

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "repo": "edwardpeter547/expensetracker",
+  "package": "application-foundation-improvements",
+  "tickets": [
+    {
+      "id": "AFI-EPIC-29",
+      "type": "epic",
+      "title": "[FEATURE] Project Infrastructure Development",
+      "body": "epics/epic-29-project-infrastructure.md",
+      "parent": null,
+      "labels": [
+        "EPIC",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": 29
+    },
+    {
+      "id": "AFI-01",
+      "type": "story",
+      "title": "[STORY] Application Foundation Improvement",
+      "body": "stories/afi-01-application-foundation-improvements.md",
+      "parent": "AFI-EPIC-29",
+      "labels": [
+        "STORY",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "AFI-01-T01",
+      "type": "task",
+      "title": "[TASK] Migrate Developer Workflows from Makefile to Go Task",
+      "body": "tasks/AFI-01/afi-01-t01-migrate-makefile-to-go-task.md",
+      "parent": "AFI-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "AFI-01-T02",
+      "type": "task",
+      "title": "[TASK] Improve Expo Mobile-to-Backend Connectivity and Session Handling",
+      "body": "tasks/AFI-01/afi-01-t02-improve-mobile-backend-connectivity.md",
+      "parent": "AFI-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    },
+    {
+      "id": "AFI-01-T03",
+      "type": "task",
+      "title": "[TASK] Implement Multilingual and Multi-Currency Financial Foundations",
+      "body": "tasks/AFI-01/afi-01-t03-multilingual-multicurrency-foundations.md",
+      "parent": "AFI-01",
+      "labels": [
+        "TASK",
+        "needs-triage"
+      ],
+      "depends_on": [],
+      "related": [],
+      "issue_number": null
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import {
     getTransactionsbyUser,
     updateTransactionRecord
 } from "../services/transaction.service.js";
+import { getCategoryRecord } from "../services/category.service.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { parseDate } from "../utils/helpers.js";
@@ -66,35 +67,49 @@ export const getTransaction = catchAsync(async (request, response) => {
  */
 export const createTransaction = catchAsync(async (request, response) => {
 
-    const {amount, type, category, description, recieptUrl, date, location} = request.body;
+    const {amount, type, category, categoryId, description, receiptUrl, date, location} = request.body;
+    const userId = request.user?.id;
+
+    let resolvedCategoryId = categoryId ?? null;
+    let resolvedCategoryName = category;
+    if(categoryId){
+        const categoryRecord = await getCategoryRecord(categoryId, userId);
+        if(!categoryRecord){
+            throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+        }
+        resolvedCategoryId = categoryRecord.id;
+        resolvedCategoryName = categoryRecord.name;
+    }
 
     const transactionData = {
-        userId: request.user?.id,
+        userId: userId,
         amount: amount,
+        currency: request.user?.currency || 'USD',
         transType: type,
-        category: category,
+        category: resolvedCategoryName,
+        categoryId: resolvedCategoryId,
         description: description,
-        receiptUrl: recieptUrl ? recieptUrl : null,
+        receiptUrl: receiptUrl ? receiptUrl : null,
         location: location ? location : null,
         transactionDate: parseDate(date)
     }
 
     const record = await createTransactionRecord(transactionData);
 
-    response.status(StatusCodes.OK).json({
+    response.status(StatusCodes.CREATED).json({
         success: true,
         message: "Transaction created successfully.",
         data: {
             record: record
         },
-        error: null
+        errors: null
     })
 
 });
 
 
 /**
- * Delete an owned transaction; a non-owned record yields a Prisma P2025.
+ * Delete an owned transaction; a non-owned record yields a 404.
  *
  * @param {import('express').Request} request Express request with `params.id`.
  * @param {import('express').Response} response Express response.
@@ -123,12 +138,25 @@ export const deleteTransaction = catchAsync(async (request, response) => {
 export const updateTransaction = catchAsync(async (request, response) => {
     const { id } = request.params;
     const userId = request.user?.id;
-    const { amount, type, category, description, receiptUrl, date, location } = request.body;
+    const { amount, type, category, categoryId, description, receiptUrl, date, location } = request.body;
+
+    let resolvedCategory = {};
+    if(categoryId){
+        const categoryRecord = await getCategoryRecord(categoryId, userId);
+        if(!categoryRecord){
+            throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+        }
+        resolvedCategory = {
+            category: categoryRecord.name,
+            categoryId: categoryRecord.id,
+        };
+    }
 
     const transactionData = {
         ...(amount !== undefined && { amount }),
         ...(type !== undefined && {transType: type}),
         ...(category !== undefined && {category}),
+        ...resolvedCategory,
         ...(description !== undefined && {description}),
         ...(receiptUrl !== undefined && {receiptUrl}),
         ...(location !== undefined && {location}),
@@ -136,8 +164,6 @@ export const updateTransaction = catchAsync(async (request, response) => {
     }
 
     const updatedTransaction = await updateTransactionRecord(id, userId, transactionData);
-    if(transactionData)
-        
 
     response.status(StatusCodes.OK).json({
         success: true,

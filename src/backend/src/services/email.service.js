@@ -135,7 +135,7 @@ class EmailService {
             template: 'registration-complete',
             locale,
             data: {
-                firstName: user.firstName,
+                firstName: user.firstname,
                 unsubscribeToken: user.unsubscribeToken
             }
         });
@@ -174,7 +174,6 @@ class EmailService {
      */
     async sendPasswordResetCode(user, resetPasswordCode){
         const locale = user.language || Config.defaultLocale;
-        console.log(`This is the locale: ${user.locale}`);
         return this._send({
             to: user.email,
             subject: i18n.__({phrase: 'RESET_PASSWORD_EMAIL_SUBJECT', locale}, {brandName: Config.brandName}),

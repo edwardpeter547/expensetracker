@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { SUPPORTED_LANGUAGES } from '../constants/localization.js';
 import {id, email, password, otpToken, refreshToken, text, token} from './common.validation.js';
 
 /**
@@ -8,8 +9,10 @@ export const registerSchema = Joi.object({
     email: email(),
     username: text(3, 30).required().alphanum(),
     password: password(8, 100),
-    firstName: text(),
-    lastName: text(),
+    firstName: text().required(),
+    lastName: text().required(),
+    language: Joi.string().valid(...SUPPORTED_LANGUAGES),
+    currency: Joi.string().uppercase().length(3),
 });
 
 /**

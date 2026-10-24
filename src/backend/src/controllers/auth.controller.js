@@ -5,7 +5,6 @@ import Config from '../configurations/env.config.js';
 import i18n from '../configurations/i18n.config.js';
 import logger from '../configurations/logger.config.js';
 import { AUTH_ACTIONS, MESSAGING_ACTIONS, USER_ACTIONS } from '../constants/audit.actions.js';
-import { USER_MODEL_EXCLUDE } from '../constants/model.exclude.js';
 import {
     confirmVerification,
     createLoginAttempt,
@@ -15,11 +14,9 @@ import {
     getUser,
     getSafeUser,
     getVerificationToken,
-    refreshRecord,
     removeVerificationToken,
     revokeRefreshTokenByHash,
     rotateRefreshToken,
-    sanitizeResponse,
     savePasswordResetToken,
     saveVerificationToken,
     updateLastLogin,
@@ -44,10 +41,10 @@ import { generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
  */
 export const register = catchAsync(async (request, response) => {
 
-    const {email, username, password, firstName, lastName} = request.body;
-    const language = request.headers['accept-language']?.split('-')[0] || Config.defaultLocale
+    const {email, username, password, firstName, lastName, language: bodyLanguage, currency} = request.body;
+    const language = bodyLanguage || request.headers['accept-language']?.split('-')[0] || Config.defaultLocale
 
-    const user = await createUser(email, username, password, firstName, lastName, language);
+    const user = await createUser(email, username, password, firstName, lastName, language, currency);
     const {accessToken, refreshToken } = generateTokens(user.id, user.email);
 
     await createRefreshToken(refreshToken, user.id, request.ip);
@@ -102,7 +99,7 @@ export const verifyEmail = catchAsync(async (request, response) => {
     await confirmVerification(verification.id, verification.user.id);
 
     await emailService.sendVerificationConfirmation(verification.user)
-    .catch(error => logger.error('Failed to send email', {user: maskEmail(user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}))
+    .catch(error => logger.error('Failed to send email', {user: maskEmail(verification.user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}))
 
     response.status(200).json({
         success: true,
@@ -195,13 +192,13 @@ export const login = catchAsync(async (request, response) => {
     await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: true, userId: user.id});
     logger.info('Login Successful', {user: maskEmail(user.email), action: AUTH_ACTIONS.LOGIN_SUCCESS});
 
-    const updatedUser = await refreshRecord(user._meta);
+    const safeUser = await getSafeUser({id: user.id});
 
     response.status(StatusCodes.OK).json({
         success: true,
         message: request.__("RESPONSE_LOGIN_SUCCESSFUL"),
         data: {
-            user: sanitizeResponse(updatedUser, USER_MODEL_EXCLUDE),
+            user: safeUser,
             accessToken,
             refreshToken
         }
@@ -221,12 +218,18 @@ export const login = catchAsync(async (request, response) => {
 export const changePassword = catchAsync(async (request, response) => {
     const {code, email, password} = request.body;
     const user = await getUser({email});
+
+    if(!user){
+        logger.warn("Password reset attempted for unknown email", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: getAppLocale(request)}), StatusCodes.UNAUTHORIZED);
+    }
+
     const result = await verifyResetPasswordToken(code, user);
     const locale = user.language || Config.defaultLocale;
 
     if(!result.valid){
         logger.warn("Expired password reset token", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED})
-        throw new AppError(i18n.__({phrase: "ERROR_EXPIRED_RESET_TOKEN", locale: locale}));
+        throw new AppError(i18n.__({phrase: "ERROR_EXPIRED_RESET_TOKEN", locale: locale}), StatusCodes.UNAUTHORIZED);
     }
 
     await updateUserPassword(user, password);
@@ -252,12 +255,18 @@ export const verifyToken = catchAsync(async (request, response) => {
 
     const {code, email } = request.body;
     const user = await getSafeUser({email});
+
+    if(!user){
+        logger.warn("Password reset code verification failed", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: getAppLocale(request)}), StatusCodes.UNAUTHORIZED);
+    }
+
     const locale = user.language || Config.defaultLocale;
 
     const result = await verifyResetPasswordToken(code, user);
     if(!result.valid){
         logger.warn("Invalid password reset token", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED})
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: locale}));
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: locale}), StatusCodes.UNAUTHORIZED);
     }
 
     response.status(StatusCodes.OK).json({
@@ -281,12 +290,16 @@ export const forgotPassword = catchAsync(async (request, response) => {
     const user = await getSafeUser({email});
 
     if(!user){
-        logger.warn('User does not exist', {user: maskEmail(email), action: USER_ACTIONS.USER_NOT_FOUND});
-        throw new AppError('User not found', StatusCodes.NOT_FOUND);
+        logger.warn('Password reset requested for unknown email', {user: maskEmail(email), action: USER_ACTIONS.USER_NOT_FOUND});
+        return response.status(StatusCodes.OK).json({
+            success: true,
+            message: request.__("RESPONSE_PASSWORD_RESET_CODE_SENT"),
+            data: null,
+            errors: null
+        });
     }
 
-    const passwordResetCode = Array.from(crypto.randomBytes(6)).map(byte => byte % 10).join('');
-    console.log(`This is the password reset code: ${passwordResetCode}`);
+    const passwordResetCode = Array.from({length: 6}, () => crypto.randomInt(0, 10)).join('');
     await savePasswordResetToken(user,  passwordResetCode);
 
     emailService.sendPasswordResetCode(user, passwordResetCode)
@@ -295,7 +308,7 @@ export const forgotPassword = catchAsync(async (request, response) => {
     response.status(StatusCodes.OK).json({
         success: true,
         message: request.__("RESPONSE_PASSWORD_RESET_CODE_SENT"),
-        data: {user},
+        data: null,
         errors: null
     });
 });
@@ -325,7 +338,7 @@ export const logout = catchAsync(async (request, response) => {
     response.status(StatusCodes.OK).json({
         success: true,
         message: request.__('RESPONSE_LOGOUT_SUCCESSFUL'),
-        data: request.user,
+        data: null,
         errors: null
     })
 })

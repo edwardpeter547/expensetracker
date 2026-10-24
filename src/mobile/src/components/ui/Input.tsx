@@ -75,4 +75,6 @@ const InputField = forwardRef<TextInput, InputProps>(({label, error, isPassword,
 
 });
 
+InputField.displayName = 'InputField';
+
 export default InputField;

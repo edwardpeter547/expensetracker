@@ -1,11 +1,13 @@
 import Joi from 'joi';
+import { decimalAmount } from './common.validation.js';
 
 /**
  * Validation schema for creating a budget.
  */
 export const createBudgetSchema = Joi.object({
-    amount: Joi.number().positive().required(),
+    amount: decimalAmount().required(),
     categoryId: Joi.string().required(),
+    currency: Joi.string().uppercase().length(3),
     period: Joi.string().valid("WEEKLY", "MONTHLY", "YEARLY").default("MONTHLY"),
     startDate: Joi.date().iso(),
     endDate: Joi.date().iso().min(Joi.ref("startDate")),
@@ -16,11 +18,13 @@ export const createBudgetSchema = Joi.object({
  * Validation schema for updating a budget (at least one field required).
  */
 export const updateBudgetSchema = Joi.object({
-    amount: Joi.number().positive(),
+    amount: decimalAmount(),
+    currency: Joi.string().uppercase().length(3),
     period: Joi.string().valid("WEEKLY", "MONTHLY", "YEARLY"),
     startDate: Joi.date().iso(),
     endDate: Joi.date().iso().min(Joi.ref("startDate")),
-    alertThreshold: Joi.number().integer().min(1).max(100)
+    alertThreshold: Joi.number().integer().min(1).max(100),
+    isActive: Joi.boolean()
 }).min(1);
 
 

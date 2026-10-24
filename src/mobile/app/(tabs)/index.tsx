@@ -6,6 +6,9 @@ import QuickActionButtons from "@/components/ui/QuickActionButtons";
 import { useAuth } from "@/hooks/useAuth";
 import useStyles from "@/hooks/useStyles";
 import useTheme from "@/hooks/useTheme";
+import { useLocale } from "@/contexts/LocaleContext";
+import { formatMoney } from "@/localization/format";
+import { systemCategoryLabel } from "@/localization/systemCategories";
 import { DashboardData } from "@/types/Common";
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
@@ -17,6 +20,7 @@ const DashboardScreen = () => {
    const { colors }  = useTheme();
    const Styles = useStyles("home");
    const { user } = useAuth();
+   const { language, currency } = useLocale();
    const [data, setData] = useState<DashboardData | null>(null);
    const [loading, setLoading] = useState<boolean>(true);
    const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -27,8 +31,9 @@ const DashboardScreen = () => {
         try {
             const response = await apiClient.get("/user/dashboard");
             setData(response.data.data);
-        }catch(error){
-            console.log("failed to fetch dashboard:", error);
+        }catch{
+            // A failed dashboard fetch should surface in the UI rather than
+            // echo request details (which may include auth headers) to logs.
         }finally{
             setLoading(false);
             setRefreshing(false)
@@ -82,18 +87,18 @@ const DashboardScreen = () => {
                 {/* Balance Card */}
                 <View style={Styles.balanceCard}>
                     <Text style={Styles.balanceTitle}>Current Balance</Text>
-                    <Text style={Styles.balanceAmount}>${data?.balance?.toFixed(2) || "0.00"}</Text>
+                    <Text style={Styles.balanceAmount}>{formatMoney(data?.balance ?? "0", language, data?.currency ?? currency)}</Text>
                     <View style={Styles.balanceStats}>
                         <View style={[Styles.balanceStatItem, Styles.statDivider]}>
                             <Text style={Styles.balanceStatLabel}>Income</Text>
                             <Text style={[Styles.balanceStatAmount, {color: colors.income}]}>
-                                ${data?.totalIncome?.toFixed(2) || "0.00"}
+                                {formatMoney(data?.totalIncome ?? "0", language, data?.currency ?? currency)}
                             </Text>
                         </View>
                         <View style={Styles.balanceStatItem}>
                             <Text style={Styles.balanceStatLabel}>Expenses</Text>
                             <Text style={[Styles.balanceStatAmount, { color: colors.expense }]}>
-                                ${data?.totalExpenses?.toFixed(2) || "0.00"}
+                                {formatMoney(data?.totalExpenses ?? "0", language, data?.currency ?? currency)}
                             </Text>
                         </View>
                     </View>
@@ -148,7 +153,7 @@ const DashboardScreen = () => {
                                     {transaction.description || transaction.category}
                                 </Text>
                                 <Text style={Styles.transactionCategory}>
-                                    {transaction.category}
+                                    {systemCategoryLabel(transaction.categoryId, language) || transaction.category}
                                 </Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>
@@ -163,8 +168,8 @@ const DashboardScreen = () => {
                                         },
                                     ]}
                                 >
-                                    {transaction.transType === "INCOME" ? "+" : "-"}$
-                                    {transaction.amount.toFixed(2)}
+                                    {transaction.transType === "INCOME" ? "+" : "-"}
+                                    {formatMoney(transaction.amount, language, transaction.currency ?? data?.currency ?? currency)}
                                 </Text>
                                 <Text style={Styles.transactionDate}>
                                     {new Date(transaction.transactionDate).toLocaleDateString()}
