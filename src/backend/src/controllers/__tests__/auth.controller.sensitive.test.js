@@ -26,6 +26,7 @@ const mockAuthService = {
     saveVerificationToken: jest.fn(),
     savePasswordResetToken: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
+    resetPasswordWithCode: jest.fn(),
     createUser: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),

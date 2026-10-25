@@ -85,6 +85,19 @@ export const hashToken = (token) => {
 }
 
 /**
+ * Hash a short-lived password-reset code before persistence and lookup.
+ *
+ * Reset codes are sensitive but short, so a fast unsalted SHA-256 digest is
+ * sufficient to prevent the raw code from being readable in the database.
+ *
+ * @param {string} code The raw numeric reset code.
+ * @returns {string} The hex-encoded digest.
+ */
+export const hashResetCode = (code) => {
+    return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+/**
  * Persist a SHA-256 digest of a refresh token for a user.
  *
  * The raw token is never stored; only its digest is written. `familyId` links
@@ -531,13 +544,22 @@ export const saveVerificationToken = async(user, verificationToken) => {
  * @returns {Promise<void>}
  */
 export const savePasswordResetToken = async (user, passwordResetToken, ipAddress) => {
-    await prisma.passwordResetToken.create({
-        data: {
-            token: passwordResetToken,
-            userId: user.id,
-            expiresAt: new Date(Date.now() + Config.passwordResetTokenExpiryMinutes * 60 * 1000),
-            createdByIp: ipAddress
-        }
+    await prisma.$transaction(async (tx) => {
+        // Invalidate any previous unused code so repeated forgot-password
+        // requests cannot accumulate an unbounded set of active credentials.
+        await tx.passwordResetToken.updateMany({
+            where: {userId: user.id, usedAt: null},
+            data: {usedAt: new Date()},
+        });
+
+        await tx.passwordResetToken.create({
+            data: {
+                token: hashResetCode(passwordResetToken),
+                userId: user.id,
+                expiresAt: new Date(Date.now() + Config.passwordResetTokenExpiryMinutes * 60 * 1000),
+                createdByIp: ipAddress,
+            },
+        });
     });
 }
 
@@ -629,8 +651,9 @@ export const verifyResetPasswordToken = async (code, user) => {
     const tokenData = await prisma.passwordResetToken.findFirst({
         where: {
             userId: user.id,
-            token: code,
-            expiresAt: {gt: new Date()}
+            token: hashResetCode(code),
+            usedAt: null,
+            expiresAt: {gt: new Date()},
         }
     });
 
@@ -638,6 +661,73 @@ export const verifyResetPasswordToken = async (code, user) => {
         valid: !!tokenData,
         code: tokenData || null
     }
+}
+
+/**
+ * Consume a reset code and update the user's password atomically.
+ *
+ * The user row is locked first so this operation serializes with refresh-token
+ * rotation and revoke-all. A code can be used exactly once: the conditional
+ * `updateMany` consumes it only while `usedAt` is null, and concurrent callers
+ * block on the same user-row lock.
+ *
+ * @param {object} params Reset parameters.
+ * @param {number} params.userId The user to reset.
+ * @param {string} params.code The raw numeric reset code.
+ * @param {string} params.password The new plaintext password.
+ * @returns {Promise<{success: boolean}>} Whether the reset was applied.
+ */
+export const resetPasswordWithCode = async ({userId, code, password}) => {
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    return prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
+
+        const token = await tx.passwordResetToken.findFirst({
+            where: {
+                userId,
+                token: hashResetCode(code),
+                usedAt: null,
+                expiresAt: {gt: new Date()},
+            },
+            select: {id: true},
+        });
+
+        if (!token) return {success: false};
+
+        const userRecord = await tx.user.findUnique({
+            where: {id: userId},
+            select: {password: true},
+        });
+        if (!userRecord) return {success: false};
+
+        const consumed = await tx.passwordResetToken.updateMany({
+            where: {id: token.id, usedAt: null},
+            data: {usedAt: new Date()},
+        });
+        if (consumed.count !== 1) return {success: false};
+
+        await tx.passwordHistory.create({
+            data: {
+                password: userRecord.password,
+                userId,
+            },
+        });
+        await tx.user.update({
+            where: {id: userId},
+            data: {
+                password: hashedPassword,
+                lastPasswordReset: new Date(),
+                tokenVersion: {increment: 1},
+            },
+        });
+        await tx.refreshToken.updateMany({
+            where: {userId, isRevoked: false},
+            data: {isRevoked: true},
+        });
+
+        return {success: true};
+    });
 }
 
 const getCurrentPaswordHash = async (email) => {

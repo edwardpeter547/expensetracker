@@ -14,7 +14,7 @@ import { describe, expect, test } from '@jest/globals';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import Config from '../../configurations/env.config.js';
-import { generateTokens, getDirectory } from '../helpers.js';
+import { generateNumericCode, generateTokens, getDirectory } from '../helpers.js';
 
 /**
  * Token Generation Tests
@@ -116,6 +116,31 @@ describe('Generate Tokens Test Suite - generateTokens', () => {
 
         expect(decoded.userId).toBe(999);
         expect(decoded.email).toBe('admin@test.com');
+    });
+});
+
+/**
+ * Numeric-code generation tests.
+ */
+describe('generateNumericCode', () => {
+    /**
+     * Codes must be exactly the requested length and contain only digits.
+     */
+    test('returns a fixed-length numeric code', () => {
+        expect(generateNumericCode(6)).toMatch(/^\d{6}$/);
+        expect(generateNumericCode(4)).toMatch(/^\d{4}$/);
+    });
+
+    /**
+     * Leading zeros must be preserved by returning a string rather than a
+     * number.
+     */
+    test('preserves leading zeros as a string', () => {
+        const code = generateNumericCode(2);
+
+        expect(typeof code).toBe('string');
+        expect(code).toHaveLength(2);
+        expect(Number(code)).toBeGreaterThanOrEqual(0);
     });
 });
 

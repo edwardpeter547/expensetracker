@@ -38,6 +38,7 @@ model PasswordResetToken {
     userId          Int
     user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
     expiresAt       DateTime
+    usedAt          DateTime?
     createdAt       DateTime            @default(now())
     createdByIp     String?
 
