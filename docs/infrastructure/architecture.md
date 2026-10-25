@@ -115,6 +115,8 @@ Production is **persistent** even when non-production environments are ephemeral
 
 The stage graph below is the implementation guide for issue #43. The production image does **not** contain the Prisma CLI, test tooling, or test files; a separate `migrate` target owns schema changes.
 
+**File convention:** the backend Dockerfile lives at `src/backend/docker/Dockerfile` with `src/backend` as its build context and `.dockerignore` at `src/backend/.dockerignore`. Build it with `docker build -f src/backend/docker/Dockerfile --target <target> -t expensetracker-backend:<target> src/backend`.
+
 ```mermaid
 flowchart TD
   base["base (node:24-alpine, non-root app user, /app)"]

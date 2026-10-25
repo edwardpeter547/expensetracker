@@ -47,7 +47,9 @@ import { StatusCodes } from 'http-status-codes';
  * standard `{ success, status, message, errors }` error envelope.
  *
  * Prisma `P2025`/`P2002` and JWT errors are translated to stable HTTP codes;
- * the stack is included only in development.
+ * the stack is included only in development. Server errors (5xx) are logged
+ * at `error` level with a stack; expected client errors (4xx) are intentionally
+ * not logged, because they are routine request outcomes rather than defects.
  *
  * @param {Error|AppError} appError The thrown error.
  * @param {import('express').Request} request Express request.
@@ -63,16 +65,6 @@ export const errorHandler = (appError, request, response, next) => {
             appError?.message || appError || 'Internal server Error',
             appError?.statusCode || StatusCodes.INTERNAL_SERVER_ERROR
         )
-
-    let error = {...appError};
-
-    logger.error('Error:', {
-        name: normalizedError.name,
-        message: normalizedError.message,
-        stack: normalizedError.stack,
-        path: request.path,
-        method: request.method
-    });
 
     //Prisma error: Record not found
     if(appError.code === 'P2025'){
@@ -97,6 +89,17 @@ export const errorHandler = (appError, request, response, next) => {
 
     const statusCode = normalizedError.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     const message = normalizedError.message || 'Internal Server Error';
+
+    if (statusCode >= StatusCodes.INTERNAL_SERVER_ERROR) {
+        logger.error('Error:', {
+            name: normalizedError.name,
+            message,
+            status: statusCode,
+            path: request.path,
+            method: request.method,
+            stack: normalizedError.stack,
+        });
+    }
 
     response.status(statusCode).json({
         success: false,

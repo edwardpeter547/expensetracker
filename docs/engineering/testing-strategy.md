@@ -13,7 +13,10 @@
 - `src/backend/src/utils/__tests__` — `AppError`, `catchAsync`, helpers.
 - `src/backend/src/validations/__tests__` — auth, general, and transaction validation schemas.
 
-There are no controller, service, or route integration tests yet, and no mobile tests.
+The backend has controller, service, and route test suites. Database-gated
+integration suites use the `*.integration.test.js` suffix and cover refresh-token
+rotation, logout, and the logout HTTP route. Mobile tests cover the API client
+and localization modules.
 
 ## Commands
 
@@ -25,6 +28,7 @@ task test:unit                       # alias for the standard suite
 task test:auth                       # auth-related tests
 task test:refresh                    # refresh-token tests
 task test:logout                     # logout tests
+task test:integration                # real-PostgreSQL integration tests
 ```
 
 The mobile package has no `test` script yet, so there is no `task test:mobile`
@@ -36,6 +40,7 @@ target; mobile quality checks currently mean `task lint` (`expo lint`).
 - Import from `@jest/globals` (`describe`, `test`, `expect`, `jest`) to match existing files.
 - Use descriptive test names and cover the failure paths, not only happy paths.
 - Keep unit tests pure (no live database); for anything requiring the DB, use a setup hook like `src/backend/scripts/setup.js` and the reset helpers in `src/backend/scripts/prepare.db.js`.
+- End every database-gated suite with `.integration.test.js` so `task test:integration` discovers it automatically. A unit suite must never use that suffix, because it would be skipped outside the integration harness.
 
 ## Shared test fixtures
 

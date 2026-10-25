@@ -13,6 +13,7 @@
 
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import Config from '../../configurations/env.config.js';
+import logger from '../../configurations/logger.config.js';
 import AppError from '../../utils/appError.js';
 import { errorHandler, notFoundHandler } from "../error.middleware.js";
 
@@ -49,6 +50,8 @@ describe('Error Handler Middleware Test - errorHandler', () => {
         }
         mockNext = jest.fn();
         jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(logger, 'error').mockImplementation(() => {});
+        jest.spyOn(logger, 'warn').mockImplementation(() => {});
     })
 
     /**
@@ -120,6 +123,35 @@ describe('Error Handler Middleware Test - errorHandler', () => {
         const jsonResponse = mockResponse.json.mock.calls[0][0];
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(jsonResponse.stack).toBeDefined();
+    });
+
+    /**
+     * Confirms expected client errors are not logged at all, because a 4xx is
+     * a routine request outcome rather than a server-side defect.
+     */
+    test('does not log 4xx client errors', () => {
+        const error = new AppError('Validation failed', 400);
+
+        errorHandler(error, mockRequest, mockResponse, mockNext);
+
+        expect(logger.error).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Confirms unexpected server errors are logged at `error` with a stack
+     * for diagnosis, while client errors are not promoted to error level.
+     */
+    test('logs 5xx server errors at error level with a stack', () => {
+        const error = new AppError('Something went wrong');
+
+        errorHandler(error, mockRequest, mockResponse, mockNext);
+
+        expect(logger.error).toHaveBeenCalledWith(
+            'Error:',
+            expect.objectContaining({status: 500, message: 'Something went wrong'})
+        );
+        expect(logger.warn).not.toHaveBeenCalled();
     });
 
     /**

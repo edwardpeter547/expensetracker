@@ -1,0 +1,23 @@
+# Dependencies and version control
+node_modules
+.git
+
+# Environment files and secrets (runtime configuration is injected as env vars)
+.env
+.env.*
+*.env
+**/.env
+**/*.env
+src/environment/
+
+# Logs, coverage, and local caches
+logs
+*.log
+coverage
+
+# Prisma generated client — regenerated inside the `prisma-build` stage
+src/generated
+
+# OS and editor artifacts
+.DS_Store
+*.swp
