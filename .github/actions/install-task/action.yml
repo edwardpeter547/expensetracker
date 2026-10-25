@@ -1,0 +1,15 @@
+name: Install Go Task
+description: Install a pinned Go Task binary on an Ubuntu runner
+
+runs:
+  using: composite
+  steps:
+    - name: Install Go Task
+      shell: bash
+      run: |
+        curl -sSLo /tmp/task.tar.gz \
+          https://github.com/go-task/task/releases/download/v3.54.0/task_linux_amd64.tar.gz
+        mkdir -p "$HOME/.local/bin"
+        tar -xzf /tmp/task.tar.gz -C "$HOME/.local/bin" task
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        "$HOME/.local/bin/task" --version

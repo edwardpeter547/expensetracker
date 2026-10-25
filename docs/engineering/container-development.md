@@ -24,13 +24,25 @@ Both contexts exclude `node_modules`, environment files, logs, coverage, and cac
 task docker:build                        # production image (default)
 task docker:build TARGET=test            # any target: production|development|test|migrate
 
-task docker:test                         # build + run backend unit/static suite
+task docker:test                         # build + run backend unit tests
 task docker:test:integration             # Linux/CI host-network integration suite
 task docker:test:mobile                  # build + run mobile test suite
 
 task docker:dev                          # backend development container (hot reload)
 task docker:run:production               # local production container
 task docker:migrate                      # apply migrations with the migrate image
+```
+
+CI composes the Docker targets through a dedicated task family, so the local
+developer commands stay focused and CI-specific combinations live in one place:
+
+```bash
+task ci:backend-static                   # static validation + unit tests
+task ci:backend-integration              # DB integration tests
+task ci:backend-image                    # image build + smoke test
+task ci:mobile                           # mobile install/check/test
+task ci:python                           # Python tooling tests + manifest validation
+task ci:check                            # all of the above
 ```
 
 Required values are passed as Task variables; the tasks fail fast with a clear message when they are missing:
@@ -78,13 +90,13 @@ task docker:dev
 
 ## Run tests
 
-Backend unit and static suites run in the `test` image and propagate a nonzero exit status on failure:
+Backend unit tests run in the `test` image and propagate a nonzero exit status on failure:
 
 ```bash
 task docker:test
 ```
 
-Static checks remain host-native via the existing tasks: `task prisma:validate` and `task docs:validate`.
+Static checks remain host-native via `task prisma:validate` and `task docs:validate`, or bundled with the unit suite for CI via `task ci:backend-static`.
 
 Database-backed integration suites are named `*.integration.test.js` (see `docs/engineering/testing-strategy.md`). Run them host-natively on macOS:
 

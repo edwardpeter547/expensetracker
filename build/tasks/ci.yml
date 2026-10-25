@@ -1,0 +1,59 @@
+version: '3'
+
+tasks:
+  ci:backend-static:
+    desc: Run backend static validation and unit tests for CI
+    deps:
+      - docker:test
+    cmds:
+      - docker run --rm expensetracker-backend:test npx prisma validate
+      - docker run --rm expensetracker-backend:test npm run docs:validate
+
+  ci:backend-integration:
+    desc: Run backend PostgreSQL integration tests for CI
+    vars:
+      TEST_DATABASE_URL: '{{default "postgresql://postgres:postgres@127.0.0.1:5432/postgres" .TEST_DATABASE_URL}}'
+    deps:
+      - task: docker:test:integration
+        vars:
+          TEST_DATABASE_URL: '{{.TEST_DATABASE_URL}}'
+
+  ci:backend-image:
+    desc: Build and smoke-test the backend production image for CI
+    vars:
+      DATABASE_URL: '{{default "postgresql://postgres:postgres@127.0.0.1:5432/postgres" .DATABASE_URL}}'
+      JWT_SECRET: '{{default "test-only-secret" .JWT_SECRET}}'
+      PORT: '{{default "7001" .PORT}}'
+      SMOKE_CONTAINER: '{{default "expensetracker-backend-smoke" .SMOKE_CONTAINER}}'
+    deps:
+      - task: docker:build
+        vars:
+          TARGET: production
+    cmds:
+      - >-
+        "{{.ROOT_DIR}}/build/scripts/ci/smoke.sh" "{{.PORT}}" "{{.DATABASE_URL}}" "{{.JWT_SECRET}}" "{{.SMOKE_CONTAINER}}"
+
+  ci:mobile:
+    desc: Run mobile validation for CI
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm ci
+      - cd "{{.ROOT_DIR}}/src/mobile" && npx expo config --type public
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run lint
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run test:typecheck
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm test
+
+  ci:python:
+    desc: Run Python ticket tooling validation for CI
+    dir: '{{.ROOT_DIR}}'
+    cmds:
+      - python3 -m unittest discover -s scripts/github_tickets/tests -v
+      - python3 scripts/github_tickets.py validate --manifest tickets/packages/github-automation/manifest.json
+      - python3 scripts/github_tickets.py validate --manifest tickets/packages/infrastructure-roadmap-alignment/manifest.json
+
+  ci:backend:
+    desc: Run all backend CI validation jobs
+    deps: [ci:backend-static, ci:backend-integration, ci:backend-image]
+
+  ci:check:
+    desc: Run backend, mobile, and Python CI validation
+    deps: [ci:backend, ci:mobile, ci:python]

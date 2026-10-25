@@ -23,6 +23,7 @@ Extract a composite action only when two or more jobs share a non-trivial multi-
 
 | Path | Kind | Phase | Responsibility |
 | --- | --- | --- | --- |
+| `.github/actions/install-task/` | composite | 2 | Install a pinned Go Task binary (implemented) |
 | `.github/actions/setup-node-backend/` | composite | 2 | Checkout, Node setup, backend `npm ci` with cache |
 | `.github/actions/setup-node-mobile/` | composite | 2 | Checkout, Node setup, mobile `npm ci` with cache |
 | `.github/actions/docker-metadata/` | composite | 3 | Compute image tags and OCI labels |
@@ -53,14 +54,25 @@ Extract a composite action only when two or more jobs share a non-trivial multi-
 
 ## 3. Pull-request continuous integration
 
-Every PR to `develop` runs `ci.yml` with four jobs, `permissions: contents: read`, and concurrency cancellation.
+**Implemented:** the first CI delivery is `.github/workflows/ci.yml`, which
+runs the five jobs described below (`backend-static`, `backend-integration`,
+`backend-image`, `mobile`, `python-tooling`) on pull requests to `develop`,
+pushes to `develop`, `workflow_dispatch`, and `workflow_call`. Coverage,
+publishing, deployment, EAS, and self-hosted-runner work remain deferred.
+The backend jobs invoke the `ci:*` Go Task targets, which compose the `docker:*`
+targets, so the canonical commands live in the Taskfile and CI cannot drift
+from local development; `docker:test` remains the local unit-test command. The
+mobile and Python jobs also use `ci:*` wrappers over their package scripts.
+
+Every PR to `develop` runs `ci.yml` with five jobs, `permissions: contents: read`, and concurrency cancellation.
 
 | Job | Checks | Environment |
 | --- | --- | --- |
-| `backend-static` | `npm ci`, `npx prisma generate`, `npx prisma validate`, `npm run docs:validate`, `npm test` (unit) | Docker `test` image |
+| `backend-static` | Prisma validate, OpenAPI validate, and unit tests (dependency install and Prisma generation happen when the `test` image is built) | Docker `test` image |
 | `backend-integration` | Database-backed tests | Docker `test` image + disposable PostgreSQL |
 | `backend-image` | Production image build + startup/health smoke test | Docker `production` image + disposable PostgreSQL |
 | `mobile` | `npx expo config --type public`, `npm run lint`, `npm run test:typecheck`, `npm test` | Native Node |
+| `python-tooling` | Ticket automation `unittest` suite + offline manifest validation | Native Python 3.12 |
 
 ### Three test categories
 
