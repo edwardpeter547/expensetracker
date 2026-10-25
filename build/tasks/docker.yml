@@ -1,0 +1,99 @@
+version: '3'
+
+vars:
+  BACKEND_CTX: '{{.ROOT_DIR}}/src/backend'
+  BACKEND_DF: '{{.ROOT_DIR}}/src/backend/docker/Dockerfile'
+  MOBILE_CTX: '{{.ROOT_DIR}}/src/mobile'
+  MOBILE_DF: '{{.ROOT_DIR}}/src/mobile/docker/Dockerfile'
+
+tasks:
+  docker:build:
+    desc: Build a backend Docker target (TARGET=production|development|test|migrate)
+    vars:
+      TARGET: '{{default "production" .TARGET}}'
+    cmds:
+      - docker build -f "{{.BACKEND_DF}}" --target "{{.TARGET}}" -t "expensetracker-backend:{{.TARGET}}" "{{.BACKEND_CTX}}"
+
+  docker:test:
+    desc: Build and run the backend unit/static test suite in Docker
+    deps:
+      - task: docker:build
+        vars:
+          TARGET: test
+    cmds:
+      - docker run --rm expensetracker-backend:test
+
+  docker:test:integration:
+    desc: Run backend PostgreSQL integration tests in Docker (Linux/CI host networking)
+    deps:
+      - task: docker:build
+        vars:
+          TARGET: test
+    vars:
+      TEST_DATABASE_URL: '{{default "postgresql://postgres:postgres@127.0.0.1:5432/postgres" .TEST_DATABASE_URL}}'
+    cmds:
+      - |-
+        docker run --rm --network host \
+          -e RUN_DB_INTEGRATION=1 \
+          -e TEST_DATABASE_URL='{{.TEST_DATABASE_URL}}' \
+          -e JWT_SECRET=test-only-secret \
+          -e NODE_OPTIONS=--experimental-vm-modules \
+          expensetracker-backend:test \
+          npx jest --runInBand --testPathPatterns='\.integration\.test\.js$'
+
+  docker:dev:
+    desc: Run the backend development container with hot reload
+    vars:
+      BIND_HOST: '{{default "127.0.0.1" .BIND_HOST}}'
+      HOST_PORT: '{{default "7001" .HOST_PORT}}'
+      CONTAINER_PORT: '{{default "7001" .CONTAINER_PORT}}'
+      SOURCE_MOUNT: '{{default (printf "%s/src/backend:/app" .ROOT_DIR) .SOURCE_MOUNT}}'
+      NODE_MODULES_VOLUME: '{{default "/app/node_modules" .NODE_MODULES_VOLUME}}'
+      GENERATED_VOLUME: '{{default "/app/src/generated" .GENERATED_VOLUME}}'
+      LOGS_VOLUME: '{{default "/app/src/logs" .LOGS_VOLUME}}'
+    preconditions:
+      - sh: 'test -f "{{.ROOT_DIR}}/src/backend/src/environment/dev.env"'
+        msg: 'Missing src/backend/src/environment/dev.env (copy dev.env.example first)'
+    cmds:
+      - docker build -f "{{.BACKEND_DF}}" --target development -t expensetracker-backend:development "{{.BACKEND_CTX}}"
+      - |-
+        docker run --rm -p '{{.BIND_HOST}}:{{.HOST_PORT}}:{{.CONTAINER_PORT}}' \
+          -e PORT='{{.CONTAINER_PORT}}' \
+          -v '{{.SOURCE_MOUNT}}' \
+          -v '{{.NODE_MODULES_VOLUME}}' \
+          -v '{{.GENERATED_VOLUME}}' \
+          -v '{{.LOGS_VOLUME}}' \
+          expensetracker-backend:development
+
+  docker:run:production:
+    desc: Run the backend production container locally (DATABASE_URL and JWT_SECRET required)
+    vars:
+      BIND_HOST: '{{default "127.0.0.1" .BIND_HOST}}'
+      HOST_PORT: '{{default "7001" .HOST_PORT}}'
+      CONTAINER_PORT: '{{default "7001" .CONTAINER_PORT}}'
+    preconditions:
+      - sh: 'test -n "{{.DATABASE_URL}}"'
+        msg: 'DATABASE_URL is required'
+      - sh: 'test -n "{{.JWT_SECRET}}"'
+        msg: 'JWT_SECRET is required'
+    cmds:
+      - |-
+        docker run --rm -p '{{.BIND_HOST}}:{{.HOST_PORT}}:{{.CONTAINER_PORT}}' \
+          -e PORT='{{.CONTAINER_PORT}}' \
+          -e DATABASE_URL='{{.DATABASE_URL}}' \
+          -e JWT_SECRET='{{.JWT_SECRET}}' \
+          expensetracker-backend:production
+
+  docker:migrate:
+    desc: Run backend database migrations in Docker
+    preconditions:
+      - sh: 'test -n "{{.MIGRATION_DATABASE_URL}}"'
+        msg: 'MIGRATION_DATABASE_URL is required'
+    cmds:
+      - docker run --rm -e MIGRATION_DATABASE_URL='{{.MIGRATION_DATABASE_URL}}' expensetracker-backend:migrate
+
+  docker:test:mobile:
+    desc: Build and run the mobile test runner in Docker
+    cmds:
+      - docker build -f "{{.MOBILE_DF}}" --target test -t expensetracker-mobile:test "{{.MOBILE_CTX}}"
+      - docker run --rm expensetracker-mobile:test

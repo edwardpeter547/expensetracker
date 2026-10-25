@@ -22,6 +22,9 @@ includes:
   network:
     taskfile: ./tasks/network.yml
     flatten: true
+  docker:
+    taskfile: ./tasks/docker.yml
+    flatten: true
   utilities:
     taskfile: ./tasks/utilities.yml
     flatten: true
