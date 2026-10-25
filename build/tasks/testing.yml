@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  INTEGRATION_TEST_PATTERN: '(auth\.service\.refresh\.integration|auth\.service\.logout\.integration|auth\.logout\.route)\.test\.js'
+  INTEGRATION_TEST_PATTERN: '\.integration\.test\.js$'
 
 tasks:
   test:
@@ -59,7 +59,7 @@ tasks:
       TEST_DATABASE_URL: '{{.TEST_DATABASE_URL}}'
     cmds:
       - |-
-        {{.ROOT_DIR}}/build/scripts/testing/integration-env.sh npx jest --runInBand --testPathPatterns='auth\.logout\.route' {{.JEST_ARGS}}
+        {{.ROOT_DIR}}/build/scripts/testing/integration-env.sh npx jest --runInBand --testPathPatterns='auth\.logout\.route\.integration' {{.JEST_ARGS}}
 
   test:integration-refresh:
     desc: Run the refresh-token integration suite

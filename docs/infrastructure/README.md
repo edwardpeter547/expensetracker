@@ -23,6 +23,7 @@ The product currently has reliable local tooling (Go Task, Docker-managed Postgr
 | [cloud-and-iac.md](cloud-and-iac.md) | Cloud hosting, Terraform/OpenTofu, Ansible, and Kubernetes evolution |
 | [ephemeral-environments.md](ephemeral-environments.md) | Temporary cloud environments, teardown, data safety, and cost controls |
 | [ci-cd-roadmap.md](ci-cd-roadmap.md) | Phased delivery roadmap and Epic #29 ticket alignment |
+| [../engineering/container-development.md](../engineering/container-development.md) | Practical backend build/run/test/migrate commands |
 
 Related, outside this directory:
 
@@ -67,4 +68,4 @@ Full detail is in [architecture.md](architecture.md).
 
 Architectural decisions are recorded in the [decision register](ci-cd-roadmap.md#4-decision-register), split into agreed requirements, proposed technical defaults, and decisions deferred to implementation gates.
 
-The first implementation task is **GitHub issue #43 — Multi-Stage Backend Dockerfile**, scoped to the verified stage graph in [architecture.md](architecture.md#6-multi-stage-docker-architecture). Prerequisites: confirm the Node 24 LTS default and the Docker Hub repository name/access (see the decision register); no cloud-provider decision is required for Phases 1–2.
+The first implementation task is **GitHub issue #43 — Multi-Stage Backend Dockerfile**, located at `src/backend/docker/Dockerfile` (build context `src/backend`), scoped to the verified stage graph in [architecture.md](architecture.md#6-multi-stage-docker-architecture). Prerequisites: confirm the Node 24 LTS default and the Docker Hub repository name/access (see the decision register); no cloud-provider decision is required for Phases 1–2.

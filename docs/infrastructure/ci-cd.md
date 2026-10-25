@@ -62,6 +62,10 @@ Every PR to `develop` runs `ci.yml` with four jobs, `permissions: contents: read
 | `backend-image` | Production image build + startup/health smoke test | Docker `production` image + disposable PostgreSQL |
 | `mobile` | `npx expo config --type public`, `npm run lint`, `npm run test:typecheck`, `npm test` | Native Node |
 
+### Three test categories
+
+The repository has three independent test categories. The backend `test` image covers backend Node.js tests only; mobile React Native/Expo tests run natively with Node; Python tooling tests under `scripts/` run with the standard-library `unittest` runner. CI orchestrates all three as separate jobs in the same workflow, and the backend image never gains mobile or Python dependencies to run unrelated suites.
+
 ### Consistent backend validation (correction A, part 1)
 
 All backend checks run in the same Docker `test` image. Static checks are part of `backend-static`, not separate native steps, so local and CI behavior are identical.
@@ -71,7 +75,7 @@ All backend checks run in the same Docker `test` image. Static checks are part o
 The following are the actual, verified commands (from `package.json` and `Taskfile`), not invented:
 
 - Backend unit tests: `cd src/backend && npm test` → `NODE_OPTIONS=--experimental-vm-modules NODE_ENV=testing jest --coverage --verbose`.
-- Backend integration tests: `task test:integration` → `integration-env.sh npx jest --runInBand --testPathPatterns='(auth\.service\.refresh\.integration|auth\.service\.logout\.integration|auth\.logout\.route)\.test\.js'`.
+- Backend integration tests: `task test:integration` → `integration-env.sh npx jest --runInBand --testPathPatterns='\.integration\.test\.js$'`.
 - Prisma validation: `cd src/backend && npx prisma validate`.
 - OpenAPI validation: `cd src/backend && npm run docs:validate` (Redocly lint).
 - Mobile unit tests: `cd src/mobile && npm test` (Node test runner).
@@ -105,14 +109,34 @@ The guard is preserved unchanged. Platform-specific executable topology:
 #### B. Linux local development
 
 - **PostgreSQL:** either the existing host container (`127.0.0.1:5432`) or a Compose `postgres-test` service.
-- **Tests:** `task test:integration` host-natively, **or** `docker compose --profile test run --rm --network host backend-test` with `TEST_DATABASE_URL=postgresql://postgres:...@localhost:5432/postgres`. On Linux, `--network host` shares the runner/host network namespace, satisfying the guard.
+- **Tests:** `task test:integration` host-natively, **or** run the `test` image with `--network host`:
+
+  ```bash
+  docker run --rm --network host \
+    -e RUN_DB_INTEGRATION=1 \
+    -e TEST_DATABASE_URL='postgresql://postgres:<password>@localhost:5432/postgres' \
+    -e JWT_SECRET='test-only-secret' \
+    expensetracker-backend:test \
+    npx jest --runInBand --testPathPatterns='\.integration\.test\.js$'
+  ```
+
+  The future Compose path (`docker compose --profile test run --rm --network host backend-test`) is equivalent once #5 lands. On Linux, `--network host` shares the runner/host network namespace, satisfying the guard.
 - **Topology:** container process shares host network → `localhost:5432`.
 - **Credentials/isolation/cleanup/failure:** as above; use a CI-only/disposable password.
 
 #### C. GitHub-hosted Linux CI
 
 - **PostgreSQL:** `services: postgres:16-alpine` with `pg_isready` health check, mapped to `127.0.0.1:5432`, `POSTGRES_USER=postgres`, `POSTGRES_DB=postgres`, and an ephemeral password.
-- **Tests:** run the `test` image with `--network host`, `RUN_DB_INTEGRATION=1`, and `TEST_DATABASE_URL=postgresql://postgres:<ephemeral>@localhost:5432/postgres`.
+- **Tests:** run the `test` image with `--network host`, `RUN_DB_INTEGRATION=1`, and `TEST_DATABASE_URL=postgresql://postgres:<ephemeral>@localhost:5432/postgres`:
+
+  ```bash
+  docker run --rm --network host \
+    -e RUN_DB_INTEGRATION=1 \
+    -e TEST_DATABASE_URL='postgresql://postgres:<ephemeral>@localhost:5432/postgres' \
+    -e JWT_SECRET='test-only-secret' \
+    expensetracker-backend:test \
+    npx jest --runInBand --testPathPatterns='\.integration\.test\.js$'
+  ```
 - **Isolation:** each job gets its own service container; the harness creates and drops unique databases.
 - **Cleanup:** `afterAll`/`finally` drop; service container discarded by GitHub.
 - **Failure:** nonzero exit fails the job.

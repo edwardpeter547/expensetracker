@@ -1,6 +1,10 @@
 /**
  * HTTP-level integration tests for the logout route.
  *
+ * The `.integration.test.js` suffix marks this suite as database-gated so it
+ * is discovered by `task test:integration` and is never confused with a unit
+ * suite that must pass without PostgreSQL.
+ *
  * These tests exercise the real Express app with Supertest against a disposable
  * PostgreSQL instance, covering authentication, validation, idempotency,
  * cross-user isolation, and the response envelope end to end.

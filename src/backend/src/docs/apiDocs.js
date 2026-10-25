@@ -18,8 +18,10 @@ import * as yaml from 'js-yaml';
 import swaggerUi from 'swagger-ui-express';
 
 import Config from '../configurations/env.config.js';
+import { getDirectory } from '../utils/helpers.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const __dirname = getDirectory(import.meta.url);
 const OPENAPI_PATH = path.resolve(__dirname, '../../openapi/openapi.yaml');
 
 let cachedSpec = null;
