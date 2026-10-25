@@ -18,6 +18,7 @@ import {
     listUserSessions,
     removeVerificationToken,
     resetFailedLogins,
+    resetPasswordWithCode,
     revokeAllUserSessions,
     revokeRefreshTokenByHash,
     revokeUserSession,
@@ -25,13 +26,12 @@ import {
     savePasswordResetToken,
     saveVerificationToken,
     updateLastLogin,
-    updateUserPassword,
     verifyResetPasswordToken,
 } from '../services/auth.service.js';
 import emailService from '../services/email.service.js';
 import AppError from '../utils/appError.js';
 import catchAsync from '../utils/catchAsync.js';
-import { generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
+import { generateNumericCode, generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
 import { DUMMY_PASSWORD_HASH } from '../constants/app.constants.js';
 
 
@@ -162,7 +162,9 @@ export const resendVerification = catchAsync(async (request, response) => {
  * Every failure path returns the same generic 401 shape so the response does
  * not disclose whether the email exists, whether the password was wrong, or
  * whether the account is temporarily restricted. A dummy bcrypt comparison is
- * performed for unknown emails to reduce timing differences.
+ * performed for unknown emails to reduce timing differences. Failed attempts
+ * are recorded before the lockout gate is consulted so concurrent failures are
+ * all persisted rather than lost to a read-then-act race.
  *
  * @param {import('express').Request} request Express request.
  * @param {import('express').Response} response Express response.
@@ -192,15 +194,15 @@ export const login = catchAsync(async (request, response) => {
         throw genericFailure();
     }
 
-    const lockout = await getAccountLockout(email);
-    if (lockout.locked) {
-        logger.warn('Login blocked by temporary lockout', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_BLOCKED});
-        throw genericFailure();
-    }
-
     if (!passwordValid) {
         await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: false, userId: user.id});
         logger.warn('Login failed: invalid password', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_FAILED});
+        throw genericFailure();
+    }
+
+    const lockout = await getAccountLockout(email);
+    if (lockout.locked) {
+        logger.warn('Login blocked by temporary lockout', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_BLOCKED});
         throw genericFailure();
     }
 
@@ -245,21 +247,23 @@ export const login = catchAsync(async (request, response) => {
 export const changePassword = catchAsync(async (request, response) => {
     const {code, email, password} = request.body;
     const user = await getUser({email});
+    const locale = getAppLocale(request);
 
     if(!user){
         logger.warn("Password reset attempted for unknown email", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: getAppLocale(request)}), StatusCodes.UNAUTHORIZED);
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale}), StatusCodes.UNAUTHORIZED);
     }
 
-    const result = await verifyResetPasswordToken(code, user);
-    const locale = user.language || Config.defaultLocale;
+    const result = await resetPasswordWithCode({
+        userId: user.id,
+        code,
+        password,
+    });
 
-    if(!result.valid){
-        logger.warn("Expired password reset token", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED})
-        throw new AppError(i18n.__({phrase: "ERROR_EXPIRED_RESET_TOKEN", locale: locale}), StatusCodes.UNAUTHORIZED);
+    if(!result.success){
+        logger.warn("Password reset code invalid or already used", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: user.language || locale}), StatusCodes.UNAUTHORIZED);
     }
-
-    await updateUserPassword(user, password);
 
     response.status(StatusCodes.OK).json({
         success: true,
@@ -326,7 +330,7 @@ export const forgotPassword = catchAsync(async (request, response) => {
         });
     }
 
-    const passwordResetCode = Array.from({length: 6}, () => crypto.randomInt(0, 10)).join('');
+    const passwordResetCode = generateNumericCode(6);
     await savePasswordResetToken(user,  passwordResetCode);
 
     emailService.sendPasswordResetCode(user, passwordResetCode)

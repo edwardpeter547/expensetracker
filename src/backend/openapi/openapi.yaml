@@ -180,7 +180,8 @@ paths:
       description: |
         Returns the same generic success response whether or not an account
         exists for the email, so the endpoint does not reveal account
-        existence.
+        existence or whether an email was delivered. The six-digit code is
+        generated with `crypto.randomInt` and stored as a SHA-256 digest.
       security: []
       requestBody:
         required: true
@@ -211,6 +212,10 @@ paths:
       operationId: verifyOtp
       tags: [Auth]
       summary: Verify a password-reset code
+      description: |
+        Checks that an unexpired, unused reset code exists for the email. This
+        endpoint does not consume the code; consumption occurs on a successful
+        password reset.
       security: []
       requestBody:
         required: true
@@ -242,6 +247,11 @@ paths:
       operationId: changePassword
       tags: [Auth]
       summary: Change a password using a verified reset code
+      description: |
+        Atomically consumes the unexpired reset code, updates the password
+        hash, records password history, revokes all refresh-token sessions, and
+        increments `User.tokenVersion` so previously issued access tokens are
+        rejected. A code is strictly single-use.
       security: []
       requestBody:
         required: true

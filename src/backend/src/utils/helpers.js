@@ -35,6 +35,17 @@ export const generateTokens = (userId, email, tokenVersion = 0) => {
     return {accessToken, refreshToken}
 }
 
+/**
+ * Generate a fixed-length numeric code using cryptographically secure random
+ * digits with no modulo bias.
+ *
+ * @param {number} [length=6] The exact number of digits to generate.
+ * @returns {string} The zero-padded numeric code.
+ */
+export const generateNumericCode = (length = 6) => {
+    return Array.from({length}, () => crypto.randomInt(0, 10)).join('');
+}
+
 
 /**
  * Resolve the directory of a module from its `import.meta.url`.

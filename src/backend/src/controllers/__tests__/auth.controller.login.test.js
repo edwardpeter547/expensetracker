@@ -27,6 +27,7 @@ const mockAuthService = {
     savePasswordResetToken: jest.fn(),
     saveVerificationToken: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
+    resetPasswordWithCode: jest.fn(),
     updateUserPassword: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),
     revokeAllUserSessions: jest.fn(),
@@ -125,6 +126,26 @@ describe('auth login controller', () => {
 
         expect(next.mock.calls[0][0].statusCode).toBe(StatusCodes.UNAUTHORIZED);
         expect(mockAuthService.resetFailedLogins).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A wrong password is persisted as a failed attempt even when the account is
+     * already locked, so the request is audited before the lockout gate returns 401.
+     */
+    test('a wrong password on a locked account still records the failed attempt', async () => {
+        mockAuthService.getUser.mockResolvedValue({
+            id: 1, email: 'known@example.com', password: passwordHash, isActive: true,
+        });
+        mockAuthService.getAccountLockout.mockResolvedValue({locked: true, lockedUntil: new Date(Date.now() + 60000)});
+        const next = jest.fn();
+
+        await login(makeRequest('known@example.com', 'WrongPass123'), makeResponse(), next);
+        await flushAsync();
+
+        expect(next.mock.calls[0][0].statusCode).toBe(StatusCodes.UNAUTHORIZED);
+        expect(mockAuthService.createLoginAttempt).toHaveBeenCalledWith(
+            expect.objectContaining({email: 'known@example.com', loginAttemptStatus: false})
+        );
     });
 
     test('successful login resets failures and issues tokens', async () => {

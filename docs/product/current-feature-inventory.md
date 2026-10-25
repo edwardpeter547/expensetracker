@@ -28,7 +28,7 @@
 | Refresh token rotation | Integration-tested | `src/backend/src/services/__tests__/auth.service.refresh.integration.test.js` |
 | Logout (revoke refresh token) | Integration-tested | `src/backend/src/routes/__tests__/auth.logout.route.integration.test.js`, `auth.service.logout.integration.test.js` |
 | Email verification (send + confirm) | Integration-tested | `src/backend/src/routes/__tests__/auth.register.verify.route.integration.test.js` |
-| Forgot password / OTP / change password | Integration-tested | `src/backend/src/routes/__tests__/auth.password.reset.route.integration.test.js` |
+| Forgot password / OTP / change password | Integration-tested | `src/backend/src/routes/__tests__/auth.password.reset.route.integration.test.js`; reset codes are hashed, single-use, and expire |
 | Resend verification | Integration-tested | `src/backend/src/routes/__tests__/auth.register.verify.route.integration.test.js` |
 | Device session list/revoke | Integration-tested | `src/backend/src/routes/__tests__/auth.session.route.integration.test.js`; revoke-all also bumps `tokenVersion` to invalidate access tokens |
 | Password history | Source only | `src/backend/src/prisma/models/user.prisma` (PasswordHistory) |
