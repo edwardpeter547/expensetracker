@@ -64,7 +64,7 @@ Every PR to `develop` runs `ci.yml` with four jobs, `permissions: contents: read
 
 ### Three test categories
 
-The repository has three independent test categories. The backend `test` image covers backend Node.js tests only; mobile React Native/Expo tests run natively with Node; Python tooling tests under `scripts/` run with the standard-library `unittest` runner. CI orchestrates all three as separate jobs in the same workflow, and the backend image never gains mobile or Python dependencies to run unrelated suites.
+The repository has three independent test categories. The backend `test` image covers backend Node.js tests only; mobile React Native/Expo tests run either natively with Node or in the dedicated mobile test image (`src/mobile/docker/Dockerfile`, target `test`); Python tooling tests under `scripts/` run with the standard-library `unittest` runner. CI orchestrates all three as separate jobs in the same workflow, and no image gains mobile, backend, or Python dependencies to run unrelated suites.
 
 ### Consistent backend validation (correction A, part 1)
 

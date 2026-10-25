@@ -1,0 +1,23 @@
+# Dependencies and version control
+node_modules
+.git
+
+# Environment files and secrets
+.env
+.env.*
+*.env
+
+# Local npm configuration (install flags are encoded in the Dockerfile instead)
+.npmrc
+.npmrc.*
+
+# Expo/build caches and outputs
+.expo
+dist
+web-build
+coverage
+
+# Logs and editor artifacts
+*.log
+.DS_Store
+*.swp
