@@ -21,8 +21,12 @@
     "RESPONSE_PASSWORD_RESET_CODE_SENT": "Password reset verification code has been sent",
     "RESPONSE_PASSWORD_CHANGED": "Your password has been updated",
     "RESPONSE_LOGIN_SUCCESSFUL": "Login successful",
+    "RESPONSE_SESSIONS_LISTED": "Sessions listed successfully",
+    "RESPONSE_SESSION_REVOKED": "Session revoked successfully",
+    "RESPONSE_ALL_SESSIONS_REVOKED": "All sessions revoked successfully",
     "ERROR_INVALID_RESET_TOKEN": "Invalid or expired One time password. please request a new one",
     "ERROR_EXPIRED_RESET_TOKEN": "Expired One time password, please request a new one",
     "ERROR_INVALID_USER": "Invalid email or password",
-    "ERROR_ACCOUNT_DEACTIVATED": "Account is deactivated. Contact support."
+    "ERROR_ACCOUNT_DEACTIVATED": "Account is deactivated. Contact support.",
+    "ERROR_SESSION_NOT_FOUND": "Session not found"
 }

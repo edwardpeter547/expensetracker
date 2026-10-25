@@ -31,6 +31,11 @@ import { APPLICATION_MODE } from '../constants/audit.actions.js';
  * @throws Will throw if SMTP connection fails in production
  */
 const createTransporter = async () => {
+    if (Config.nodeEnv === APPLICATION_MODE.TESTING) {
+        // No-op transport so automated tests never contact SMTP or Ethereal.
+        return {sendMail: async () => ({messageId: 'test-message'})};
+    }
+
     if (Config.nodeEnv === APPLICATION_MODE.PRODUCTION) {
         return nodemailer.createTransport({
             host: Config.smtpHost,

@@ -78,3 +78,10 @@ export const changePasswordSchema = Joi.object({
     email: email(),
     password: password(8, 100),
 });
+
+/**
+ * Validation schema for the device-session identifier route parameter.
+ */
+export const sessionIdSchema = Joi.object({
+    id: Joi.string().required(),
+});

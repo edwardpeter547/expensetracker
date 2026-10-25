@@ -18,10 +18,13 @@ const mockAuthService = {
     createVerificationToken: jest.fn(),
     getSafeUser: jest.fn(),
     getUser: jest.fn(),
+    getAccountLockout: jest.fn(),
+    resetFailedLogins: jest.fn(),
     getVerificationToken: jest.fn(),
     refreshRecord: jest.fn(),
     removeVerificationToken: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),
+    revokeAllUserSessions: jest.fn(),
     rotateRefreshToken: jest.fn(),
     sanitizeResponse: jest.fn(),
     savePasswordResetToken: jest.fn(),
@@ -29,6 +32,8 @@ const mockAuthService = {
     updateLastLogin: jest.fn(),
     updateUserPassword: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
+    listUserSessions: jest.fn(),
+    revokeUserSession: jest.fn(),
 };
 
 const mockEmailService = {

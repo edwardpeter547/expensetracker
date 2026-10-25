@@ -46,9 +46,13 @@ export default {
     RESPONSE_PASSWORD_RESET_CODE_SENT: 'Le code de vérification de réinitialisation du mot de passe a été envoyé',
     RESPONSE_PASSWORD_CHANGED: 'Votre mot de passe a été mis à jour.',
     RESPONSE_LOGIN_SUCCESSFUL: 'Connexion réussie',
+    RESPONSE_SESSIONS_LISTED: 'Sessions récupérées avec succès',
+    RESPONSE_SESSION_REVOKED: 'Session révoquée avec succès',
+    RESPONSE_ALL_SESSIONS_REVOKED: 'Toutes les sessions ont été révoquées avec succès',
     ERROR_INVALID_RESET_TOKEN: 'Mot de passe à usage unique invalide ou expiré. Veuillez en demander un nouveau.',
     ERROR_EXPIRED_RESET_TOKEN: 'Mot de passe à usage unique expiré, veuillez en demander un nouveau.',
     ERROR_INVALID_USER: 'Adresse e-mail ou mot de passe invalide',
-    ERROR_ACCOUNT_DEACTIVATED: 'Votre compte a été désactivé. Veuillez contacter l\'assistance.'
+    ERROR_ACCOUNT_DEACTIVATED: 'Votre compte a été désactivé. Veuillez contacter l\'assistance.',
+    ERROR_SESSION_NOT_FOUND: 'Session introuvable',
 
 }

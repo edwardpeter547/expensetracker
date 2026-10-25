@@ -80,7 +80,14 @@ export const validateQuery = (schema) => {
             return next(new AppError('Invalid Query parameters', 400, errors));
         }
 
-        request.query = value;
+        // Express 5 exposes `req.query` as a getter, so assigning to it throws.
+        // Redefine it as a plain property to preserve the sanitized value.
+        Object.defineProperty(request, 'query', {
+            value,
+            writable: true,
+            configurable: true,
+            enumerable: true,
+        });
         next();
     }
 }

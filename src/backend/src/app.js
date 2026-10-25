@@ -15,12 +15,13 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import path from 'path';
 import Config from './configurations/env.config.js';
 import i18n from './configurations/i18n.config.js';
 import { morganMiddleware } from './configurations/morgan.config.js';
+import { globalApiRateLimiter } from './configurations/rate-limit.config.js';
+import { corsOptions, hstsOptions } from './configurations/security.config.js';
 import { registerApiDocs } from './docs/apiDocs.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { langHandler } from './middleware/lang.middleware.js';
@@ -29,10 +30,19 @@ import { getDirectory } from './utils/helpers.js';
 
 const app = express();
 
+// Only honor proxy headers when the operator explicitly declares the trusted
+// hop count. Off by default to prevent IP spoofing that would bypass limits.
+app.set('trust proxy', Config.trustProxy);
+
 
 // Security Middleware
-app.use(helmet());
-app.use(cors({origin: Config.clientUrl, credentials: true}));
+// HSTS is added below only when Config.enableHsts is true; the default
+// Helmet middleware must not emit its own HSTS header before that decision.
+app.use(helmet({ hsts: false }));
+if (Config.enableHsts) {
+    app.use(helmet.hsts(hstsOptions));
+}
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json({limit: '10mb'}));
 app.use(express.urlencoded({extended: true, limit: '10mb'}));
@@ -43,19 +53,9 @@ app.use(morganMiddleware);
 app.use(i18n.init);
 app.use(langHandler);
 
-// Rate Limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 Minutes
-    max: 100,
-    message: 'Too many requests from this IP, please try again later.',
-    standardHeaders: true,
-    legacyHeaders: false,
-})
-
-
 // Api Routes
 app.use('/static', express.static(path.join(getDirectory(import.meta.url), '../public')));
-app.use('/api', limiter);
+app.use('/api', globalApiRateLimiter);
 app.use('/api/v1', router);
 registerApiDocs(app);
 

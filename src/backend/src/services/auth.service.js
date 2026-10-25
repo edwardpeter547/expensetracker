@@ -94,16 +94,18 @@ export const hashToken = (token) => {
  * @param {number} userId The owning user id.
  * @param {string} [ipAddress] The issuing request IP.
  * @param {string|null} [familyId=null] The token family id, or null to create one.
+ * @param {string|null} [userAgent=null] The issuing request user agent.
  * @returns {Promise<void>}
  */
-export const createRefreshToken = async (refreshToken, userId, ipAddress, familyId = null) => {
+export const createRefreshToken = async (refreshToken, userId, ipAddress, familyId = null, userAgent = null) => {
     await prisma.refreshToken.create({
         data: {
             token: hashToken(refreshToken),
             familyId: familyId ?? crypto.randomUUID(),
             userId: userId,
             expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-            createdByIp: ipAddress
+            createdByIp: ipAddress,
+            userAgent: userAgent,
         }
     });
     logger.info("Refresh Token generated", {userId: userId, action: AUTH_ACTIONS.REFRESH_TOKEN_CREATED});
@@ -170,6 +172,70 @@ export const revokeAllRefreshTokens = async (userId) => {
 }
 
 /**
+ * Revoke every active refresh-token session for a user and invalidate all
+ * previously issued access tokens in one atomic operation.
+ *
+ * The `tokenVersion` increment causes the authentication middleware to reject
+ * access tokens signed with the previous version on the next request, while
+ * the refresh-token update prevents any device from obtaining a new token.
+ *
+ * @param {number} userId The user whose sessions should be revoked.
+ * @returns {Promise<object[]>} The results of the token-version update
+ *   followed by the refresh-token revocation.
+ */
+export const revokeAllUserSessions = async (userId) => {
+    return prisma.$transaction([
+        prisma.user.update({
+            where: { id: userId },
+            data: { tokenVersion: { increment: 1 } },
+        }),
+        prisma.refreshToken.updateMany({
+            where: { userId, isRevoked: false },
+            data: { isRevoked: true },
+        }),
+    ]);
+};
+
+/**
+ * List a user's active device sessions (refresh-token records).
+ *
+ * @param {number} userId The owning user id.
+ * @returns {Promise<object[]>} Session records ordered newest first.
+ */
+export const listUserSessions = async (userId) => {
+    return prisma.refreshToken.findMany({
+        where: {
+            userId,
+            isRevoked: false,
+            expiresAt: {gt: new Date()},
+        },
+        orderBy: {createdAt: 'desc'},
+        select: {
+            id: true,
+            createdAt: true,
+            expiresAt: true,
+            createdByIp: true,
+            userAgent: true,
+            lastUsedAt: true,
+        },
+    });
+};
+
+/**
+ * Revoke one of the user's own sessions by refresh-token id.
+ *
+ * @param {number} userId The owning user id.
+ * @param {string} sessionId The refresh-token id.
+ * @returns {Promise<{count: number}>} The number of sessions revoked (0 or 1).
+ */
+export const revokeUserSession = async (userId, sessionId) => {
+    return prisma.refreshToken.updateMany({
+        where: {id: sessionId, userId, isRevoked: false},
+        data: {isRevoked: true},
+    });
+};
+
+/**
  * Rotate a presented refresh token atomically and return a new token pair.
  *
  * The consume step is a conditional update that revokes the presented token
@@ -206,10 +272,31 @@ export const rotateRefreshToken = async (presentedToken) => {
         throw new AppError('Account deactivated', 401);
     }
 
-    const tokens = generateTokens(stored.user.id, stored.user.email);
+    const tokens = generateTokens(stored.user.id, stored.user.email, stored.user.tokenVersion);
 
     try {
         await prisma.$transaction(async (tx) => {
+            // Lock the user row before consuming the refresh token. This
+            // serializes rotation against revoke-all and password-reset
+            // token-version bumps, so a refresh token inserted after a global
+            // revocation cannot survive because the version check below sees
+            // the committed bump or the global revocation sees the new row.
+            const lockedRows = await tx.$queryRaw`
+                SELECT "tokenVersion", "isActive"
+                FROM "user"
+                WHERE "id" = ${stored.user.id}
+                FOR UPDATE
+            `;
+            const lockedUser = lockedRows[0];
+
+            if (
+                !lockedUser ||
+                !lockedUser.isActive ||
+                Number(lockedUser.tokenVersion) !== stored.user.tokenVersion
+            ) {
+                throw new AppError('Invalid Refresh Token', 401);
+            }
+
             const consumed = await tx.refreshToken.updateMany({
                 where: { token: tokenHash, isRevoked: false },
                 data: { isRevoked: true }
@@ -226,7 +313,10 @@ export const rotateRefreshToken = async (presentedToken) => {
                     token: hashToken(tokens.refreshToken),
                     familyId: stored.familyId,
                     userId: stored.user.id,
-                    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
+                    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+                    createdByIp: stored.createdByIp,
+                    userAgent: stored.userAgent,
+                    lastUsedAt: new Date(),
                 }
             });
         });
@@ -276,6 +366,69 @@ export const createLoginAttempt = async ({ipAddress, userAgent, email, loginAtte
         action: loginAttemptStatus ? USER_ACTIONS.USER_LOGIN_ATTEMPT_SUCCESS: USER_ACTIONS.USER_LOGIN_ATTEMPT_FAILED }
     );
 }
+
+/**
+ * Count failed login attempts for an email within the trailing window.
+ *
+ * @param {string} email The attempted email address.
+ * @param {number} windowMs The trailing window in milliseconds.
+ * @returns {Promise<number>} The number of failed attempts in the window.
+ */
+export const countRecentFailedLogins = async (email, windowMs) => {
+    return prisma.loginAttempt.count({
+        where: {
+            email,
+            wasSuccess: false,
+            attemptTime: {gte: new Date(Date.now() - windowMs)},
+        },
+    });
+};
+
+/**
+ * Determine whether an email is currently restricted by failed-login policy.
+ *
+ * The restriction window escalates with the number of recent failures (doubling
+ * per additional failure-limit tier) and is capped at the configured maximum.
+ * A successful login clears the counter via {@link resetFailedLogins}.
+ *
+ * @param {string} email The email to evaluate.
+ * @returns {Promise<{locked: boolean, lockedUntil: Date|null}>} Lock state.
+ */
+export const getAccountLockout = async (email) => {
+    const {failureLimit, baseWindowMs, maxWindowMs} = Config.loginLockout;
+    const failures = await countRecentFailedLogins(email, maxWindowMs);
+
+    if (failures < failureLimit) {
+        return {locked: false, lockedUntil: null};
+    }
+
+    const tiers = Math.floor((failures - failureLimit) / failureLimit);
+    const windowMs = Math.min(maxWindowMs, baseWindowMs * Math.pow(2, tiers));
+    const lastFailure = await prisma.loginAttempt.findFirst({
+        where: {email, wasSuccess: false},
+        orderBy: {attemptTime: 'desc'},
+        select: {attemptTime: true},
+    });
+
+    if (!lastFailure) {
+        return {locked: false, lockedUntil: null};
+    }
+
+    const lockedUntil = new Date(lastFailure.attemptTime.getTime() + windowMs);
+    return {locked: lockedUntil.getTime() > Date.now(), lockedUntil};
+};
+
+/**
+ * Clear failed-login history for an email after a successful authentication.
+ *
+ * @param {string} email The email whose failed attempts should be cleared.
+ * @returns {Promise<void>}
+ */
+export const resetFailedLogins = async (email) => {
+    await prisma.loginAttempt.deleteMany({
+        where: {email, wasSuccess: false},
+    });
+};
 
 /**
  * Persist an email-verification token for a user.
@@ -524,7 +677,8 @@ export const updateUserPassword = async (user, password) => {
             where: {email: user.email},
             data: {
                 password: hashedPassword,
-                lastPasswordReset: new Date()
+                lastPasswordReset: new Date(),
+                tokenVersion: {increment: 1},
             }
         });
 

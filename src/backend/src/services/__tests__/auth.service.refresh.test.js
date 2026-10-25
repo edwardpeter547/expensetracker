@@ -27,6 +27,7 @@ const ACTIVE_USER = {
     isEmailVerified: true,
     emailVerifiedAt: new Date('2026-01-01T00:00:00Z'),
     language: 'en',
+    tokenVersion: 0,
 };
 
 const INACTIVE_USER = { ...ACTIVE_USER, id: 2, email: 'inactive@example.com', isActive: false };
@@ -65,6 +66,7 @@ const makeTransactionClient = () => {
     const undoLog = [];
     return {
         undoLog,
+        $queryRaw: jest.fn(async () => [{ tokenVersion: 0, isActive: true }]),
         refreshToken: {
             create: async ({ data }) => {
                 if (shouldFailCreate) throw new Error('simulated database failure');

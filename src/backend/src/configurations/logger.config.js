@@ -46,6 +46,7 @@ const consoleFormat = winston.format.combine(
 const logger = winston.createLogger({
     level: Config.nodeEnv === APPLICATION_MODE.PRODUCTION || Config.nodeEnv === APPLICATION_MODE.TESTING ? 'info' : 'debug',
     format: logFormat,
+    silent: process.env.LOG_SILENT === 'true',
     transports: [
         // Write all logs to server.log
         new winston.transports.File({

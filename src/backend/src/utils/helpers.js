@@ -15,13 +15,20 @@ import AppError from './appError.js';
  *
  * @param {number|string} userId The user's unique identifier.
  * @param {string} email The user's email address.
+ * @param {number} [tokenVersion=0] The user's current token version.
  * @returns {{accessToken: string, refreshToken: string}} The token pair.
  */
-export const generateTokens = (userId, email) => {
+export const generateTokens = (userId, email, tokenVersion = 0) => {
     const accessToken = jwt.sign(
-        {userId, email},
+        {userId, email, tokenVersion},
         Config.jwtSecret,
-        {expiresIn: Config.jwtExpiresIn}
+        {
+            expiresIn: Config.jwtExpiresIn,
+            algorithm: 'HS256',
+            issuer: Config.jwtIssuer,
+            audience: Config.jwtAudience,
+            jwtid: crypto.randomUUID(),
+        }
     );
 
     const refreshToken = crypto.randomBytes(40).toString('hex');

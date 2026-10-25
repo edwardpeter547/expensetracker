@@ -7,7 +7,7 @@ export default {
             displayName: 'UNIT',
             testEnvironment: 'node',
             testMatch: ['<rootDir>/src/**/__tests__/*.test.js'],
-            // setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+            setupFilesAfterEnv: ['<rootDir>/scripts/jest-setup.js'],
             testTimeout: 10000,
 
             globals: {

@@ -3,7 +3,7 @@
 ## Purpose
 ExpenseTracker is a personal finance application. The current implementation covers:
 
-- User registration, email verification, login, logout, token refresh, and password reset.
+- User registration, email verification, login, logout, token refresh, password reset, and device-session management.
 - Transaction recording (income and expense) with amount, category, description, receipt URL, location, and date.
 - A dashboard summarizing monthly income, expenses, balance, and recent transactions.
 - Budget creation per category with monthly/weekly/yearly periods and alert thresholds.
@@ -52,7 +52,7 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 - Success envelope: `{ success: true, message, data, errors: null }`.
 - Error envelope (from `error.middleware.js`): `{ success: false, status, message, errors, stack? }`.
 - Prisma `P2025` maps to `404`, `P2002` maps to `409`; JWT errors map to `401`.
-- Authentication uses `Authorization: Bearer <accessToken>`. Refresh tokens are random hex strings stored server-side with expiry and revocation flags.
+- Authentication uses `Authorization: Bearer <accessToken>`. Access tokens are HS256 JWTs carrying `iss`, `aud`, `jti`, and `tokenVersion`; verification pins the algorithm and validates issuer/audience/version. Refresh tokens are random hex strings whose SHA-256 digests are stored server-side with expiry, revocation, and device metadata.
 - Status codes come from `http-status-codes`.
 
 ### Auth flow
@@ -62,17 +62,31 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 4. `POST /api/v1/auth/refresh-token` rotates refresh tokens (old token is revoked).
 5. `POST /api/v1/auth/logout` (protected) revokes the presented refresh token.
 6. `POST /api/v1/auth/forgot-password` creates a 6-digit reset code and emails it; `POST /api/v1/auth/verify-otp` verifies it; `POST /api/v1/auth/change-password` resets the password and writes a password-history record.
+7. `GET /api/v1/auth/sessions` (protected) lists the caller's active refresh-token sessions with IP, user agent, creation, and expiry metadata.
+8. `DELETE /api/v1/auth/sessions/{id}` (protected) revokes one of the caller's sessions.
+9. `DELETE /api/v1/auth/sessions` (protected) atomically revokes all of the caller's refresh-token sessions and increments `tokenVersion`, immediately invalidating previously issued access tokens.
+
+### Login-lockout availability trade-off
+
+Account lockout intentionally trades a small amount of availability for
+brute-force resistance. An attacker who knows a victim's email can deliberately
+submit enough wrong passwords to trigger the temporary restriction, causing
+denial of service for that account for up to the configured cap (default 30
+minutes). This is bounded, not indefinite: the window is capped, successful
+login resets the counter, and the IP-based rate limiter raises the cost of
+repeat attacks. The trade-off is accepted for the current single-user MVP and
+is reviewed again if household tenancy or role-based sharing is introduced.
 
 ### Data model
 The Prisma schema is split across `src/backend/src/prisma/schema.prisma` (generator + datasource) and fragments in `src/backend/src/prisma/models`. The generated client is emitted to `src/backend/src/generated` (gitignored; regenerated via `prisma generate`).
 
 Core models:
 
-- `User` — credentials, profile fields, verification flags, and preferences (`currency`, `timezone`, `language`, `theme`).
+- `User` — credentials, profile fields, verification flags, preferences (`currency`, `timezone`, `language`, `theme`), and `tokenVersion` for access-token invalidation.
 - `Transaction` — `amount` (`Float`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`.
 - `Category` — `name`, `icon`, `isSystem`, optional `userId`.
 - `Budget` — `amount` (`Float`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
-- `RefreshToken`, `VerificationToken`, `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
+- `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken`, `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
 - `Notification` — defined but not yet used.
 
 ### Persistence
@@ -116,6 +130,7 @@ Core models:
 ## Environment and configuration
 - Backend loads env files by `NODE_ENV`: `development` -> `dev.env`, `testing` -> `test.env`, otherwise `.env`, all under `src/backend/src/environment/` (gitignored).
 - Backend config is centralized in `src/backend/src/configurations/env.config.js`.
+- Backend startup fails fast when `JWT_SECRET` is missing or empty. `JWT_ISSUER` and `JWT_AUDIENCE` default to `expensetracker-api` and `expensetracker` respectively.
 - Mobile uses `.env` (gitignored) with `.env.example` documenting `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_API_PORT`, and `EXPO_PUBLIC_APP_ENV`.
 - `src/mobile/.npmrc` is gitignored with `.npmrc.example` provided.
 - API base-URL resolution and network troubleshooting are documented in `docs/engineering/api-connectivity.md`.
