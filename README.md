@@ -1,5 +1,7 @@
 # ExpenseTracker
 
+[![CI](https://github.com/edwardpeter547/expensetracker/actions/workflows/ci.yml/badge.svg)](https://github.com/edwardpeter547/expensetracker/actions/workflows/ci.yml)
+
 ExpenseTracker is a personal finance application for tracking income and expenses, managing categories, and setting budgets. It consists of an Expo/React Native mobile client and a Node.js/Express API backed by PostgreSQL.
 
 ## Structure

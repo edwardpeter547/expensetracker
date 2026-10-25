@@ -25,6 +25,9 @@ includes:
   docker:
     taskfile: ./tasks/docker.yml
     flatten: true
+  ci:
+    taskfile: ./tasks/ci.yml
+    flatten: true
   utilities:
     taskfile: ./tasks/utilities.yml
     flatten: true

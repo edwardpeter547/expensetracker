@@ -15,7 +15,7 @@ tasks:
       - docker build -f "{{.BACKEND_DF}}" --target "{{.TARGET}}" -t "expensetracker-backend:{{.TARGET}}" "{{.BACKEND_CTX}}"
 
   docker:test:
-    desc: Build and run the backend unit/static test suite in Docker
+    desc: Build and run the backend unit test suite in Docker
     deps:
       - task: docker:build
         vars:
