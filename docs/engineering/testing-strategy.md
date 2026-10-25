@@ -9,14 +9,15 @@
 - Test env: `NODE_ENV=testing` is set by the npm scripts so config loads `test.env`.
 
 ### Existing coverage areas
-- `src/backend/src/middleware/__tests__` — error middleware, language middleware, validation middleware.
+- `src/backend/src/middleware/__tests__` — error middleware, language middleware, validation middleware, and JWT authentication middleware (algorithm/issuer/audience/version enforcement).
 - `src/backend/src/utils/__tests__` — `AppError`, `catchAsync`, helpers.
 - `src/backend/src/validations/__tests__` — auth, general, and transaction validation schemas.
 
 The backend has controller, service, and route test suites. Database-gated
 integration suites use the `*.integration.test.js` suffix and cover refresh-token
-rotation, logout, and the logout HTTP route. Mobile tests cover the API client
-and localization modules.
+rotation, logout, registration/verification, password reset, profile update,
+cross-user ownership denial, login lockout, and the device-session HTTP routes.
+Mobile tests cover the API client and localization modules.
 
 ## Commands
 
@@ -88,7 +89,7 @@ Add these before shipping paid features. None of these currently exist; do not i
 - Money precision and rounding across sums, budgets, transfers, and currency conversions.
 - Date and timezone boundary tests for monthly periods and budget rollover.
 - Duplicate submission handling and idempotency for transaction create/sync.
-- Authentication, token refresh, and refresh-token rotation/revocation.
+- Authentication, token refresh, refresh-token rotation/revocation, JWT claims/versioning, per-device session revocation, and revoke-all access-token invalidation.
 - Subscription entitlement boundaries and usage allowances.
 - Household authorization: shared vs personal data access and role changes.
 - Downgrade and data retention: paid actions become read-only; history stays readable.

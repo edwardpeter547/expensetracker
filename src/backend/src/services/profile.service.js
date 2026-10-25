@@ -28,7 +28,8 @@ export const userProfile = async (userData) => {
             timezone: true,
             theme: true,
             lastLoginAt: true,
-            createdAt: true
+            createdAt: true,
+            tokenVersion: true,
         }
     });
 }

@@ -28,11 +28,15 @@ export const authenticate = async (request, response, next) => {
         const token = authHeader.split(' ')[1];
 
         // Verify access token
-        const decoded = jwt.verify(token, Config.jwtSecret);
+        const decoded = jwt.verify(token, Config.jwtSecret, {
+            algorithms: ['HS256'],
+            issuer: Config.jwtIssuer,
+            audience: Config.jwtAudience,
+        });
         
         const user = await userProfile({userId: decoded.userId});
 
-        if(!user || !user.isActive){
+        if(!user || !user.isActive || user.tokenVersion !== decoded.tokenVersion){
             throw new AppError('User not found or account deactivated', StatusCodes.UNAUTHORIZED)
         }
 

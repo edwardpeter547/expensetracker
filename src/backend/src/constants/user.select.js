@@ -23,6 +23,7 @@ export const USER_PUBLIC_SELECT = {
     emailVerifiedAt: true,
     language: true,
     currency: true,
+    tokenVersion: true,
 };
 
 /**

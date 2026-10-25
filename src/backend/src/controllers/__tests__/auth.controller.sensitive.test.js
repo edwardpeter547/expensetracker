@@ -18,6 +18,8 @@ const servicesDirectory = path.resolve(
 const mockAuthService = {
     getSafeUser: jest.fn(),
     getUser: jest.fn(),
+    getAccountLockout: jest.fn(),
+    resetFailedLogins: jest.fn(),
     getVerificationToken: jest.fn(),
     confirmVerification: jest.fn(),
     removeVerificationToken: jest.fn(),
@@ -29,11 +31,14 @@ const mockAuthService = {
     createRefreshToken: jest.fn(),
     createVerificationToken: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),
+    revokeAllUserSessions: jest.fn(),
     rotateRefreshToken: jest.fn(),
     refreshRecord: jest.fn(),
     sanitizeResponse: jest.fn(),
     updateLastLogin: jest.fn(),
     updateUserPassword: jest.fn(),
+    listUserSessions: jest.fn(),
+    revokeUserSession: jest.fn(),
 };
 
 const mockEmailService = {
@@ -123,10 +128,7 @@ describe('auth.controller sensitive-data responses', () => {
         expect(mockAuthService.getSafeUser).toHaveBeenCalledWith({ email: 'a@b.c' });
         expect(mockAuthService.getUser).not.toHaveBeenCalled();
         const payload = json.mock.calls[0][0];
-        expect(payload.data.user).not.toHaveProperty('password');
-        expect(payload.data.user).not.toHaveProperty('dateOfBirth');
-        expect(payload.data.user).not.toHaveProperty('mobileNumber');
-        expect(payload.data.user).toHaveProperty('email', 'a@b.c');
+        expect(payload.data).toBeNull();
     });
 
     test('verifyToken returns a user without a password hash', async () => {

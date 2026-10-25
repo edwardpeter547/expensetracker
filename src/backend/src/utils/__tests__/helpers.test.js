@@ -13,6 +13,7 @@
 import { describe, expect, test } from '@jest/globals';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
+import Config from '../../configurations/env.config.js';
 import { generateTokens, getDirectory } from '../helpers.js';
 
 /**
@@ -73,6 +74,25 @@ describe('Generate Tokens Test Suite - generateTokens', () => {
 
         expect(decoded).toHaveProperty('userId', userId);
         expect(decoded).toHaveProperty('email', email);
+    });
+
+    /**
+     * Validates that the access token carries a pinned HS256 algorithm and the
+     * expected issuer, audience, jti, and tokenVersion claims.
+     */
+    test('accessToken is HS256 with issuer, audience, jti, and tokenVersion claims', () => {
+        const tokens = generateTokens(userId, email, 2);
+        const decoded = jwt.verify(tokens.accessToken, Config.jwtSecret, {
+            algorithms: ['HS256'],
+            issuer: Config.jwtIssuer,
+            audience: Config.jwtAudience,
+        });
+
+        expect(decoded.iss).toBe(Config.jwtIssuer);
+        expect(decoded.aud).toBe(Config.jwtAudience);
+        expect(decoded.tokenVersion).toBe(2);
+        expect(typeof decoded.jti).toBe('string');
+        expect(decoded.jti.length).toBeGreaterThan(0);
     });
 
     /**

@@ -9,6 +9,8 @@ model RefreshToken {
     isRevoked       Boolean             @default(false)
     createdAt       DateTime            @default(now())
     createdByIp     String? 
+    userAgent       String?
+    lastUsedAt      DateTime?
 
     @@index([token])
     @@index([userId])

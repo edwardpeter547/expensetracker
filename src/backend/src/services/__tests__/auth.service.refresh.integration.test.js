@@ -64,6 +64,7 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
     let prisma;
     let authService;
     let adminClient;
+    let testDbUrl;
     let setupFailed = false;
 
     // Names of databases this run successfully created. Teardown drops only
@@ -117,6 +118,31 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
         });
     };
 
+    /**
+     * Wait until a backend transaction is blocked on a lock with a query
+     * matching the supplied pattern.
+     *
+     * @param {string} pattern SQL `ILIKE` pattern for `pg_stat_activity.query`.
+     * @param {number} [timeoutMs=2000] How long to wait before failing.
+     * @returns {Promise<void>}
+     */
+    const waitForBlockedQuery = async (pattern, timeoutMs = 2000) => {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            const result = await adminClient.query(
+                `SELECT count(*)::int AS n
+                   FROM pg_stat_activity
+                  WHERE wait_event_type = 'Lock'
+                    AND state = 'active'
+                    AND query ILIKE $1`,
+                [pattern]
+            );
+            if (result.rows[0].n > 0) return;
+            await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        throw new Error(`Timed out waiting for a locked query matching ${pattern}`);
+    };
+
     beforeAll(async () => {
         try {
             adminClient = await connectPg(ADMIN_DATABASE_URL);
@@ -126,6 +152,7 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
             await createDatabaseAndTrack(adminClient, mainTestDbName);
 
             const mainTestDbUrl = replaceDatabaseName(ADMIN_DATABASE_URL, mainTestDbName);
+            testDbUrl = mainTestDbUrl;
             execSync('npx prisma db push', {
                 cwd: backendRoot,
                 env: { ...process.env, DATABASE_URL: mainTestDbUrl },
@@ -225,6 +252,91 @@ describeDb('auth refresh-token integration (real PostgreSQL)', () => {
             { id: user.id, email: user.email, language: user.language },
             'new-password'
         );
+
+        const active = await prisma.refreshToken.count({
+            where: { userId: user.id, isRevoked: false },
+        });
+        expect(active).toBe(0);
+
+        const updatedUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { tokenVersion: true },
+        });
+        expect(updatedUser.tokenVersion).toBe(user.tokenVersion + 1);
+    });
+
+    /**
+     * Force the rotation to acquire the user-row lock first, then verify
+     * revoke-all still removes the freshly rotated refresh token.
+     */
+    test('revoke-all revokes a refresh token created by a rotation that won the race', async () => {
+        const user = await seedUser();
+        const raw = crypto.randomBytes(40).toString('hex');
+        await authService.createRefreshToken(raw, user.id, '127.0.0.1');
+
+        const lockClient = await connectPg(testDbUrl);
+        await lockClient.query('BEGIN');
+        await lockClient.query('SELECT id FROM "user" WHERE id = $1 FOR UPDATE', [user.id]);
+
+        const rotatePromise = authService.rotateRefreshToken(raw);
+        await waitForBlockedQuery('%FOR UPDATE%');
+        const revokeAllPromise = authService.revokeAllUserSessions(user.id);
+
+        try {
+            await lockClient.query('COMMIT');
+        } finally {
+            await lockClient.end();
+        }
+
+        const [rotateResult, revokeAllResult] = await Promise.allSettled([
+            rotatePromise,
+            revokeAllPromise,
+        ]);
+
+        expect(rotateResult.status).toBe('fulfilled');
+        expect(revokeAllResult.status).toBe('fulfilled');
+
+        const active = await prisma.refreshToken.count({
+            where: { userId: user.id, isRevoked: false },
+        });
+        expect(active).toBe(0);
+
+        await expect(
+            authService.rotateRefreshToken(rotateResult.value.refreshToken)
+        ).rejects.toMatchObject({ statusCode: 401 });
+    });
+
+    /**
+     * Force revoke-all to acquire the user-row lock first, then verify a
+     * concurrent rotation cannot create a usable session.
+     */
+    test('rotation loses the race and cannot create a session after revoke-all commits', async () => {
+        const user = await seedUser();
+        const raw = crypto.randomBytes(40).toString('hex');
+        await authService.createRefreshToken(raw, user.id, '127.0.0.1');
+
+        const lockClient = await connectPg(testDbUrl);
+        await lockClient.query('BEGIN');
+        await lockClient.query('SELECT id FROM "user" WHERE id = $1 FOR UPDATE', [user.id]);
+
+        const revokeAllPromise = authService.revokeAllUserSessions(user.id);
+        await waitForBlockedQuery('%tokenVersion%');
+        const rotatePromise = authService.rotateRefreshToken(raw);
+
+        try {
+            await lockClient.query('COMMIT');
+        } finally {
+            await lockClient.end();
+        }
+
+        const [revokeAllResult, rotateResult] = await Promise.allSettled([
+            revokeAllPromise,
+            rotatePromise,
+        ]);
+
+        expect(revokeAllResult.status).toBe('fulfilled');
+        expect(rotateResult.status).toBe('rejected');
+        expect(rotateResult.reason).toMatchObject({ statusCode: 401 });
 
         const active = await prisma.refreshToken.count({
             where: { userId: user.id, isRevoked: false },

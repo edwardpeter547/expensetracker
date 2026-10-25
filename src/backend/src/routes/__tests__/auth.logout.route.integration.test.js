@@ -144,7 +144,16 @@ describeDb('auth logout route (HTTP, real PostgreSQL)', () => {
                 isActive: true,
             },
         });
-        const accessToken = jwt.sign({ userId: user.id, email: user.email }, Config.jwtSecret, { expiresIn: '15m' });
+        const accessToken = jwt.sign(
+            { userId: user.id, email: user.email, tokenVersion: user.tokenVersion },
+            Config.jwtSecret,
+            {
+                expiresIn: '15m',
+                algorithm: 'HS256',
+                issuer: Config.jwtIssuer,
+                audience: Config.jwtAudience,
+            }
+        );
         return { user, accessToken };
     };
 
