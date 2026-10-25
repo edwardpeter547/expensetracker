@@ -59,7 +59,6 @@ FROM dependencies AS prisma-build
 USER root
 COPY --chown=app:app prisma.config.js ./
 COPY --chown=app:app src/prisma ./src/prisma
-COPY --chown=app:app src/configurations/env.config.js ./src/configurations/env.config.js
 
 # Generate the gitignored Prisma client. The placeholder datasource URL is
 # build-time only; `prisma generate` never connects to it and no secret is
