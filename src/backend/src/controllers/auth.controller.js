@@ -6,6 +6,12 @@ import i18n from '../configurations/i18n.config.js';
 import logger from '../configurations/logger.config.js';
 import { AUTH_ACTIONS, MESSAGING_ACTIONS, USER_ACTIONS } from '../constants/audit.actions.js';
 import {
+    AUTH_AUDIT_EVENT_TYPES,
+    AUTH_AUDIT_OUTCOMES,
+    AUTH_AUDIT_REASONS,
+} from '../constants/auth-audit.constants.js';
+import {
+    countRecentFailedLogins,
     confirmVerification,
     createLoginAttempt,
     createRefreshToken,
@@ -28,11 +34,57 @@ import {
     updateLastLogin,
     verifyResetPasswordToken,
 } from '../services/auth.service.js';
+import { hasRecentEvent, recordAuthAuditEvent } from '../services/auth-audit.service.js';
 import emailService from '../services/email.service.js';
 import AppError from '../utils/appError.js';
 import catchAsync from '../utils/catchAsync.js';
 import { generateNumericCode, generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
 import { DUMMY_PASSWORD_HASH } from '../constants/app.constants.js';
+
+/**
+ * Record suspicious repeated-failure evidence once per lockout engagement.
+ *
+ * Reuses the configured lockout threshold and base observation window rather
+ * than introducing a second independent counter. A durable dedup query (not
+ * in-memory state) prevents one audit event per request during a brute-force
+ * burst; the event is written only while a recent suspicious event is absent.
+ *
+ * @param {object} params Detection inputs.
+ * @param {object} params.user The known user whose password failed.
+ * @param {string} params.ipAddress The request IP address.
+ * @param {string} params.correlationId The request correlation id.
+ * @returns {Promise<void>}
+ */
+const recordRepeatedAuthFailures = async ({user, ipAddress, correlationId}) => {
+    const {failureLimit, baseWindowMs} = Config.loginLockout;
+    const failures = await countRecentFailedLogins(user.email, baseWindowMs);
+
+    if (failures < failureLimit) {
+        return;
+    }
+
+    const alreadyRecorded = await hasRecentEvent({
+        userId: user.id,
+        eventType: AUTH_AUDIT_EVENT_TYPES.REPEATED_AUTH_FAILURES,
+        since: new Date(Date.now() - baseWindowMs),
+    });
+
+    if (alreadyRecorded) {
+        return;
+    }
+
+    await recordAuthAuditEvent({
+        eventType: AUTH_AUDIT_EVENT_TYPES.REPEATED_AUTH_FAILURES,
+        outcome: AUTH_AUDIT_OUTCOMES.SUSPICIOUS_ACTIVITY,
+        userId: user.id,
+        ipAddress,
+        correlationId,
+        metadata: {
+            reason: AUTH_AUDIT_REASONS.REPEATED_FAILURES,
+            attemptCount: failures,
+        },
+    });
+};
 
 
 /**
@@ -50,7 +102,22 @@ export const register = catchAsync(async (request, response) => {
     const {email, username, password, firstName, lastName, language: bodyLanguage, currency} = request.body;
     const language = bodyLanguage || request.headers['accept-language']?.split('-')[0] || Config.defaultLocale
 
-    const user = await createUser(email, username, password, firstName, lastName, language, currency);
+    let user;
+    try {
+        user = await createUser(email, username, password, firstName, lastName, language, currency);
+    } catch (error) {
+        if (error?.statusCode === 409) {
+            await recordAuthAuditEvent({
+                eventType: AUTH_AUDIT_EVENT_TYPES.REGISTRATION,
+                outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+                userId: null,
+                ipAddress: request.ip,
+                correlationId: request.id,
+                metadata: {reason: AUTH_AUDIT_REASONS.DUPLICATE_ACCOUNT},
+            });
+        }
+        throw error;
+    }
     const {accessToken, refreshToken } = generateTokens(user.id, user.email, 0);
 
     await createRefreshToken(refreshToken, user.id, request.ip, null, request.headers['user-agent']);
@@ -64,7 +131,15 @@ export const register = catchAsync(async (request, response) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     await createVerificationToken(user, verificationToken);
 
-    emailService.sendRegistrationComplete(user, verificationToken).catch(error => logger.error('failed send welcome email', {userId: user.id, error}));
+    await recordAuthAuditEvent({
+        eventType: AUTH_AUDIT_EVENT_TYPES.REGISTRATION,
+        outcome: AUTH_AUDIT_OUTCOMES.SUCCESS,
+        userId: user.id,
+        ipAddress: request.ip,
+        correlationId: request.id,
+    });
+
+    emailService.sendRegistrationComplete(user, verificationToken).catch(error => logger.error('failed send welcome email', {userId: user.id, error: error.message}));
     logger.info("Registration Email sent!", {user: maskEmail(user.email), action: MESSAGING_ACTIONS.WELCOME_EMAIL_SENT})
     logger.info("User Account Created", {user: maskEmail(user.email), action: USER_ACTIONS.USER_CREATED});
 
@@ -190,24 +265,57 @@ export const login = catchAsync(async (request, response) => {
 
     if (!user) {
         await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: false});
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.LOGIN,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: null,
+            ipAddress,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.INVALID_CREDENTIALS},
+        });
         logger.warn('Login failed: user not found', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_FAILED});
         throw genericFailure();
     }
 
     if (!passwordValid) {
         await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: false, userId: user.id});
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.LOGIN,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: user.id,
+            ipAddress,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.INVALID_CREDENTIALS},
+        });
+        await recordRepeatedAuthFailures({user, ipAddress, correlationId: request.id});
         logger.warn('Login failed: invalid password', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_FAILED});
         throw genericFailure();
     }
 
     const lockout = await getAccountLockout(email);
     if (lockout.locked) {
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.LOGIN,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: user.id,
+            ipAddress,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.ACCOUNT_LOCKED},
+        });
         logger.warn('Login blocked by temporary lockout', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_BLOCKED});
         throw genericFailure();
     }
 
     if (!user.isActive) {
         await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: false, userId: user.id});
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.LOGIN,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: user.id,
+            ipAddress,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.ACCOUNT_INACTIVE},
+        });
         logger.warn('Login blocked: account deactivated', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_BLOCKED});
         throw genericFailure();
     }
@@ -219,6 +327,13 @@ export const login = catchAsync(async (request, response) => {
     await createRefreshToken(refreshToken, user.id, ipAddress, null, userAgent);
     await updateLastLogin(user);
     await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: true, userId: user.id});
+    await recordAuthAuditEvent({
+        eventType: AUTH_AUDIT_EVENT_TYPES.LOGIN,
+        outcome: AUTH_AUDIT_OUTCOMES.SUCCESS,
+        userId: user.id,
+        ipAddress,
+        correlationId: request.id,
+    });
     logger.info('Login Successful', {user: maskEmail(user.email), action: AUTH_ACTIONS.LOGIN_SUCCESS});
 
     const safeUser = await getSafeUser({id: user.id});
@@ -250,6 +365,14 @@ export const resetPassword = catchAsync(async (request, response) => {
     const locale = getAppLocale(request);
 
     if(!user){
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_RESET_COMPLETE,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: null,
+            ipAddress: request.ip,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.INVALID_RESET_CODE},
+        });
         logger.warn("Password reset attempted for unknown email", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
         throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale}), StatusCodes.UNAUTHORIZED);
     }
@@ -258,9 +381,19 @@ export const resetPassword = catchAsync(async (request, response) => {
         userId: user.id,
         code,
         password,
+        ipAddress: request.ip,
+        correlationId: request.id,
     });
 
     if(!result.success){
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_RESET_COMPLETE,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: user.id,
+            ipAddress: request.ip,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.INVALID_RESET_CODE},
+        });
         logger.warn("Password reset code invalid or already used", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
         throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: user.language || locale}), StatusCodes.UNAUTHORIZED);
     }
@@ -332,6 +465,13 @@ export const forgotPassword = catchAsync(async (request, response) => {
 
     const passwordResetCode = generateNumericCode(6);
     await savePasswordResetToken(user,  passwordResetCode);
+    await recordAuthAuditEvent({
+        eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_RESET_REQUEST,
+        outcome: AUTH_AUDIT_OUTCOMES.REQUESTED,
+        userId: user.id,
+        ipAddress: request.ip,
+        correlationId: request.id,
+    });
 
     emailService.sendPasswordResetCode(user, passwordResetCode)
     .catch(error => logger.error('Failed to send email', {user: maskEmail(user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}));
@@ -364,6 +504,13 @@ export const logout = catchAsync(async (request, response) => {
 
     await revokeRefreshTokenByHash(refreshToken, user.id);
 
+    await recordAuthAuditEvent({
+        eventType: AUTH_AUDIT_EVENT_TYPES.LOGOUT,
+        outcome: AUTH_AUDIT_OUTCOMES.SUCCESS,
+        userId: user.id,
+        ipAddress: request.ip,
+        correlationId: request.id,
+    });
     logger.info('User logged out', {user: maskEmail(user.email), action: AUTH_ACTIONS.LOGOUT_SUCCESS});
 
     response.status(StatusCodes.OK).json({
@@ -454,11 +601,43 @@ export const refreshToken = catchAsync(async (request, response) => {
     const { refreshToken } = request.body;
     
     if(!refreshToken){
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.TOKEN_REFRESH,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: null,
+            ipAddress: request.ip,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.INVALID_REFRESH_TOKEN},
+        });
         throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST);
     }
 
-    const tokens = await rotateRefreshToken(refreshToken);
+    let tokens;
+    try {
+        tokens = await rotateRefreshToken(refreshToken);
+    } catch (error) {
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.TOKEN_REFRESH,
+            outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+            userId: null,
+            ipAddress: request.ip,
+            correlationId: request.id,
+            metadata: {
+                reason: error?.message?.includes('Expired')
+                    ? AUTH_AUDIT_REASONS.TOKEN_EXPIRED
+                    : AUTH_AUDIT_REASONS.INVALID_REFRESH_TOKEN,
+            },
+        });
+        throw error;
+    }
 
+    await recordAuthAuditEvent({
+        eventType: AUTH_AUDIT_EVENT_TYPES.TOKEN_REFRESH,
+        outcome: AUTH_AUDIT_OUTCOMES.SUCCESS,
+        userId: tokens.userId,
+        ipAddress: request.ip,
+        correlationId: request.id,
+    });
     logger.info('Token refreshed', {
         userId: tokens.userId,
         action: AUTH_ACTIONS.TOKEN_REFRESHED

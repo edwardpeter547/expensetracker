@@ -12,6 +12,7 @@ import path from 'path';
 
 const mockAuthService = {
     confirmVerification: jest.fn(),
+    countRecentFailedLogins: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),
     createUser: jest.fn(),
@@ -44,12 +45,18 @@ const mockEmailService = {
     sendPasswordResetCode: jest.fn(),
 };
 
+const mockAuthAuditService = {
+    recordAuthAuditEvent: jest.fn(),
+    hasRecentEvent: jest.fn(),
+};
+
 const servicesDirectory = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     '../../services'
 );
 
 jest.unstable_mockModule(path.join(servicesDirectory, 'auth.service.js'), () => mockAuthService);
+jest.unstable_mockModule(path.join(servicesDirectory, 'auth-audit.service.js'), () => mockAuthAuditService);
 jest.unstable_mockModule(path.join(servicesDirectory, 'email.service.js'), () => ({ default: mockEmailService }));
 
 const authController = await import('../auth.controller.js');
@@ -65,6 +72,8 @@ const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
 describe('auth controller refresh-token endpoints', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
+        mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
         jest.spyOn(console, 'log').mockImplementation(() => {});
     });
 

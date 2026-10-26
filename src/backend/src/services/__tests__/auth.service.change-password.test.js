@@ -15,6 +15,9 @@ const mockTx = {
     refreshToken: {
         updateMany: jest.fn(),
     },
+    authAuditEvent: {
+        create: jest.fn(),
+    },
 };
 
 const mockPrisma = {
@@ -37,6 +40,7 @@ describe('auth.service changeUserPassword', () => {
         mockTx.passwordHistory.create.mockResolvedValue({});
         mockTx.user.update.mockResolvedValue({});
         mockTx.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+        mockTx.authAuditEvent.create.mockResolvedValue({});
     });
 
     /**

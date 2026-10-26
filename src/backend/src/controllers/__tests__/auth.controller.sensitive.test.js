@@ -17,6 +17,7 @@ const servicesDirectory = path.resolve(
 
 const mockAuthService = {
     getSafeUser: jest.fn(),
+    countRecentFailedLogins: jest.fn(),
     getUser: jest.fn(),
     getAccountLockout: jest.fn(),
     resetFailedLogins: jest.fn(),
@@ -53,7 +54,13 @@ const mockProfileService = {
     revokeRefreshToken: jest.fn(),
 };
 
+const mockAuthAuditService = {
+    recordAuthAuditEvent: jest.fn(),
+    hasRecentEvent: jest.fn(),
+};
+
 jest.unstable_mockModule(path.join(servicesDirectory, 'auth.service.js'), () => mockAuthService);
+jest.unstable_mockModule(path.join(servicesDirectory, 'auth-audit.service.js'), () => mockAuthAuditService);
 jest.unstable_mockModule(path.join(servicesDirectory, 'email.service.js'), () => ({ default: mockEmailService }));
 jest.unstable_mockModule(path.join(servicesDirectory, 'profile.service.js'), () => mockProfileService);
 
@@ -72,6 +79,8 @@ describe('auth.controller sensitive-data responses', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
+        mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     });
 

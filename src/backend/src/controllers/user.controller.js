@@ -1,7 +1,13 @@
 import { StatusCodes } from "http-status-codes";
 import logger from "../configurations/logger.config.js";
 import { USER_ACTIONS } from "../constants/audit.actions.js";
+import {
+    AUTH_AUDIT_EVENT_TYPES,
+    AUTH_AUDIT_OUTCOMES,
+    AUTH_AUDIT_REASONS,
+} from "../constants/auth-audit.constants.js";
 import { changeUserPassword } from "../services/auth.service.js";
+import { recordAuthAuditEvent } from "../services/auth-audit.service.js";
 import {
     getAvatar as getAvatarImage,
     removeAvatar as removeUserAvatar,
@@ -126,7 +132,28 @@ export const updateProfile = catchAsync(async (request, response) => {
 export const changePassword = catchAsync(async (request, response) => {
     const { currentPassword, newPassword } = request.body;
 
-    await changeUserPassword(request.user.id, currentPassword, newPassword);
+    try {
+        await changeUserPassword(request.user.id, currentPassword, newPassword, {
+            ipAddress: request.ip,
+            correlationId: request.id,
+        });
+    } catch (error) {
+        if (error?.statusCode === 401 || error?.statusCode === 409) {
+            await recordAuthAuditEvent({
+                eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_CHANGE,
+                outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
+                userId: request.user.id,
+                ipAddress: request.ip,
+                correlationId: request.id,
+                metadata: {
+                    reason: error.statusCode === 409
+                        ? AUTH_AUDIT_REASONS.PASSWORD_REUSE
+                        : AUTH_AUDIT_REASONS.INVALID_CURRENT_PASSWORD,
+                },
+            });
+        }
+        throw error;
+    }
 
     logger.info("User password changed", {
         user: maskEmail(request.user.email),

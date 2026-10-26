@@ -23,6 +23,16 @@ jest.unstable_mockModule(
     () => ({ userProfile: mockUserProfile })
 );
 
+const mockAuthAuditService = {
+    recordAuthAuditEvent: jest.fn(),
+    hasRecentEvent: jest.fn(),
+};
+
+jest.unstable_mockModule(
+    path.join(servicesDirectory, 'auth-audit.service.js'),
+    () => mockAuthAuditService
+);
+
 const jwt = (await import('jsonwebtoken')).default;
 const Config = (await import('../../configurations/env.config.js')).default;
 const { authenticate } = await import('../auth.middleware.js');
@@ -45,6 +55,8 @@ const signToken = (payload, options = {}) => jwt.sign(payload, Config.jwtSecret,
 describe('authenticate middleware', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
+        mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
         mockUserProfile.mockResolvedValue({
             id: 1,
             email: 'a@b.c',

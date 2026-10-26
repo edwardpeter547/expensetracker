@@ -25,6 +25,7 @@ import { corsOptions, hstsOptions } from './configurations/security.config.js';
 import { registerApiDocs } from './docs/apiDocs.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { langHandler } from './middleware/lang.middleware.js';
+import { correlationIdHandler } from './middleware/request-id.middleware.js';
 import router from './routes/index.js';
 import { getDirectory } from './utils/helpers.js';
 
@@ -47,6 +48,7 @@ app.use(compression());
 app.use(express.json({limit: '10mb'}));
 app.use(express.urlencoded({extended: true, limit: '10mb'}));
 app.use(cookieParser());
+app.use(correlationIdHandler);
 app.use(morganMiddleware);
 
 // Initialize i18n and language handler middleware

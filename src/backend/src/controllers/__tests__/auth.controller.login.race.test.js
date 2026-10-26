@@ -18,6 +18,7 @@ const servicesDirectory = path.resolve(
 
 const mockAuthService = {
     confirmVerification: jest.fn(),
+    countRecentFailedLogins: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),
     createUser: jest.fn(),
@@ -41,9 +42,15 @@ const mockAuthService = {
     revokeUserSession: jest.fn(),
 };
 
+const mockAuthAuditService = {
+    recordAuthAuditEvent: jest.fn(),
+    hasRecentEvent: jest.fn(),
+};
+
 const mockedCompare = jest.fn();
 
 jest.unstable_mockModule(path.join(servicesDirectory, 'auth.service.js'), () => mockAuthService);
+jest.unstable_mockModule(path.join(servicesDirectory, 'auth-audit.service.js'), () => mockAuthAuditService);
 jest.unstable_mockModule(
     path.join(servicesDirectory, 'email.service.js'),
     () => ({default: {}})
@@ -73,6 +80,8 @@ const makeResponse = () => {
 describe('auth login lockout ordering', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
+        mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
         mockAuthService.getUser.mockResolvedValue({
             id: 1,
             email: 'known@example.com',

@@ -19,6 +19,7 @@ const servicesDirectory = path.resolve(
 
 const mockAuthService = {
     confirmVerification: jest.fn(),
+    countRecentFailedLogins: jest.fn(),
     createUser: jest.fn(),
     createVerificationToken: jest.fn(),
     getUser: jest.fn(),
@@ -42,7 +43,13 @@ const mockAuthService = {
     revokeUserSession: jest.fn(),
 };
 
+const mockAuthAuditService = {
+    recordAuthAuditEvent: jest.fn(),
+    hasRecentEvent: jest.fn(),
+};
+
 jest.unstable_mockModule(path.join(servicesDirectory, 'auth.service.js'), () => mockAuthService);
+jest.unstable_mockModule(path.join(servicesDirectory, 'auth-audit.service.js'), () => mockAuthAuditService);
 jest.unstable_mockModule(
     path.join(servicesDirectory, 'email.service.js'),
     () => ({default: {}})
@@ -72,6 +79,9 @@ describe('auth login controller', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockAuthService.getAccountLockout.mockResolvedValue({locked: false, lockedUntil: null});
+        mockAuthService.countRecentFailedLogins.mockResolvedValue(0);
+        mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
+        mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
     });
 
     test('unknown email returns 401', async () => {

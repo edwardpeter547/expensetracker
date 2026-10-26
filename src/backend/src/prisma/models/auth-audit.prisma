@@ -1,0 +1,16 @@
+model AuthAuditEvent {
+    id            String   @id @default(cuid())
+    eventType     String
+    outcome       String
+    userId        Int?
+    user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+    ipAddress     String?
+    correlationId String?
+    metadata      Json?
+    createdAt     DateTime @default(now())
+
+    @@index([userId, createdAt])
+    @@index([eventType, createdAt])
+    @@index([createdAt])
+    @@map("auth_audit_event")
+}

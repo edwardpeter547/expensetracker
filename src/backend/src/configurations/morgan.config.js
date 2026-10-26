@@ -5,11 +5,11 @@ import { APPLICATION_MODE } from '../constants/audit.actions.js';
 
 
 /**
- * Custom token: body
- * Extracts and serializes the request body for logging
+ * Custom token: requestId
+ * Exposes the correlation id attached by the request-id middleware.
  */
-morgan.token('body', (request) => {
-    return JSON.stringify(request.body);
+morgan.token('requestId', (request) => {
+    return request.id || '-';
 });
 
 
@@ -31,9 +31,9 @@ morgan.token('user', (request) => {
  */
 const getMorganFormat = () => {
     if(Config.nodeEnv === APPLICATION_MODE.PRODUCTION){
-        return ':remote-addr - :user - :method :url :status :response-time ms';
+        return ':requestId :remote-addr - :user - :method :url :status :response-time ms';
     }else{
-        return ':method :url :status :response-time ms - :res[content-length] - :user-agent';
+        return ':requestId :method :url :status :response-time ms - :res[content-length] - :user-agent';
     }
 };
 
