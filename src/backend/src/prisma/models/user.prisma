@@ -35,6 +35,7 @@ model User {
   notifications             Notification[]
   refreshTokens             RefreshToken[]
   loginAttempts             LoginAttempt[]
+  authAuditEvents           AuthAuditEvent[]
   verificationTokens        VerificationToken[]
   passwordResetTokens       PasswordResetToken[]
   passwordHistories         PasswordHistory[]

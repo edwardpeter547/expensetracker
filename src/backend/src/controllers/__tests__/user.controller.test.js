@@ -28,8 +28,14 @@ const mockDeletionService = {
     exportUserData: jest.fn(),
 };
 
+const mockAuthAuditService = {
+    recordAuthAuditEvent: jest.fn(),
+    hasRecentEvent: jest.fn(),
+};
+
 jest.unstable_mockModule(path.join(servicesDirectory, 'profile.service.js'), () => mockProfileService);
 jest.unstable_mockModule(path.join(servicesDirectory, 'auth.service.js'), () => mockAuthService);
+jest.unstable_mockModule(path.join(servicesDirectory, 'auth-audit.service.js'), () => mockAuthAuditService);
 jest.unstable_mockModule(path.join(servicesDirectory, 'avatar.service.js'), () => mockAvatarService);
 jest.unstable_mockModule(
     path.resolve(getDirectory(import.meta.url), '../../account-deletion/deletion/service.js'),
@@ -49,6 +55,8 @@ const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
 describe('user.controller', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
+        mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
     });
 
     /**
@@ -122,7 +130,12 @@ describe('user.controller', () => {
         );
         await flushAsync();
 
-        expect(mockAuthService.changeUserPassword).toHaveBeenCalledWith(1, 'old', 'new-password');
+        expect(mockAuthService.changeUserPassword).toHaveBeenCalledWith(
+            1,
+            'old',
+            'new-password',
+            {ipAddress: undefined, correlationId: undefined}
+        );
         expect(status).toHaveBeenCalledWith(200);
         expect(json).toHaveBeenCalledWith(expect.objectContaining({ data: null }));
     });

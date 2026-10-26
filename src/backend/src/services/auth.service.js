@@ -8,6 +8,8 @@ import { USER_PUBLIC_SELECT } from "../constants/user.select.js";
 import AppError from "../utils/appError.js";
 import { generateTokens, normalizeUsername } from "../utils/helpers.js";
 import { REFRESH_TOKEN_TTL_MS, REFRESH_TOKEN_PATTERN, REUSE_DETECTED } from "../constants/app.constants.js";
+import { AUTH_AUDIT_EVENT_TYPES, AUTH_AUDIT_OUTCOMES } from "../constants/auth-audit.constants.js";
+import { recordAuthAuditEvent } from "./auth-audit.service.js";
 
 /**
  * Find an existing user by email or username.
@@ -676,9 +678,11 @@ export const verifyResetPasswordToken = async (code, user) => {
  * @param {number} params.userId The user to reset.
  * @param {string} params.code The raw numeric reset code.
  * @param {string} params.password The new plaintext password.
+ * @param {string|null} [params.ipAddress=null] The request IP address.
+ * @param {string|null} [params.correlationId=null] The request correlation id.
  * @returns {Promise<{success: boolean}>} Whether the reset was applied.
  */
-export const resetPasswordWithCode = async ({userId, code, password}) => {
+export const resetPasswordWithCode = async ({userId, code, password, ipAddress = null, correlationId = null}) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     return prisma.$transaction(async (tx) => {
@@ -726,6 +730,14 @@ export const resetPasswordWithCode = async ({userId, code, password}) => {
             where: {userId, isRevoked: false},
             data: {isRevoked: true},
         });
+
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_RESET_COMPLETE,
+            outcome: AUTH_AUDIT_OUTCOMES.SUCCESS,
+            userId,
+            ipAddress,
+            correlationId,
+        }, {tx, critical: true});
 
         return {success: true};
     });
@@ -794,13 +806,16 @@ export const updateUserPassword = async (user, password) => {
  * @param {number} userId The authenticated user's id.
  * @param {string} currentPassword The presented current password.
  * @param {string} newPassword The proposed new password.
+ * @param {object} [auditContext={}] Request context for the audit record.
+ * @param {string|null} [auditContext.ipAddress=null] The request IP address.
+ * @param {string|null} [auditContext.correlationId=null] The request correlation id.
  * @returns {Promise<object>} The transaction result.
  * @throws {AppError} With status 401 when the user is missing or the current
  *   password is incorrect.
  * @throws {AppError} With status 409 when the new password reuses the current
  *   password or a previous password.
  */
-export const changeUserPassword = async (userId, currentPassword, newPassword) => {
+export const changeUserPassword = async (userId, currentPassword, newPassword, auditContext = {}) => {
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
     return prisma.$transaction(async (tx) => {
@@ -855,6 +870,14 @@ export const changeUserPassword = async (userId, currentPassword, newPassword) =
             where: { userId, isRevoked: false },
             data: { isRevoked: true },
         });
+
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_CHANGE,
+            outcome: AUTH_AUDIT_OUTCOMES.SUCCESS,
+            userId,
+            ipAddress: auditContext.ipAddress ?? null,
+            correlationId: auditContext.correlationId ?? null,
+        }, {tx, critical: true});
     });
 }
 

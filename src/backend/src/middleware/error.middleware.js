@@ -97,6 +97,7 @@ export const errorHandler = (appError, request, response, next) => {
             status: statusCode,
             path: request.path,
             method: request.method,
+            correlationId: request.id,
             stack: normalizedError.stack,
         });
     }

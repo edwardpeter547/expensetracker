@@ -27,7 +27,7 @@ The repository is a two-package monorepo coordinated by Go Task. It is **not** a
 - `src/backend/src/app.js` builds the Express app. Middleware order:
   1. `helmet`, CORS (configured origin + credentials), `compression`.
   2. JSON and URL-encoded body parsing (10 MB limit), cookie parsing.
-  3. `morgan` request logging.
+  3. Request correlation-id assignment, then `morgan` request logging.
   4. `i18n.init` and `langHandler` (language detection/validation).
   5. Rate limiting applied to `/api`.
   6. Static assets at `/static`.
@@ -112,6 +112,7 @@ Core models:
 - `Category` — `name`, `icon`, `isSystem`, optional `userId`.
 - `Budget` — `amount` (`Float`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
 - `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken`, `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
+- `AuthAuditEvent` — persistent, secret-safe authentication audit trail (see `docs/authentication-audit-logging.md`).
 - `Notification` — defined but not yet used.
 
 ### Persistence

@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import Config from '../configurations/env.config.js';
 import { userProfile } from '../services/profile.service.js';
 import AppError from '../utils/appError.js';
+import { recordAuthAuditEvent } from '../services/auth-audit.service.js';
+import { AUTH_AUDIT_EVENT_TYPES, AUTH_AUDIT_OUTCOMES, AUTH_AUDIT_REASONS } from '../constants/auth-audit.constants.js';
 
 
 /**
@@ -18,6 +20,8 @@ import AppError from '../utils/appError.js';
  * @returns {Promise<void>}
  */
 export const authenticate = async (request, response, next) => {
+    let decodedUserId = null;
+
     try {
 
         const authHeader = request.headers.authorization;
@@ -33,6 +37,7 @@ export const authenticate = async (request, response, next) => {
             issuer: Config.jwtIssuer,
             audience: Config.jwtAudience,
         });
+        decodedUserId = decoded.userId;
         
         const user = await userProfile({userId: decoded.userId});
 
@@ -44,6 +49,15 @@ export const authenticate = async (request, response, next) => {
         next();
 
     }catch(error){
+        await recordAuthAuditEvent({
+            eventType: AUTH_AUDIT_EVENT_TYPES.AUTHORIZATION_DENIED,
+            outcome: AUTH_AUDIT_OUTCOMES.DENIED,
+            userId: decodedUserId,
+            ipAddress: request.ip,
+            correlationId: request.id,
+            metadata: {reason: AUTH_AUDIT_REASONS.INSUFFICIENT_PERMISSION},
+        });
+
         if(error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError'){
             return next(new AppError('Invalid or expired token', StatusCodes.UNAUTHORIZED));
         }
