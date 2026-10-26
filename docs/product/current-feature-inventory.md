@@ -72,10 +72,17 @@
 | --- | --- | --- |
 | Dashboard summary (income, expenses, balance, recent) | Source only | `src/backend/src/controllers/user.controller.js` `getDashboard`; `src/mobile/app/(tabs)/index.tsx` |
 | Mobile dashboard screen | Source only | `src/mobile/app/(tabs)/index.tsx` |
-| Get profile | Integration-tested | `src/backend/src/routes/__tests__/user.profile.route.integration.test.js` |
-| Update profile | Integration-tested | `src/backend/src/routes/__tests__/user.profile.route.integration.test.js` |
+| Get profile (safe DTO with display name and default avatar) | Integration-tested | `src/backend/src/routes/__tests__/user.profile.route.integration.test.js` |
+| Update profile (validated currency/timezone/language/theme, normalized username) | Integration-tested | `src/backend/src/routes/__tests__/user.profile.route.integration.test.js` |
+| Change own password (bcrypt verify, history reuse rejection, session revocation) | Integration-tested | `src/backend/src/routes/__tests__/user.account.route.integration.test.js` |
+| Default avatar (deterministic, storage-independent) | Unit-tested | `src/backend/src/services/__tests__/avatar.service.test.js` |
+| Avatar upload/retrieve/replace/remove (local + S3 storage) | Integration-tested | `src/backend/src/routes/__tests__/user.avatar.route.integration.test.js`; `src/backend/src/services/avatar.service.js` |
+| Pluggable file storage (local filesystem + S3-compatible) | Unit-tested | `src/backend/src/storage/__tests__/*` |
+| Account deletion (voluntary closure, 14-day recovery, cancellation, durable erasure) | Integration-tested | `src/backend/src/routes/__tests__/user.deletion.route.integration.test.js`; `src/backend/src/account-deletion/*` |
+| Statutory erasure (prompt, review-gated scope) | Unit-tested | `src/backend/src/account-deletion/deletion/service.js`; policy in `docs/decisions/DECISION-DELETION-POLICY.md` |
+| Data export (versioned JSON, secret-free) | Integration-tested | `src/backend/src/routes/__tests__/user.deletion.route.integration.test.js` |
 | Mobile profile screen | Placeholder | empty `src/mobile/app/(tabs)/profile.tsx` |
-| Reports, trends, export | Not implemented | — |
+| Reports, trends | Not implemented | — |
 | Notifications | Placeholder | empty `src/backend/src/routes/v1/notification.routes.js`; model + constants only |
 
 ## Platform and engineering

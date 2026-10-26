@@ -184,3 +184,44 @@ These are explicitly **not** decided by this record:
    Free/Plus/Pro + Family strategy (separate entitlements epic).
 6. Concrete lockout/per-endpoint rate-limit thresholds for
    register/login/forgot-password/verify-otp/refresh.
+
+## Follow-up: account deletion architecture (Story #13 / Subtask #28)
+
+**Status:** Accepted for implementation. Production release additionally
+requires privacy/legal review.
+
+The product owner confirmed the deletion policy recorded in
+`DECISION-DELETION-POLICY.md`, which resolves the gate this ADR originally set
+for Task #28. The selected architecture mirrors the pluggable storage pattern:
+
+- A common `ErasureHandler` contract with all concrete handlers consolidated in
+  one module (`erasure/handlers.js`), each owning a single data category and
+  declaring dependencies only where deletion order matters.
+- An `ErasureRegistry` that rejects duplicates, missing dependencies, and
+  cycles, and derives a deterministic, dependency-safe execution plan.
+- A `DeletionCoordinator` that knows workflow and progress state but no Prisma
+  models, consuming the registry, a policy resolver, and a durable progress
+  repository.
+- A PostgreSQL-backed durable worker with atomic claims, leases, bounded
+  exponential retries, and crash-safe resume.
+- Object deletion through the existing `StorageAdapter` abstraction.
+
+**Reasons for registry + coordinator.** Future data categories (receipts,
+external bank connections, billing) register a handler without modifying the
+coordinator. Keeping policy (whether/when) separate from handlers (how) lets
+legal rules change without touching erasure execution.
+
+**Alternatives considered.** Hardcoding `prisma.*.deleteMany` calls in a
+worker (rejected: couples execution to schema and blocks category-level
+retention/review); process-local timers without durable state (rejected: a
+crash would lose progress); a separate file per handler (rejected for the
+current project size — one file, many distinct classes).
+
+**Reliability trade-offs.** Cleanup of the previously stored avatar object and
+orphan reconciliation remain best-effort and are documented; the active storage
+provider locates objects only if it is the provider that stored them, so a
+provider migration needs an explicit object-migration or reconciliation step.
+
+**Authorization vs. production.** Implementation is authorized by the accepted
+policy; production release remains gated on privacy/legal review of retention
+values, the statutory intake channel, backup retention, and audit evidence.

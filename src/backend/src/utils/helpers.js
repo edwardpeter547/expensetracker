@@ -76,6 +76,18 @@ export const maskEmail = (emailAddress) => {
 
 
 /**
+ * Normalize a username to its canonical storage form.
+ *
+ * Usernames are case-insensitive and stored lowercase so two accounts can
+ * never differ only by letter case. Leading/trailing whitespace is removed.
+ *
+ * @param {string} username The raw username submitted by a client.
+ * @returns {string} The trimmed, lowercase username.
+ */
+export const normalizeUsername = (username) => String(username).trim().toLowerCase();
+
+
+/**
  * Resolve the effective locale for a request.
  *
  * Prefers the authenticated user's language, then the `Accept-Language`

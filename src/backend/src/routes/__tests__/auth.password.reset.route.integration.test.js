@@ -1,7 +1,7 @@
 /**
  * Database-gated HTTP tests for the password recovery flow.
  *
- * Exercises forgot-password, verify-otp, and change-password against the real
+ * Exercises forgot-password, verify-otp, and reset-password against the real
  * Express app and a disposable PostgreSQL database, verifying generic
  * unknown-email responses, valid reset, expired-token rejection, session
  * revocation, and password/token-version changes.
@@ -331,7 +331,7 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
      * A valid code verifies the account and then changes the password exactly
      * through the reset flow, revoking sessions and bumping tokenVersion.
      */
-    test('verify-otp and change-password complete a valid reset', async () => {
+    test('verify-otp and reset-password complete a valid reset', async () => {
         const user = await seedUser();
         const raw = crypto.randomBytes(40).toString('hex');
         await authService.createRefreshToken(raw, user.id, '127.0.0.1');
@@ -364,7 +364,7 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
         expect(verify.body.data.user).not.toHaveProperty('password');
 
         await request(app)
-            .post('/api/v1/auth/change-password')
+            .post('/api/v1/auth/reset-password')
             .send({ code, email: user.email, password: 'NewPassword123' })
             .expect(200);
 
@@ -388,7 +388,7 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
         expect(consumedRecord.usedAt).not.toBeNull();
 
         await request(app)
-            .post('/api/v1/auth/change-password')
+            .post('/api/v1/auth/reset-password')
             .send({ code, email: user.email, password: 'SecondNewPassword1' })
             .expect(401);
     });
@@ -413,7 +413,7 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
             .expect(401);
 
         await request(app)
-            .post('/api/v1/auth/change-password')
+            .post('/api/v1/auth/reset-password')
             .send({ code: '654321', email: user.email, password: 'NewPassword123' })
             .expect(401);
 
@@ -428,7 +428,7 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
     });
 
     /**
-     * A reset code is consumed on the first successful change-password and
+     * A reset code is consumed on the first successful reset-password and
      * must be rejected on every later attempt.
      */
     test('a reset code can be used only once', async () => {
@@ -436,12 +436,12 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
         const code = await requestResetCode(user);
 
         await request(app)
-            .post('/api/v1/auth/change-password')
+            .post('/api/v1/auth/reset-password')
             .send({ code, email: user.email, password: 'FirstNewPassword1' })
             .expect(200);
 
         await request(app)
-            .post('/api/v1/auth/change-password')
+            .post('/api/v1/auth/reset-password')
             .send({ code, email: user.email, password: 'SecondNewPassword1' })
             .expect(401);
     });

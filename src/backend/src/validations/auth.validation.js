@@ -1,6 +1,6 @@
 import Joi from 'joi';
 import { SUPPORTED_LANGUAGES } from '../constants/localization.js';
-import {id, email, password, otpToken, refreshToken, text, token} from './common.validation.js';
+import {id, email, password, otpToken, refreshToken, text, token, currencyCode} from './common.validation.js';
 
 /**
  * Validation schema for account registration.
@@ -12,7 +12,7 @@ export const registerSchema = Joi.object({
     firstName: text().required(),
     lastName: text().required(),
     language: Joi.string().valid(...SUPPORTED_LANGUAGES),
-    currency: Joi.string().uppercase().length(3),
+    currency: currencyCode(),
 });
 
 /**
@@ -71,9 +71,9 @@ export const forgotPasswordSchema = Joi.object({
 
 
 /**
- * Validation schema for changing a password with a reset code.
+ * Validation schema for resetting a password with a verified reset code.
  */
-export const changePasswordSchema = Joi.object({
+export const resetPasswordSchema = Joi.object({
     code: otpToken(6),
     email: email(),
     password: password(8, 100),

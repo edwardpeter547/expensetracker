@@ -6,7 +6,7 @@ import prisma from "../configurations/prisma.connect.js";
 import { AUTH_ACTIONS, USER_ACTIONS } from "../constants/audit.actions.js";
 import { USER_PUBLIC_SELECT } from "../constants/user.select.js";
 import AppError from "../utils/appError.js";
-import { generateTokens } from "../utils/helpers.js";
+import { generateTokens, normalizeUsername } from "../utils/helpers.js";
 import { REFRESH_TOKEN_TTL_MS, REFRESH_TOKEN_PATTERN, REUSE_DETECTED } from "../constants/app.constants.js";
 
 /**
@@ -40,7 +40,8 @@ export const checkExistingUser = async (email, username) => {
  */
 export const createUser = async (email, username, password, firstname, lastname, language, currency = 'USD') => {
 
-    const isExistingUser = await checkExistingUser(email, username);
+    const normalizedUsername = normalizeUsername(username);
+    const isExistingUser = await checkExistingUser(email, normalizedUsername);
     if(isExistingUser){
         logger.warn(`User :${username} Already exist`);
         throw new AppError("User with this email or username already exist", 409);
@@ -51,7 +52,7 @@ export const createUser = async (email, username, password, firstname, lastname,
     const user = await prisma.user.create({
         data: {
             email,
-            username,
+            username: normalizedUsername,
             password: hashedPassword,
             firstname: firstname,
             lastname: lastname,
@@ -775,6 +776,84 @@ export const updateUserPassword = async (user, password) => {
         await tx.refreshToken.updateMany({
             where: {userId: user.id, isRevoked: false},
             data: {isRevoked: true}
+        });
+    });
+}
+
+/**
+ * Change the authenticated user's password after verifying the current one.
+ *
+ * The user row is locked first (`SELECT ... FOR UPDATE`) so concurrent
+ * password changes serialize against each other and against refresh-token
+ * rotation and revoke-all. The current password is verified with bcrypt, and
+ * the new password is rejected when it equals the current password or any
+ * entry in the password-history table. On success the old hash is recorded in
+ * history, the new hash is stored, the user's token version is incremented,
+ * and every active refresh-token session is revoked atomically.
+ *
+ * @param {number} userId The authenticated user's id.
+ * @param {string} currentPassword The presented current password.
+ * @param {string} newPassword The proposed new password.
+ * @returns {Promise<object>} The transaction result.
+ * @throws {AppError} With status 401 when the user is missing or the current
+ *   password is incorrect.
+ * @throws {AppError} With status 409 when the new password reuses the current
+ *   password or a previous password.
+ */
+export const changeUserPassword = async (userId, currentPassword, newPassword) => {
+    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+    return prisma.$transaction(async (tx) => {
+        // Lock the user row first so a concurrent password change cannot
+        // interleave with the compare-and-update sequence below.
+        const lockedRows = await tx.$queryRaw`
+            SELECT "password"
+            FROM "user"
+            WHERE "id" = ${userId}
+            FOR UPDATE
+        `;
+        const lockedUser = lockedRows[0];
+
+        if (!lockedUser) {
+            throw new AppError('User not found', 401);
+        }
+
+        const currentPasswordValid = await bcrypt.compare(currentPassword, lockedUser.password);
+        if (!currentPasswordValid) {
+            throw new AppError('Current password is incorrect', 401);
+        }
+
+        if (await bcrypt.compare(newPassword, lockedUser.password)) {
+            throw new AppError('New password must be different from the current password', 409);
+        }
+
+        const history = await tx.passwordHistory.findMany({
+            where: { userId },
+            select: { password: true },
+        });
+        for (const entry of history) {
+            if (await bcrypt.compare(newPassword, entry.password)) {
+                throw new AppError('New password was used previously', 409);
+            }
+        }
+
+        await tx.passwordHistory.create({
+            data: {
+                password: lockedUser.password,
+                userId,
+            },
+        });
+        await tx.user.update({
+            where: { id: userId },
+            data: {
+                password: hashedNewPassword,
+                lastPasswordReset: new Date(),
+                tokenVersion: { increment: 1 },
+            },
+        });
+        await tx.refreshToken.updateMany({
+            where: { userId, isRevoked: false },
+            data: { isRevoked: true },
         });
     });
 }

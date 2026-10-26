@@ -1,0 +1,71 @@
+model AccountDeletionRequest {
+    id               String                  @id @default(cuid())
+    userId           Int
+    requestType      DeletionRequestType
+    scope            DeletionScope           @default(ALL)
+    status           DeletionRequestStatus
+    createdAt        DateTime                @default(now())
+    updatedAt        DateTime                @updatedAt
+    acceptedAt       DateTime?
+    recoveryDeadline DateTime?
+    scheduledFor     DateTime?
+    policyVersion    Int                     @default(1)
+    failureCount     Int                     @default(0)
+    nextRetryAt      DateTime?
+    lastError        String?
+    leaseOwner       String?
+    leaseExpiresAt   DateTime?
+    completedAt      DateTime?
+    context          Json?
+    steps            DeletionStep[]
+
+    @@index([userId])
+    @@index([status, scheduledFor])
+    @@index([status, nextRetryAt])
+    @@map("account_deletion_request")
+}
+
+model DeletionStep {
+    id                  String                  @id @default(cuid())
+    requestId           String
+    request             AccountDeletionRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+    category            String
+    status              DeletionStepStatus      @default(PENDING)
+    attemptCount        Int                     @default(0)
+    lastError           String?
+    completedAt         DateTime?
+    retentionReason     String?
+    retentionReviewedBy String?
+    retentionReviewedAt DateTime?
+    retentionReviewDue  DateTime?
+
+    @@unique([requestId, category])
+    @@index([requestId])
+    @@map("deletion_step")
+}
+
+enum DeletionRequestType {
+    VOLUNTARY
+    STATUTORY
+}
+
+enum DeletionScope {
+    ALL
+    PARTIAL
+}
+
+enum DeletionRequestStatus {
+    PENDING_DELETION
+    DELETION_IN_PROGRESS
+    COMPLETED
+    CANCELLED
+    FAILED
+    REVIEW_REQUIRED
+}
+
+enum DeletionStepStatus {
+    PENDING
+    COMPLETED
+    RETAINED
+    REVIEW_REQUIRED
+}

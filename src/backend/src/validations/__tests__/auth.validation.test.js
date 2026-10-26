@@ -1,11 +1,11 @@
 import { describe, expect, test } from '@jest/globals';
 import {
-    changePasswordSchema,
     forgotPasswordSchema,
     loginSchema,
     logoutSchema,
     refreshSchema,
     registerSchema,
+    resetPasswordSchema,
 } from '../auth.validation';
 
 describe('Register Schema Validation - registerSchema', () => {
@@ -220,10 +220,10 @@ describe('Forgot Password Schema Validation - forgotPasswordSchema', () =>{
 /**
  * Reset Password Schema Validation Tests
  *
- * Validates the changePasswordSchema which requires both a token and
+ * Validates the resetPasswordSchema which requires both a token and
  * a new password that meets minimum length requirements.
  */
-describe('Change Password Schema Validation - changePasswordSchema', () => {
+describe('Reset Password Schema Validation - resetPasswordSchema', () => {
 
     const passwordResetData = {
         code: '066983',
@@ -241,7 +241,7 @@ describe('Change Password Schema Validation - changePasswordSchema', () => {
 
         requiredFields.forEach(field => {
             const {[field]: removedField, ...inputWithoutField} = passwordResetData;
-            const { error } = changePasswordSchema.validate({...inputWithoutField});
+            const { error } = resetPasswordSchema.validate({...inputWithoutField});
             expect(error).toBeDefined();
             expect(error.message).toContain(field);
         });
@@ -252,7 +252,7 @@ describe('Change Password Schema Validation - changePasswordSchema', () => {
      * Passwords shorter than 8 characters should be rejected.
      */
     test('fails when new password is less than 8 characters', () => {
-        const { error } = changePasswordSchema.validate({...passwordResetData, newPassword: "secre"});
+        const { error } = resetPasswordSchema.validate({...passwordResetData, newPassword: "secre"});
 
         expect(error).toBeDefined();
         expect(error.message).toContain('newPassword');

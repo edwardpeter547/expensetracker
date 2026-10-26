@@ -81,3 +81,58 @@ export const decimalAmount = () => Joi.alternatives()
             return helpers.error('any.invalid');
         }
     });
+
+/**
+ * The set of recognized ISO 4217 currency codes, sourced from ICU.
+ *
+ * A fallback allowlist keeps the schema usable on runtimes without
+ * `Intl.supportedValuesOf`; the repository targets modern Node which always
+ * provides it.
+ */
+const ISO_CURRENCY_CODES = new Set(
+    typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function'
+        ? Intl.supportedValuesOf('currency')
+        : ['USD', 'EUR', 'GBP', 'NGN', 'GHS', 'CAD', 'AUD', 'JPY', 'INR', 'CNY']
+);
+
+/**
+ * The set of recognized IANA timezone identifiers, sourced from ICU.
+ *
+ * @type {Set<string>}
+ */
+const IANA_TIMEZONE_IDS = new Set(
+    typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function'
+        ? Intl.supportedValuesOf('timeZone')
+        : ['UTC']
+);
+
+/**
+ * Build an ISO 4217 currency-code schema.
+ *
+ * The value is normalized to uppercase and must match a recognized ISO 4217
+ * code, so clients cannot persist arbitrary three-letter strings.
+ *
+ * @returns {import('joi').StringSchema} An optional normalized currency code.
+ */
+export const currencyCode = () => Joi.string()
+    .uppercase()
+    .custom((value, helpers) => {
+        if (!ISO_CURRENCY_CODES.has(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    });
+
+/**
+ * Build an IANA timezone-identifier schema.
+ *
+ * @returns {import('joi').StringSchema} An optional validated IANA timezone.
+ */
+export const timezoneId = () => Joi.string()
+    .max(64)
+    .custom((value, helpers) => {
+        if (!IANA_TIMEZONE_IDS.has(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    });
