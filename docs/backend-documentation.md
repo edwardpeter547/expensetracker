@@ -93,3 +93,37 @@ The committed Prisma migrations under `src/backend/src/prisma/migrations` are
 the authoritative schema mechanism. Use `task prisma:migrate -- --name <name>`
 to create a migration during development and `task prisma:deploy` to apply
 committed migrations noninteractively (the CI/CD-friendly path).
+
+## Account management
+
+The account-profile backend (profile DTO, avatar contract, authenticated
+password change, and the deletion-policy gate) is described in
+`docs/audits/account-management-gap-assessment.md`. Keep that note in sync with
+`src/backend/src/services/profile.service.js`,
+`src/backend/src/services/avatar.service.js`,
+`src/backend/src/services/auth.service.js`, and the `Users` section of
+`src/backend/openapi/openapi.yaml`.
+
+## File storage configuration
+
+Avatar (and future file) storage is selected at startup with `STORAGE_DRIVER`:
+
+- `disabled` (default) — the deterministic default avatar works; uploads and
+  removals return `503`.
+- `local` — the Node filesystem adapter. `STORAGE_LOCAL_ROOT` defaults to
+  `src/backend/uploads`; relative roots resolve against the backend package
+  root. Keep this directory out of public static serving and out of Git (it is
+  already gitignored), and do not rely on its contents in ephemeral production
+  containers.
+- `s3` — Amazon S3 or an S3-compatible store. Requires `STORAGE_S3_BUCKET` and
+  `STORAGE_S3_REGION`; `STORAGE_S3_ENDPOINT` is optional and enables path-style
+  addressing for compatible stores such as MinIO. Credentials are resolved by
+  the AWS SDK's standard provider chain (environment, shared config, or IAM
+  role); never commit credentials.
+
+Selecting `s3` with missing bucket or region fails startup rather than leaving
+a broken upload endpoint. Switching providers does not migrate existing
+objects: plan a migration or a transitional read strategy before changing
+drivers, and schedule a periodic orphan sweep for objects that outlived a
+failed cleanup. Configuration examples live in `src/backend/.env.example` and
+`src/backend/src/environment/dev.env.example`.

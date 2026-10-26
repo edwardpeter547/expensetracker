@@ -70,6 +70,33 @@ const Config = {
     // Localization Settings
     defaultLocale: process.env.DEFAULT_LOCALE || 'en',
 
+    // File storage. `driver` selects local filesystem, S3/compatible object
+    // storage, or disabled. Storage is opt-in: leaving it unset disables
+    // upload persistence while keeping the deterministic default avatar.
+    storageDriver: process.env.STORAGE_DRIVER || 'disabled',
+    storageLocalRoot: process.env.STORAGE_LOCAL_ROOT || '',
+    storageS3Bucket: process.env.STORAGE_S3_BUCKET || '',
+    storageS3Region: process.env.STORAGE_S3_REGION || '',
+    storageS3Endpoint: process.env.STORAGE_S3_ENDPOINT || '',
+
+    // Avatar uploads.
+    avatarUploadLimitBytes: parseInt(process.env.AVATAR_UPLOAD_LIMIT_BYTES || '5242880', 10),
+    avatarRateLimit: {
+        windowMs: parseInt(process.env.AVATAR_RATE_LIMIT_WINDOW_MS || '3600000', 10),
+        limit: parseInt(process.env.AVATAR_RATE_LIMIT_MAX || '30', 10),
+    },
+
+    // Account-deletion recovery reauthentication and durable worker.
+    deletionRecoveryRateLimit: {
+        windowMs: parseInt(process.env.DELETION_RECOVERY_RATE_LIMIT_WINDOW_MS || '3600000', 10),
+        limit: parseInt(process.env.DELETION_RECOVERY_RATE_LIMIT_MAX || '5', 10),
+    },
+    deletionWorker: {
+        intervalMs: parseInt(process.env.DELETION_WORKER_INTERVAL_MS || '60000', 10),
+        leaseTtlMs: parseInt(process.env.DELETION_WORKER_LEASE_TTL_MS || '60000', 10),
+        maxRetries: parseInt(process.env.DELETION_WORKER_MAX_RETRIES || '5', 10),
+    },
+
     // SMTP Settings
     smtpFrom: process.env.SMTP_FROM || "noreply@expensetracker.co.uk",
 
@@ -135,6 +162,8 @@ const Config = {
 
 Config['baseUrl'] = `${Config.protocol}://${Config.serverDomain}:${Config.port}`;
 Config['brandLogo'] = `${Config.baseUrl}/static/images/logo.png`;
+Config['avatarDefaultUrl'] = `${Config.baseUrl}/static/images/default-avatar.svg`;
+Config['avatarRetrievalUrl'] = `${Config.baseUrl}/api/v1/user/avatar`;
 
 
 export default Config;

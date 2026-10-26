@@ -1,12 +1,12 @@
 import express from 'express';
 import {
-    changePassword,
     forgotPassword,
     listSessions,
     login,
     logout,
     refreshToken,
     register,
+    resetPassword,
     resendVerification,
     revokeAllSessions,
     revokeSession,
@@ -16,12 +16,12 @@ import {
 import { authenticate } from '../../middleware/auth.middleware.js';
 import { validate, validateParams, validateQuery } from '../../middleware/validation.middleware.js';
 import {
-    changePasswordSchema,
     emailVerificationSchema,
     loginSchema,
     logoutSchema,
     refreshSchema,
     registerSchema,
+    resetPasswordSchema,
     resetPasswordTokenSchema,
     sessionIdSchema,
     verificationTokenSchema
@@ -47,7 +47,7 @@ authRoutes.post('/resend-verification', resendVerificationRateLimiter, validate(
 authRoutes.post('/login', loginRateLimiter, validate(loginSchema), login);
 authRoutes.post('/forgot-password', forgotPasswordRateLimiter, validate(emailVerificationSchema), forgotPassword);
 authRoutes.post('/verify-otp', validate(resetPasswordTokenSchema), verifyToken);
-authRoutes.post('/change-password', validate(changePasswordSchema), changePassword);
+authRoutes.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 authRoutes.post('/refresh-token', refreshTokenRateLimiter, validate(refreshSchema), refreshToken);
 
 // Protected Routes

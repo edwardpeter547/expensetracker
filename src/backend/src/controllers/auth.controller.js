@@ -237,14 +237,14 @@ export const login = catchAsync(async (request, response) => {
 });
 
 /**
- * Change a password using a verified reset code, revoking all sessions.
+ * Reset a password using a verified reset code, revoking all sessions.
  *
  * @param {import('express').Request} request Express request with `code`,
  *   `email`, and `password`.
  * @param {import('express').Response} response Express response.
  * @returns {Promise<void>}
  */
-export const changePassword = catchAsync(async (request, response) => {
+export const resetPassword = catchAsync(async (request, response) => {
     const {code, email, password} = request.body;
     const user = await getUser({email});
     const locale = getAppLocale(request);

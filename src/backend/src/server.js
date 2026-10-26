@@ -15,6 +15,8 @@ import app from "./app.js";
 import prisma from "./configurations/prisma.connect.js";
 import Config from "./configurations/env.config.js";
 import logger from "./configurations/logger.config.js";
+import { getStorageAdapter } from "./configurations/storage.config.js";
+import { startDeletionWorker } from "./account-deletion/deletion/worker.js";
 
 
 let server;
@@ -71,6 +73,16 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 const startServer = async () => {
     try{
         await prisma.$connect();
+        // Validate and construct the storage adapter at startup so a broken
+        // STORAGE_DRIVER configuration fails fast instead of leaving a
+        // permanently unavailable upload endpoint.
+        getStorageAdapter();
+        // Start the durable deletion worker. The interval is only a trigger;
+        // all job state, leasing, and progress live in PostgreSQL.
+        startDeletionWorker({
+            intervalMs: Config.deletionWorker.intervalMs,
+            leaseTtlMs: Config.deletionWorker.leaseTtlMs,
+        });
         logger.info('Database connected successfully');
         server = app.listen(Config.port, Config.host, () => {
             const serverInfo = {

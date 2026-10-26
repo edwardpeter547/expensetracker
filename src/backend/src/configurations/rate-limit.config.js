@@ -36,6 +36,8 @@ export const registerRateLimiter = createAuthRateLimiter(Config.authRateLimits.r
 export const forgotPasswordRateLimiter = createAuthRateLimiter(Config.authRateLimits.forgotPassword);
 export const resendVerificationRateLimiter = createAuthRateLimiter(Config.authRateLimits.resendVerification);
 export const refreshTokenRateLimiter = createAuthRateLimiter(Config.authRateLimits.refreshToken);
+export const avatarUploadRateLimiter = createAuthRateLimiter(Config.avatarRateLimit);
+export const deletionRecoveryRateLimiter = createAuthRateLimiter(Config.deletionRecoveryRateLimit);
 
 /**
  * Global limiter applied to every `/api` request. It reuses the same factory

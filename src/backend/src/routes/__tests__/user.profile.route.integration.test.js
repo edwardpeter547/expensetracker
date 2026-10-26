@@ -203,6 +203,44 @@ describeDb('user profile routes (HTTP, real PostgreSQL)', () => {
     });
 
     /**
+     * The profile DTO exposes derived display-name/avatar fields and must not
+     * leak credential metadata or unneeded personal identifiers.
+     */
+    test('profile DTO omits credentials and personal identifiers', async () => {
+        const { user, accessToken } = await seedAuthenticatedUser();
+
+        const response = await request(app)
+            .get('/api/v1/user/profile')
+            .set('Authorization', `Bearer ${accessToken}`)
+            .expect(200);
+
+        const profile = response.body.data.profile;
+        expect(profile.displayName).toBe('Profile User');
+        expect(profile.avatar).toMatchObject({ isDefault: true, initials: 'PU' });
+        expect(profile).not.toHaveProperty('tokenVersion');
+        expect(profile).not.toHaveProperty('dateOfBirth');
+        expect(profile).not.toHaveProperty('mobileNumber');
+        expect(profile).not.toHaveProperty('password');
+    });
+
+    /**
+     * A username update that collides with another user's normalized username
+     * must be rejected with 409 and leave the row unchanged.
+     */
+    test('rejects a duplicate username with 409', async () => {
+        const { accessToken } = await seedAuthenticatedUser();
+        const other = await seedAuthenticatedUser();
+        const target = `taken${crypto.randomBytes(4).toString('hex')}`;
+        await prisma.user.update({ where: { id: other.user.id }, data: { username: target } });
+
+        await request(app)
+            .put('/api/v1/user/profile')
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send({ username: target.toUpperCase() })
+            .expect(409);
+    });
+
+    /**
      * Profile routes require a valid access token.
      */
     test('rejects unauthenticated profile access', async () => {

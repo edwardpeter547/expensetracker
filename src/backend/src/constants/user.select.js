@@ -10,6 +10,11 @@
 /**
  * Minimal projection for authentication lifecycle responses (email
  * verification, resend, OTP verification, and password recovery).
+ *
+ * `tokenVersion` is retained here because the refresh-token rotation path
+ * reads the owning user's token version through this projection to enforce
+ * the revoke-all invariant. It is an internal auth field, so it is excluded
+ * from the client-facing profile DTO (`USER_PROFILE_SELECT`).
  */
 export const USER_PUBLIC_SELECT = {
     id: true,
@@ -42,8 +47,11 @@ export const USER_OWNER_SELECT = {
 
 /**
  * Projection for the authenticated user's own profile and profile updates.
- * It includes editable preferences but omits verification status, personal
- * identifiers such as date of birth and phone number, and all credentials.
+ *
+ * It includes editable preferences plus read-only security metadata
+ * (`isEmailVerified`, `lastLoginAt`) and timestamps, but omits credential
+ * material (`tokenVersion`, `lastPasswordReset`), personal identifiers such as
+ * date of birth and phone number, and the password hash.
  */
 export const USER_PROFILE_SELECT = {
     id: true,
@@ -56,5 +64,8 @@ export const USER_PROFILE_SELECT = {
     currency: true,
     timezone: true,
     theme: true,
+    isEmailVerified: true,
+    lastLoginAt: true,
+    createdAt: true,
     updatedAt: true,
 };

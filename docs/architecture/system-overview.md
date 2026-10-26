@@ -61,10 +61,35 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 3. `POST /api/v1/auth/login` validates credentials, updates last login, and returns user + tokens.
 4. `POST /api/v1/auth/refresh-token` rotates refresh tokens (old token is revoked).
 5. `POST /api/v1/auth/logout` (protected) revokes the presented refresh token.
-6. `POST /api/v1/auth/forgot-password` creates an unbiased six-digit reset code, stores its SHA-256 digest, and emails the raw code; `POST /api/v1/auth/verify-otp` verifies an unexpired, unused code; `POST /api/v1/auth/change-password` atomically consumes the code, updates the password, records password history, revokes all refresh sessions, and increments `tokenVersion`.
+6. `POST /api/v1/auth/forgot-password` creates an unbiased six-digit reset code, stores its SHA-256 digest, and emails the raw code; `POST /api/v1/auth/verify-otp` verifies an unexpired, unused code; `POST /api/v1/auth/reset-password` atomically consumes the code, updates the password, records password history, revokes all refresh sessions, and increments `tokenVersion`.
 7. `GET /api/v1/auth/sessions` (protected) lists the caller's active refresh-token sessions with IP, user agent, creation, and expiry metadata.
 8. `DELETE /api/v1/auth/sessions/{id}` (protected) revokes one of the caller's sessions.
 9. `DELETE /api/v1/auth/sessions` (protected) atomically revokes all of the caller's refresh-token sessions and increments `tokenVersion`, immediately invalidating previously issued access tokens.
+10. `GET /api/v1/user/profile` returns a safe profile DTO (derived `displayName`, stable `avatar` object, read-only security metadata); `PUT /api/v1/user/profile` updates writable fields with ISO 4217 currency, IANA timezone, and normalized-username validation.
+11. `POST /api/v1/user/change-password` verifies the current password, rejects history reuse, records password history, revokes all refresh-token sessions, and increments `tokenVersion`.
+12. `POST /api/v1/user/avatar` (multipart) validates and normalizes the image, stores it through the active storage adapter, and atomically references it; `GET /api/v1/user/avatar` returns the caller's effective image; `DELETE /api/v1/user/avatar` clears the reference and removes the object. When `STORAGE_DRIVER` is unset/`disabled`, upload and removal return 503 while the deterministic default avatar (`/static/images/default-avatar.svg`) still works.
+
+### File storage layer
+
+Uploads go through a provider-independent abstraction in
+`src/backend/src/storage` (`StorageAdapter` plus `local` and `s3` adapters and
+the startup factory). `STORAGE_DRIVER` selects the provider: `local` writes
+under `src/backend/uploads` by default, and `s3` uses the AWS SDK with its
+standard credential chain. See the storage section of
+`docs/backend-documentation.md` for configuration and migration guidance.
+
+### Account deletion
+
+`src/backend/src/account-deletion` implements voluntary account closure,
+cancellation, statutory erasure, data export, and a durable PostgreSQL-backed
+erasure worker. Voluntary closure (`POST /api/v1/user/deletion-request`) is a
+reauthenticated, deliberately confirmed action that disables the account,
+revokes sessions, and schedules erasure 14 calendar days later; cancellation
+(`DELETE /api/v1/user/deletion-request`) reauthenticates with email + password.
+`GET /api/v1/user/deletion-request` reports status, and
+`POST /api/v1/user/data-export` returns a versioned, secret-free JSON export.
+See `docs/decisions/DECISION-DELETION-POLICY.md` and
+`docs/account-deletion-technical-design.md`.
 
 ### Login-lockout availability trade-off
 
