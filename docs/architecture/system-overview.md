@@ -69,6 +69,45 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 11. `POST /api/v1/user/change-password` verifies the current password, rejects history reuse, records password history, revokes all refresh-token sessions, and increments `tokenVersion`.
 12. `POST /api/v1/user/avatar` (multipart) validates and normalizes the image, stores it through the active storage adapter, and atomically references it; `GET /api/v1/user/avatar` returns the caller's effective image; `DELETE /api/v1/user/avatar` clears the reference and removes the object. When `STORAGE_DRIVER` is unset/`disabled`, upload and removal return 503 while the deterministic default avatar (`/static/images/default-avatar.svg`) still works.
 
+### Authentication, authorization, and ownership
+
+Authentication, authorization, and ownership are deliberately separate
+concerns:
+
+- **Authentication** proves who is calling. `authenticate`
+  (`src/backend/src/middleware/auth.middleware.js`) verifies the HS256 JWT's
+  signature, algorithm pinning, issuer, audience, expiry, and token version,
+  then attaches the safe `request.user` projection from `userProfile`. It never
+  exposes password hashes, refresh tokens, reset credentials, or personal
+  identifiers such as date of birth or phone number.
+- **Role authorization** answers "is this caller allowed to take this kind of
+  action?" `authorize(...roles)`
+  (`src/backend/src/middleware/auth.middleware.js`) composes after
+  `authenticate`, requires an authenticated principal, and allows access only
+  when the principal's server-established roles include at least one required
+  role. With no roles it acts as an authentication-only guard.
+- **Ownership** answers "does this resource belong to this caller?" and remains
+  the primary control. Every single-record read, update, and delete is
+  constrained by the caller's `userId` (or future membership) and returns 404
+  on mismatch. Possessing a role never grants access to another user's
+  financial records.
+
+`authorize(...roles)` is currently an extension point, not an active role
+system: no production route consumes it because the product has no household
+or platform-administration surface yet. It fails closed whenever a role is
+required but cannot be established from a trustworthy source. Role claims are
+read only from `request.user.roles`, never from client-supplied headers, query
+parameters, or request bodies. A future role consumer must attach a
+server-derived `roles` array to the authenticated principal through a trusted
+loader (for example, a membership lookup during authentication), not by
+echoing client input.
+
+Household-scoped `MEMBER`/`VIEWER` roles and platform `ADMIN` remain deferred:
+household roles require the future household membership model, and platform
+administration requires an actual operational interface. This preserves
+Decision A in
+`docs/decisions/0001-authentication-and-authorization-architecture.md`.
+
 ### File storage layer
 
 Uploads go through a provider-independent abstraction in
