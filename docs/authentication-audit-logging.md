@@ -52,9 +52,14 @@ with a nulled `userId`.
 
 Logout has no separate failure event: a rejected logout is represented by the
 `AUTHORIZATION_DENIED` event produced at the authentication boundary, avoiding
-double-counting. Similarly, ordinary login failures, unknown-account logins,
-and password-reset request/verify steps that return generic responses do not
-get one event per middleware layer.
+double-counting. The `authorize(...roles)` middleware records its own
+`AUTHORIZATION_DENIED` only when it is the layer that rejects the request (an
+unauthenticated call used without `authenticate`, or an authenticated caller
+whose established roles do not satisfy the guard); when `authenticate` has
+already denied the request, `authorize` is never reached, so exactly one event
+is recorded per denied request. Similarly, ordinary login failures,
+unknown-account logins, and password-reset request/verify steps that return
+generic responses do not get one event per middleware layer.
 
 ## Metadata
 
