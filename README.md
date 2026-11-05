@@ -142,7 +142,9 @@ service hostname such as `postgres:5432` without changing application code.
 ```bash
 task test              # Jest + Supertest with coverage
 task test:integration  # gated real-PostgreSQL integration suites
-task lint              # mobile lint (no mobile test script yet)
+task lint              # mobile lint (expo lint)
+cd src/mobile && npm test                # mobile node tests (API + localization)
+cd src/mobile && npm run test:components # mobile Jest component tests
 ```
 
 > Go Task must be installed separately; see the installation notes above.
@@ -150,9 +152,13 @@ task lint              # mobile lint (no mobile test script yet)
 ## Documentation
 
 - [System overview](docs/architecture/system-overview.md)
+- [Mobile app guide](src/mobile/README.md)
 - [Coding standards](docs/engineering/coding-standards.md)
 - [Design principles](docs/engineering/design-principles.md)
 - [Testing strategy](docs/engineering/testing-strategy.md)
+- [Biometric authentication](docs/engineering/biometric-authentication.md)
+- [Premium feature gate](docs/engineering/premium-feature-gate.md)
+- [Teams UI integration](docs/engineering/teams-ui-integration.md)
 - [Infrastructure & CI/CD](docs/infrastructure/README.md)
 - [Backend API documentation](docs/backend-documentation.md)
 - [Architecture decisions](docs/decisions/README.md)

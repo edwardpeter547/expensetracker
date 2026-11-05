@@ -8,6 +8,16 @@
 - Coverage: enabled with HTML/LCov/JSON reporters and a global threshold of 80% (branches, functions, lines, statements). Coverage output is written to `src/backend/coverage/` (gitignored).
 - Test env: `NODE_ENV=testing` is set by the npm scripts so config loads `test.env`.
 
+### Mobile
+- API and localization tests use Node's built-in `node --test` (`npm test`).
+- Component and utility tests use **Jest via `jest-expo`**
+  (`npm run test:components`), configured in `src/mobile/jest.config.js` with
+  the `@/` alias mapped to `src/`.
+- Type-checking uses `npm run test:typecheck` (`tsc -p tsconfig.node.json`).
+- Mobile tests never hit the backend or a database; they mock `expo-router`,
+  `react-native-svg`, `expo-constants`, `expo-secure-store`, and similar native
+  dependencies.
+
 ### Existing coverage areas
 - `src/backend/src/middleware/__tests__` — error middleware, language middleware, validation middleware, and JWT authentication middleware (algorithm/issuer/audience/version enforcement).
 - `src/backend/src/utils/__tests__` — `AppError`, `catchAsync`, helpers.
@@ -17,7 +27,10 @@ The backend has controller, service, and route test suites. Database-gated
 integration suites use the `*.integration.test.js` suffix and cover refresh-token
 rotation, logout, registration/verification, password reset, profile update,
 cross-user ownership denial, login lockout, and the device-session HTTP routes.
-Mobile tests cover the API client and localization modules.
+Mobile tests cover API adapters and the plans-URL resolver (Node), plus Jest
+suites for auth/reset flows, the dashboard, transactions, receipts, recurring,
+welcome, profile, premium gating, biometrics/app lock, and the pure utility
+helpers.
 
 ## Commands
 
@@ -32,8 +45,14 @@ task test:logout                     # logout tests
 task test:integration                # real-PostgreSQL integration tests
 ```
 
-The mobile package has no `test` script yet, so there is no `task test:mobile`
-target; mobile quality checks currently mean `task lint` (`expo lint`).
+Mobile commands:
+
+```bash
+cd src/mobile && npm test                # node --test (API + localization)
+cd src/mobile && npm run test:components # Jest via jest-expo
+cd src/mobile && npm run test:typecheck  # tsc -p tsconfig.node.json
+cd src/mobile && npm run lint            # expo lint
+```
 
 ## Conventions for new tests
 
@@ -99,6 +118,6 @@ Add these before shipping paid features. None of these currently exist; do not i
 
 - **Adopt now:** add tests alongside any new backend behavior; keep the 80% coverage threshold in mind for touched modules.
 - **Adopt when touching relevant code:** add controller/service tests for auth, transactions, and budgets, using mocked Prisma or a test database; add `supertest` integration tests for the API contract.
-- **Evaluate later:** introduce a minimal mobile test setup (the Expo docs recommend Jest + `jest-expo`), and add a real `test` script before relying on a combined `task check`.
+- **Adopted:** mobile now uses `node --test` for API/localization tests and `jest-expo` for component tests (`npm test` and `npm run test:components`).
 
 No new test framework or runner is being introduced in this phase.
