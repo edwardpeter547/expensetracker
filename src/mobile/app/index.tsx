@@ -1,5 +1,5 @@
 
-import SafeScreen from "@/components/SafeScreen";
+import { brandColors } from "@/constants/designTokens";
 import { useAuth } from "@/hooks/useAuth";
 import { router } from "expo-router";
 import { useEffect } from "react";
@@ -16,18 +16,16 @@ const IndexScreen = () => {
             if(user){
                 router.replace("/(tabs)")
             } else {
-                router.replace("/(auth)/login")
+                router.replace("/welcome")
             }
         }
     }, [user, isLoading])
 
 
     return (
-        <SafeScreen>
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                <ActivityIndicator size="large" />
-            </View>
-        </SafeScreen>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: brandColors.background }}>
+            <ActivityIndicator size="large" color={brandColors.primary} />
+        </View>
     );
 }
 

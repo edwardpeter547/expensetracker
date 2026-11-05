@@ -1,23 +1,39 @@
 import SafeScreen from "@/components/SafeScreen";
+import AppLockScreen from "@/components/security/AppLockScreen";
+import { brandColors } from "@/constants/designTokens";
+import { AppLockProvider, useAppLock } from "@/contexts/AppLockContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { FeatureAccessProvider } from "@/contexts/FeatureAccessContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Stack } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const RootLayoutContent = () => {
 
-    const {isLoading } = useAuth();
+    const { user, isLoading } = useAuth();
+    const { enabled, locked, lockReady } = useAppLock();
 
-    if(isLoading){
+    if (isLoading) {
         return (
-            <SafeScreen>
-                <View style={{flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#070707"}}>
-                    <ActivityIndicator size="large" />
-                </View>
-            </SafeScreen>
+            <View style={{flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: brandColors.background}}>
+                <ActivityIndicator size="large" color={brandColors.primary} />
+            </View>
         )
+    }
+
+    if (user && !lockReady) {
+        return (
+            <View style={{flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: brandColors.background}}>
+                <ActivityIndicator size="large" color={brandColors.primary} />
+            </View>
+        )
+    }
+
+    if (user && enabled && locked) {
+        return <AppLockScreen />;
     }
 
     return (
@@ -33,12 +49,18 @@ const RootLayoutContent = () => {
 
 export default function RootLayout() {
     return (
-        <ThemeProvider>
-            <LocaleProvider>
-                <AuthProvider>
-                    <RootLayoutContent />
-                </AuthProvider>
-            </LocaleProvider>
-        </ThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <ThemeProvider>
+                <LocaleProvider>
+                    <AuthProvider>
+                        <AppLockProvider>
+                            <FeatureAccessProvider>
+                                <RootLayoutContent />
+                            </FeatureAccessProvider>
+                        </AppLockProvider>
+                    </AuthProvider>
+                </LocaleProvider>
+            </ThemeProvider>
+        </GestureHandlerRootView>
     )
 }

@@ -40,6 +40,22 @@ export const setAccessToken = (token: string | null): void => {
 };
 
 /**
+ * Return the in-memory bearer token currently attached to the API client.
+ *
+ * This is a read-only accessor for callers that need to pass the same
+ * credential out-of-band (for example, an authenticated image source), and it
+ * never performs storage I/O.
+ *
+ * @returns {string|null} The raw access token, or null when unauthenticated.
+ */
+export const getAccessToken = (): string | null => {
+    const header = apiClient.defaults.headers.common.Authorization;
+    if (typeof header !== 'string') return null;
+    const prefix = 'Bearer ';
+    return header.startsWith(prefix) ? header.slice(prefix.length) : header;
+};
+
+/**
  * Clear stored tokens and the in-memory bearer header.
  *
  * @returns {Promise<void>}
@@ -83,6 +99,43 @@ export const readStoredTokens = async (): Promise<{
 const refreshOnce = createSingleFlight<string | null>();
 
 /**
+ * Exchange a raw refresh token for a new access/refresh pair.
+ *
+ * This bypasses the axios response interceptor so a 401 during biometric
+ * sign-in does not recursively attempt a refresh with a different token.
+ *
+ * @param {string} refreshToken The raw refresh token to rotate.
+ * @returns {Promise<{accessToken: string, refreshToken: string}>} The new pair.
+ */
+export const refreshSession = async (
+    refreshToken: string,
+): Promise<{ accessToken: string; refreshToken: string }> => {
+    const response = await axios.post(
+        `${API_BASE_URL}/auth/refresh-token`,
+        { refreshToken },
+        { timeout: REQUEST_TIMEOUT_MS },
+    );
+    return response.data.data as { accessToken: string; refreshToken: string };
+};
+
+/**
+ * Revoke a refresh-token session directly, bypassing the response interceptor.
+ *
+ * Explicit logout must never be retried through the normal refresh path or
+ * redirected by the interceptor, so this uses the bare Axios instance.
+ *
+ * @param {string} refreshToken The raw refresh token to revoke.
+ * @returns {Promise<void>} Resolves when the session has been revoked.
+ */
+export const revokeSession = async (refreshToken: string): Promise<void> => {
+    await axios.post(
+        `${API_BASE_URL}/auth/logout`,
+        { refreshToken },
+        { timeout: REQUEST_TIMEOUT_MS },
+    );
+};
+
+/**
  * Exchange the stored refresh token for a new token pair.
  *
  * @returns {Promise<string|null>} The new access token, or null when no
@@ -92,12 +145,7 @@ const performRefresh = async (): Promise<string | null> => {
     const { refreshToken } = await readStoredTokens();
     if (!refreshToken) return null;
 
-    const response = await axios.post(
-        `${API_BASE_URL}/auth/refresh-token`,
-        { refreshToken },
-        { timeout: REQUEST_TIMEOUT_MS },
-    );
-    const { accessToken, refreshToken: newRefresh } = response.data.data;
+    const { accessToken, refreshToken: newRefresh } = await refreshSession(refreshToken);
     await storeTokens(accessToken, newRefresh);
     return accessToken;
 };
