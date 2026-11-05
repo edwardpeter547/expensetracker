@@ -151,9 +151,20 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 ### Hooks and state
 
 - Use React hooks; no class components.
-- Use Context for global state that already exists (`AuthContext`, `ThemeContext`) rather than adding a new state library.
-- Custom hooks (`useAuth`, `useTheme`, `useStyles`) wrap context and throw a clear error when used outside the provider.
+- Use Context for global state that already exists (`AuthContext`, `ThemeContext`, `LocaleContext`, `AppLockContext`, `FeatureAccessContext`) rather than adding a new state library.
+- Custom hooks (`useAuth`, `useTheme`, `useStyles`, `useFeatureAccess`, `useDashboard`, etc.) wrap context or data loading and throw a clear error when used outside the provider.
 - `useEffect` should clean up subscriptions/timers; keep effects focused on one concern.
+
+### Demo data and feature gating
+
+- Keep all demo/mock data and in-memory stores in `src/mobile/src/constants/*Demo.ts`, selected by the single `DEMO_MODE` switch in `dashboardDemo.ts`. Do not add a second demo toggle.
+- Mark demo-only screens and fixtures clearly (`UI-only`, `demo only`) so they are never mistaken for shipped behavior.
+- For premium/entitlement decisions use `useFeatureAccess`, `useFeatureGate`, or the `FeatureGate` component. Do not compare subscription strings (for example `user.plan === "premium"`) directly in screens.
+
+### Security and biometrics
+
+- Biometric, app-lock, and credential-storage logic lives under `src/mobile/src/security` and is surfaced through `AuthContext` and `AppLockContext`. Never store passwords; only store the refresh token behind `requireAuthentication` in SecureStore.
+- The frontend feature gate is presentation only; protected operations must still be enforced by the backend.
 
 ### Navigation
 

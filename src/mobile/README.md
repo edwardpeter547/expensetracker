@@ -1,56 +1,174 @@
-# Welcome to your Expo app 👋
+# ExpenseTracker Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The mobile client for ExpenseTracker. The in-app product is branded
+**AuditWallet**; the package, project, and code retain the ExpenseTracker name.
 
-## Get started
+This app implements the Mobile UI milestone (Epic #125): authentication with
+biometric sign-in, a five-tab shell, a dashboard, transactions with receipts
+and recurring schedules, Planning, Teams, Profile/settings with membership, a
+premium feature gate, and an AI chat surface.
 
-1. Install dependencies
+## Stack
 
-   ```bash
-   npm install
-   ```
+- Expo SDK 57, React Native 0.86, React 19
+- TypeScript with `strict: true`
+- `expo-router` file-based routing
+- Axios + `expo-secure-store` (tokens)
+- `expo-local-authentication` (biometrics)
+- AsyncStorage (theme and app-lock preferences)
 
-2. Start the app
+## Getting started
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+From the repository root:
 
 ```bash
-npm run reset-project
+task mobile:dev          # start Metro
+task dev                 # backend + mobile together
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The `android` and `ios` scripts use `expo run:android` / `expo run:ios`, which
+require a native development build (the app has `expo-dev-client`). Expo Go is
+not sufficient for biometrics (`expo-local-authentication`) or the iOS scene
+lifecycle plugin.
 
-### Other setup steps
+Install dependencies once:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+cd src/mobile && npm install
+```
 
-## Learn more
+## Environment
 
-To learn more about developing your project with Expo, look at the following resources:
+Copy `.env.example` to `.env`. Supported variables:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| Variable | Purpose |
+| --- | --- |
+| `EXPO_PUBLIC_API_URL` | Explicit API base URL (must include `/api/v1` for staging/prod) |
+| `EXPO_PUBLIC_API_PORT` | Local backend port (default `7001`) |
+| `EXPO_PUBLIC_APP_ENV` | `development`, `staging`, or `production` |
+| `EXPO_PUBLIC_AUDITWALLET_PLANS_URL` | Verified HTTPS plans page for the premium gate (optional) |
 
-## Join the community
+See `docs/engineering/api-connectivity.md` for URL resolution details.
 
-Join our community of developers creating universal apps.
+## Project structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```text
+app/                       # expo-router file-based routes
+  (auth)/                  # login, register, forgot/reset password, reset-code
+  (tabs)/                  # five-tab shell: index, transactions, budgets, goals, profile
+  planning/                # Planning tool routes
+  teams/                   # Teams workspace routes
+  transaction/             # transaction detail
+  recurring-transaction/   # recurring schedule detail
+  welcome.tsx              # unauthenticated entry
+  add-transaction.tsx      # create/edit transaction
+  add-recurring-transaction.tsx
+  ai-chat.tsx
+  membership.tsx
+  receipt-preview.tsx
+src/
+  api/                     # Axios client + API modules + URL resolver
+  components/              # auth, dashboard, planning, teams, transactions,
+                           # receipts, recurring, profile, premium, security, ui
+  constants/               # design tokens, themes, and demo fixtures
+  contexts/                # Auth, AppLock, FeatureAccess, Locale, Theme
+  hooks/                   # data and feature-access hooks
+  security/                # biometrics, app lock, biometric credential storage
+  types/                   # domain types
+  utils/                   # pure helpers (money, periods, itemization, etc.)
+```
+
+## Architecture
+
+### Routing and providers
+
+`app/_layout.tsx` is the root layout. It wraps the app in
+`GestureHandlerRootView`, `ThemeProvider`, `LocaleProvider`, `AuthProvider`,
+`AppLockProvider`, and `FeatureAccessProvider`, then gates the navigator behind
+`AppLockScreen` when a protected session is locked.
+
+`app/index.tsx` redirects authenticated users to `/(tabs)` and unauthenticated
+users to `/welcome`.
+
+`app/(tabs)/_layout.tsx` owns the five-tab bar:
+
+| Tab | Route file | Purpose |
+| --- | --- | --- |
+| Home | `index.tsx` | Dashboard V1.5 |
+| Transactions | `transactions.tsx` | Transactions and recurring entry |
+| Planning | `budgets.tsx` | Planning workspace (keeps `budgets` name for deep links) |
+| Teams | `goals.tsx` | Teams workspace (keeps `goals` name for deep links) |
+| Profile | `profile.tsx` | Profile, settings, membership |
+
+### Data layer and demo mode
+
+A single `DEMO_MODE` switch in `src/constants/dashboardDemo.ts` selects between
+in-memory demo stores and the live backend:
+
+- Demo fixtures and mutable stores live in `src/constants/*Demo.ts`
+  (`teamsDemo`, `transactionsDemo`, `planningDemo`, `recurringDemo`).
+- Data hooks (`useDashboard`, `useTransactions`, `useCategories`,
+  `useMembership`, `usePlanningBudgets`, `useTransactionFormOptions`) branch on
+  `DEMO_MODE`.
+- Live API access lives in `src/api/*` and goes through the shared
+  `src/api/client.ts` Axios instance.
+
+### Feature access (premium gate)
+
+`FeatureAccessContext` resolves per-feature access through a replaceable
+entitlement adapter. The default adapter is a development-only mock defined in
+the context. Screens gate actions with `useFeatureAccess`, `useFeatureGate`, or
+the `FeatureGate` component; they never compare subscription strings directly.
+See `docs/engineering/premium-feature-gate.md`.
+
+### Security and biometrics
+
+- Credentials are never stored; the refresh token is kept in
+  `expo-secure-store` with `requireAuthentication` for biometric sign-in.
+- Biometric app lock is local-only, with Immediate / 1 minute / 5 minute
+  timing, persisted in AsyncStorage.
+- See `docs/engineering/biometric-authentication.md`.
+
+## Commands
+
+From `src/mobile`:
+
+```bash
+npm start               # expo start
+npm run android         # expo run:android (development build)
+npm run ios             # expo run:ios (development build)
+npm run web             # expo start --web
+npm run lint            # expo lint
+npm test                # node --test (API + localization)
+npm run test:components # Jest via jest-expo
+npm run test:typecheck  # tsc -p tsconfig.node.json
+```
+
+## Testing
+
+- `npm test` runs Node-based tests for API modules and localization.
+- `npm run test:components` runs Jest component tests (jest-expo) for auth,
+  dashboard, transactions, receipts, recurring, welcome, profile, premium,
+  biometrics, and utilities.
+- `npm run test:typecheck` type-checks the Node-side TypeScript config.
+
+See `docs/engineering/testing-strategy.md` for the repository-wide strategy.
+
+## Backend integration status
+
+Connected to the real backend (when `DEMO_MODE` is off): authentication,
+profile, transactions, categories, budgets, sessions, password change, and
+account deletion.
+
+Frontend-only or demo-backed (no backend yet): Teams, membership/billing, AI
+chat, receipt OCR, recurring scheduling, premium entitlements, the
+password-reset UI, and social sign-in.
+
+## Related documentation
+
+- [System overview](../../docs/architecture/system-overview.md)
+- [Testing strategy](../../docs/engineering/testing-strategy.md)
+- [Biometric authentication](../../docs/engineering/biometric-authentication.md)
+- [Premium feature gate](../../docs/engineering/premium-feature-gate.md)
+- [Teams UI integration](../../docs/engineering/teams-ui-integration.md)
+- [API connectivity](../../docs/engineering/api-connectivity.md)
