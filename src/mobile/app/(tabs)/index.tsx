@@ -1,188 +1,101 @@
-import { apiClient } from "@/api/client";
-import QuickAddForm from "@/components/forms/QuickAddForm";
-import SafeScreen from "@/components/SafeScreen";
-import Avatar from "@/components/ui/Avatar";
-import QuickActionButtons from "@/components/ui/QuickActionButtons";
-import { useAuth } from "@/hooks/useAuth";
-import useStyles from "@/hooks/useStyles";
-import useTheme from "@/hooks/useTheme";
-import { useLocale } from "@/contexts/LocaleContext";
-import { formatMoney } from "@/localization/format";
-import { systemCategoryLabel } from "@/localization/systemCategories";
-import { DashboardData } from "@/types/Common";
-import { Ionicons } from '@expo/vector-icons';
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+/**
+ * Home tab: the approved Dashboard V1.5.
+ *
+ * Keeps the screen thin by managing the period selection and delegating data
+ * loading to `useDashboard` and rendering to `ExpenseDashboard`. Bottom
+ * navigation is owned by the Expo Router tab layout.
+ */
 
+import { getAccessToken } from '@/api/client';
+import ExpenseDashboard from '@/components/dashboard/ExpenseDashboard';
+import { getDemoTeams } from '@/constants/teamsDemo';
+import { useLocale } from '@/contexts/LocaleContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useDashboard } from '@/hooks/useDashboard';
+import type {
+    DashboardPeriod,
+    DashboardPeriodSelection,
+    DateRangeSelection,
+} from '@/types/dashboard';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
+
+/**
+ * Render the dashboard tab and own its period-selection state.
+ *
+ * @returns {JSX.Element} The dashboard screen.
+ */
 const DashboardScreen = () => {
+    const { user } = useAuth();
+    const { language, currency } = useLocale();
+    const [period, setPeriod] = useState<DashboardPeriod>('This Month');
+    const [customRange, setCustomRange] = useState<DateRangeSelection | null>(null);
+    const [teams, setTeams] = useState(() => getDemoTeams());
 
-   const { colors }  = useTheme();
-   const Styles = useStyles("home");
-   const { user } = useAuth();
-   const { language, currency } = useLocale();
-   const [data, setData] = useState<DashboardData | null>(null);
-   const [loading, setLoading] = useState<boolean>(true);
-   const [refreshing, setRefreshing] = useState<boolean>(false);
-   const [showForm, setShowForm] = useState(false);
-   const [formType, setFormType] = useState<"INCOME" | "EXPENSE">("EXPENSE");
+    const selection = useMemo<DashboardPeriodSelection>(
+        () =>
+            customRange
+                ? { kind: 'range', start: customRange.start, end: customRange.end }
+                : { kind: 'preset', period },
+        [customRange, period],
+    );
 
-   const fetchDashboard = async () => {
-        try {
-            const response = await apiClient.get("/user/dashboard");
-            setData(response.data.data);
-        }catch{
-            // A failed dashboard fetch should surface in the UI rather than
-            // echo request details (which may include auth headers) to logs.
-        }finally{
-            setLoading(false);
-            setRefreshing(false)
-        }
-   }
+    const { data, loading, error, refresh, refreshSilently } = useDashboard(
+        selection,
+        currency,
+        language,
+    );
+    const accessToken = getAccessToken();
+    const firstFocus = useRef(true);
 
-   useEffect(() => {
-        fetchDashboard();
-   }, []);
+    useFocusEffect(
+        useCallback(() => {
+            if (firstFocus.current) {
+                firstFocus.current = false;
+                return;
+            }
+            void refreshSilently();
+        }, [refreshSilently]),
+    );
 
-   const onRefresh = () => {
-        setRefreshing(true);
-        fetchDashboard();
-   }
+    useFocusEffect(
+        useCallback(() => {
+            setTeams(getDemoTeams());
+        }, []),
+    );
 
-   if (loading) {
-        return (
-            <SafeScreen>
-                <View style={Styles.loadingContainer}>
-                    <ActivityIndicator size={"large"} color={colors.primary} />
-                </View>
-            </SafeScreen>
-        );
-   }
-
-   return (
-        <SafeScreen>
-            <ScrollView 
-                style={Styles.container}
-                contentContainerStyle={Styles.content}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
-            >
-                {/* Header with user greeting */}
-                <View style={Styles.header}>
-                    <View style={Styles.headerLeft}>
-                        <Avatar firstName={user?.firstname} lastName={user?.lastname} size={50} />
-                        <View style={Styles.welcomeContainer}>
-                            <Text style={Styles.welcomeText}>Welcome back,</Text>
-                            <Text style={Styles.usernameText}>{user?.firstname || "User"}</Text>
-                        </View>
-                    </View>
-                    <View style={Styles.headerRight}>
-                        <TouchableOpacity style={Styles.logoutButton}>
-                            <Ionicons name="notifications-outline" size={22} color={colors.text} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Balance Card */}
-                <View style={Styles.balanceCard}>
-                    <Text style={Styles.balanceTitle}>Current Balance</Text>
-                    <Text style={Styles.balanceAmount}>{formatMoney(data?.balance ?? "0", language, data?.currency ?? currency)}</Text>
-                    <View style={Styles.balanceStats}>
-                        <View style={[Styles.balanceStatItem, Styles.statDivider]}>
-                            <Text style={Styles.balanceStatLabel}>Income</Text>
-                            <Text style={[Styles.balanceStatAmount, {color: colors.income}]}>
-                                {formatMoney(data?.totalIncome ?? "0", language, data?.currency ?? currency)}
-                            </Text>
-                        </View>
-                        <View style={Styles.balanceStatItem}>
-                            <Text style={Styles.balanceStatLabel}>Expenses</Text>
-                            <Text style={[Styles.balanceStatAmount, { color: colors.expense }]}>
-                                {formatMoney(data?.totalExpenses ?? "0", language, data?.currency ?? currency)}
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-
-                <QuickActionButtons
-                    onIncomePress={() => { setFormType("INCOME"); setShowForm(!showForm); }}
-                    onExpensePress={() => { setFormType("EXPENSE"); setShowForm(!showForm); }}
-                    showForm={showForm}
-                    activeType={formType}
-                />
-
-                {showForm && (
-                    <QuickAddForm
-                        formType={formType}
-                        onClose={() => setShowForm(false)}
-                        onSuccess={() => {
-                            setShowForm(false);
-                            fetchDashboard();
-                        }}
-                    />
-                )}
-
-                {/* Recent Transactions */}
-                <View style={Styles.transactionsHeaderContainer}>
-                    <Text style={Styles.sectionTitle}>Recent Transactions</Text>
-                    <TouchableOpacity onPress={() => router.push("/(tabs)/transactions")}>
-                        <Text style={{color: colors.primary, fontWeight: "600"}}>See All</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {data?.recentTransactions?.length ? (
-                    data.recentTransactions.map((transaction) => (
-                        <View key={transaction.id} style={Styles.transactionCard}>
-                            <View style={Styles.categoryIconContainer}>
-                                <Ionicons
-                                    name={
-                                        transaction.transType === "INCOME"
-                                            ? "arrow-down-circle"
-                                            : "arrow-up-circle"
-                                    }
-                                    size={24}
-                                    color={
-                                        transaction.transType === "INCOME"
-                                            ? colors.income
-                                            : colors.expense
-                                    }
-                                />
-                            </View>
-                            <View style={{ flex: 1, marginLeft: 12 }}>
-                                <Text style={Styles.transactionTitle}>
-                                    {transaction.description || transaction.category}
-                                </Text>
-                                <Text style={Styles.transactionCategory}>
-                                    {systemCategoryLabel(transaction.categoryId, language) || transaction.category}
-                                </Text>
-                            </View>
-                            <View style={{ alignItems: "flex-end" }}>
-                                <Text
-                                    style={[
-                                        Styles.transactionAmount,
-                                        {
-                                            color:
-                                                transaction.transType === "INCOME"
-                                                    ? colors.income
-                                                    : colors.expense,
-                                        },
-                                    ]}
-                                >
-                                    {transaction.transType === "INCOME" ? "+" : "-"}
-                                    {formatMoney(transaction.amount, language, transaction.currency ?? data?.currency ?? currency)}
-                                </Text>
-                                <Text style={Styles.transactionDate}>
-                                    {new Date(transaction.transactionDate).toLocaleDateString()}
-                                </Text>
-                            </View>
-                        </View>
-                    ))
-                ): null}
-
-            </ScrollView>
-        </SafeScreen>
-   )
-}
-
+    return (
+        <ExpenseDashboard
+            data={data}
+            firstNameFallback={user?.firstname ?? ''}
+            lastNameFallback={user?.lastname ?? ''}
+            loading={loading}
+            error={error}
+            selection={selection}
+            language={language}
+            accessToken={accessToken}
+            teams={teams}
+            onOpenTeam={(teamId) =>
+                router.push({ pathname: '/teams/[teamId]' as never, params: { teamId } })
+            }
+            onSelectPreset={(nextPeriod) => {
+                setPeriod(nextPeriod);
+                setCustomRange(null);
+            }}
+            onSelectRange={(start, end) => {
+                setCustomRange({ start, end });
+            }}
+            onRetry={() => {
+                void refresh();
+            }}
+            onAvatarPress={() => {
+                router.push('/(tabs)/profile');
+            }}
+            onChatPress={() => {
+                router.push('/ai-chat' as never);
+            }}
+        />
+    );
+};
 
 export default DashboardScreen;

@@ -1,6 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '7001';
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV || 'development';
+const AUDITWALLET_PLANS_URL = process.env.EXPO_PUBLIC_AUDITWALLET_PLANS_URL || '';
 
 const normalizedApiUrl = (() => {
     if (!API_URL) return undefined;
@@ -17,14 +18,14 @@ export default {
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.axorek.expensetracker"
     },
     "android": {
+      "package": "com.axorek.expensetracker",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#0D1B2E",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -34,17 +35,28 @@ export default {
     },
     "plugins": [
       "expo-router",
+      "./plugins/with-ios-scene-lifecycle",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
-          }
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96,
+          "resizeMode": "contain"
         }
       ],
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow ExpenseTracker to use Face ID to protect your stored sign-in information."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow ExpenseTracker to use Face ID to securely unlock your account and protect your financial information."
+        }
+      ],
       // ✅ Added for SDK 57
       "expo-font",
       "expo-image",
@@ -62,7 +74,8 @@ export default {
       },
       apiUrl: normalizedApiUrl,
       apiPort: Number.parseInt(API_PORT, 10) || 7001,
-      environment: APP_ENV
+      environment: APP_ENV,
+      auditWalletPlansUrl: AUDITWALLET_PLANS_URL.trim() || undefined
     },
     "owner": "edwardpeter547"
   }

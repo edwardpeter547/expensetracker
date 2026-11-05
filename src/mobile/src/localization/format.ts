@@ -12,8 +12,20 @@
  * @returns {string} `.` or `,`.
  */
 export const decimalSeparatorForLocale = (locale: string): string => {
-    const parts = new Intl.NumberFormat(locale).formatToParts(1.1);
-    return parts.find((part) => part.type === 'decimal')?.value ?? '.';
+    try {
+        const formatted = (1.1).toLocaleString(locale, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+        });
+        const match = formatted.match(/1(.)1/);
+        if (match?.[1]) return match[1];
+    } catch {
+        // Fall through to the locale-prefix heuristic below.
+    }
+
+    return /^(fr|de|it|es|pt|nl|da|nb|nn|sv|fi|el|pl|cs|sk|hu|ro|bg|ru|uk|tr)\b/.test(locale)
+        ? ','
+        : '.';
 };
 
 /**
