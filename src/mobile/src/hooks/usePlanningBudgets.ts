@@ -1,16 +1,13 @@
 /**
  * Budgets data hook for the Planning workspace.
  *
- * A single `DEMO_MODE` branch selects between the in-memory Planning demo
- * fixtures and the authenticated budget API. The hook owns loading and error
- * state and never mixes the two data sources.
+ * Loads Planning budgets through the resolved `planningBudgetDataSource`. The
+ * hook owns loading and error state.
  */
 
 import { normalizeApiError } from '@/api/errors';
-import { fetchBudgets } from '@/api/transactions';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import { getDemoPlanningBudgets, type PlanningBudget } from '@/constants/planningDemo';
-import { mapBudgetToPlanningBudget } from '@/utils/planning';
+import { planningBudgetDataSource } from '@/contracts';
+import type { PlanningBudget } from '@/types/planning';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** State exposed by the Planning budgets hook. */
@@ -37,18 +34,10 @@ export const usePlanningBudgets = (): UsePlanningBudgetsResult => {
         setLoading(true);
         setError(null);
 
-        if (DEMO_MODE) {
-            if (requestSequence.current === sequence) {
-                setBudgets(getDemoPlanningBudgets());
-                setLoading(false);
-            }
-            return;
-        }
-
         try {
-            const next = await fetchBudgets();
+            const next = await planningBudgetDataSource.list();
             if (requestSequence.current === sequence) {
-                setBudgets(next.map(mapBudgetToPlanningBudget));
+                setBudgets(next);
             }
         } catch (cause) {
             if (requestSequence.current === sequence) {

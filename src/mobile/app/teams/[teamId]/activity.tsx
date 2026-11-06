@@ -4,8 +4,10 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import { TeamActivityScreen } from '@/components/teams/TeamActivityAndBreakdown';
-import { getDemoTeam, getDemoTeamActivity } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
+import type { Team, TeamActivity } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the Team Activity route.
@@ -14,7 +16,29 @@ import { router, useLocalSearchParams } from 'expo-router';
  */
 const TeamActivityRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
+    const [activity, setActivity] = useState<TeamActivity[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (!active) return;
+                setTeam(nextTeam);
+                if (nextTeam) {
+                    void teamDataSource.activity(nextTeam.id).then((items) => {
+                        if (active) setActivity(items);
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -35,7 +59,7 @@ const TeamActivityRoute = () => {
     return (
         <TeamActivityScreen
             team={team}
-            activity={getDemoTeamActivity(team.id)}
+            activity={activity}
             onBack={handleBack}
         />
     );

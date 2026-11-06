@@ -5,8 +5,9 @@
  * transaction-derived mapping is available.
  */
 
-import { PLANNING_DEMO_INSIGHT_CATEGORIES } from '@/constants/planningDemo';
-import { useState } from 'react';
+import { planningDataSource } from '@/contracts';
+import type { PlanningInsightCategory } from '@/types/planning';
+import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
     PlanningCard,
@@ -49,6 +50,17 @@ const InsightsScreen = ({
     onBack: () => void;
 }) => {
     const [period, setPeriod] = useState<InsightPeriod>('Monthly');
+    const [categories, setCategories] = useState<PlanningInsightCategory[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        planningDataSource.insightCategories().then((items) => {
+            if (active) setCategories(items);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
 
     return (
         <PlanningScreen
@@ -121,7 +133,7 @@ const InsightsScreen = ({
 
             <PlanningCard>
                 <Text style={planningStyles.heading}>Spending by Category</Text>
-                {PLANNING_DEMO_INSIGHT_CATEGORIES.map((category) => (
+                {categories.map((category) => (
                     <View key={category.name} style={{ gap: 8 }}>
                         <View style={[planningStyles.row, { gap: 10 }]}>
                             <PlanningIconTile

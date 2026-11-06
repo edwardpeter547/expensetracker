@@ -6,14 +6,9 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { fetchTransactions } from '@/api/transactions';
 import ReceiptAttachmentPreview from '@/components/receipts/ReceiptAttachmentPreview';
 import RecurringScreenHeader from '@/components/recurring/RecurringScreenHeader';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import {
-    deleteDemoTransaction,
-    getDemoTransaction,
-} from '@/constants/transactionsDemo';
+import { transactionDataSource } from '@/contracts';
 import {
     transactionColors,
     transactionTypography,
@@ -74,15 +69,11 @@ const TransactionDetailsRoute = () => {
         let active = true;
         const load = async () => {
             setLoading(true);
-            if (DEMO_MODE) {
-                if (active) setTransaction(getDemoTransaction(id) ?? null);
-            } else {
-                try {
-                    const records = await fetchTransactions();
-                    if (active) setTransaction(records.find((record) => record.id === id) ?? null);
-                } catch {
-                    if (active) setTransaction(null);
-                }
+            try {
+                const record = await transactionDataSource.get(id);
+                if (active) setTransaction(record);
+            } catch {
+                if (active) setTransaction(null);
             }
             if (active) setLoading(false);
         };
@@ -92,13 +83,18 @@ const TransactionDetailsRoute = () => {
         };
     }, [id]);
 
-    const confirmDelete = () => {
-        if (!DEMO_MODE) {
-            setDeleteNotice('Deleting is UI-only and unavailable without demo mode.');
+    const confirmDelete = async () => {
+        try {
+            await transactionDataSource.remove(id);
+        } catch (cause) {
+            setDeleteNotice(
+                cause instanceof Error
+                    ? cause.message
+                    : 'Deleting is UI-only and unavailable without demo mode.',
+            );
             setDeleteOpen(false);
             return;
         }
-        deleteDemoTransaction(id);
         setDeleteOpen(false);
         if (router.canGoBack()) {
             router.back();

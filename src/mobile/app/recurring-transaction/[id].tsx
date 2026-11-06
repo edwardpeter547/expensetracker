@@ -9,18 +9,18 @@ import { Ionicons } from '@expo/vector-icons';
 import RecurringConfirmationCard from '@/components/recurring/RecurringConfirmationCard';
 import RecurringScreenHeader from '@/components/recurring/RecurringScreenHeader';
 import RecurringStatusBadge from '@/components/recurring/RecurringStatusBadge';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import { DEMO_RECURRING_SCHEDULES } from '@/constants/recurringDemo';
+import { recurringDataSource } from '@/contracts';
 import {
     transactionColors,
     transactionTypography,
 } from '@/constants/transactionsTheme';
 import { useLocale } from '@/contexts/LocaleContext';
-import type { RecurringStatus } from '@/types/recurring';
+import type { RecurringSchedule, RecurringStatus } from '@/types/recurring';
 import { formatSignedAmount } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Modal,
     Pressable,
     ScrollView,
@@ -55,18 +55,37 @@ const RecurringTransactionDetailsRoute = () => {
     const insets = useSafeAreaInsets();
     const { language, currency } = useLocale();
     const { id } = useLocalSearchParams<{ id: string }>();
-    const fixture = DEMO_RECURRING_SCHEDULES.find((schedule) => schedule.id === id);
-
-    const [status, setStatus] = useState<RecurringStatus | null>(
-        fixture?.status ?? null,
-    );
-    const [actualAmount, setActualAmount] = useState(fixture?.amount ?? '');
+    const [fixture, setFixture] = useState<RecurringSchedule | null>(null);
+    const [loaded, setLoaded] = useState(false);
+    const [status, setStatus] = useState<RecurringStatus | null>(null);
+    const [actualAmount, setActualAmount] = useState('');
     const [cancelOpen, setCancelOpen] = useState(false);
 
-    if (!DEMO_MODE) {
+    useEffect(() => {
+        let active = true;
+        recurringDataSource
+            .get(id)
+            .then((schedule) => {
+                if (!active) return;
+                setFixture(schedule);
+                setStatus(schedule?.status ?? null);
+                setActualAmount(schedule?.amount ?? '');
+            })
+            .catch(() => {
+                if (active) setFixture(null);
+            })
+            .finally(() => {
+                if (active) setLoaded(true);
+            });
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    if (!loaded) {
         return (
             <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
-                <Text style={styles.mutedText}>Recurring details are unavailable without demo mode.</Text>
+                <ActivityIndicator color={C.green} />
             </View>
         );
     }

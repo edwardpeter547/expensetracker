@@ -7,7 +7,7 @@
 
 import { categoryIconBackground, categoryIconColor, categoryIconName } from '@/components/transactions/categoryPresentation';
 import type { PlanningIconSource } from '@/components/planning/planningTheme';
-import type { PlanningBudget } from '@/constants/planningDemo';
+import type { PlanningBudget } from '@/types/planning';
 import type { Budget, TransactionRecord } from '@/types/transaction';
 import { transactionTitle } from '@/utils/transactions';
 

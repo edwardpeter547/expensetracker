@@ -7,14 +7,11 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import TeamWorkspaceScreen from '@/components/teams/TeamWorkspaceScreen';
-import {
-    getDemoMembers,
-    getDemoTeam,
-    getDemoTeamActivity,
-    getDemoTeamMessages,
-} from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /** Finance tool keys that map to the generic team finance route. */
 const FINANCE_KEYS = ['budgets', 'goals', 'insights', 'monthly-plan', 'cash-flow'];
@@ -27,7 +24,37 @@ const FINANCE_KEYS = ['budgets', 'goals', 'insights', 'monthly-plan', 'cash-flow
 const TeamWorkspaceRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
+    const [memberCount, setMemberCount] = useState(0);
+    const [messageCount, setMessageCount] = useState(0);
+    const [activityCount, setActivityCount] = useState(0);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (!active) return;
+                setTeam(nextTeam);
+                if (nextTeam) {
+                    void teamDataSource.members(nextTeam.id).then((items) => {
+                        if (active) setMemberCount(items.length);
+                    });
+                    void teamDataSource.messages(nextTeam.id).then((items) => {
+                        if (active) setMessageCount(items.length);
+                    });
+                    void teamDataSource.activity(nextTeam.id).then((items) => {
+                        if (active) setActivityCount(items.length);
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -50,9 +77,9 @@ const TeamWorkspaceRoute = () => {
             team={team}
             currency={currency}
             language={language}
-            memberCount={getDemoMembers(team.id).length}
-            messageCount={getDemoTeamMessages(team.id).length}
-            activityCount={getDemoTeamActivity(team.id).length}
+            memberCount={memberCount}
+            messageCount={messageCount}
+            activityCount={activityCount}
             onBack={handleBack}
             onMembers={() =>
                 router.push({ pathname: '/teams/[teamId]/members' as never, params: { teamId: team.id } })

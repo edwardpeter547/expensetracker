@@ -2,7 +2,7 @@
  * Demo-gated gallery for the receipt UI components.
  *
  * This route is for visual development only. It renders the UI-only states
- * when the existing `DEMO_MODE` toggle is on and never invokes hardware or
+ * when the existing `isDemoMode` toggle is on and never invokes hardware or
  * backend behavior.
  */
 
@@ -12,7 +12,7 @@ import ReceiptRecognitionPanel from '@/components/receipts/ReceiptRecognitionPan
 import ReceiptScannerModal from '@/components/receipts/ReceiptScannerModal';
 import ReceiptScanPreviewModal from '@/components/receipts/ReceiptScanPreviewModal';
 import ReceiptUploadModal from '@/components/receipts/ReceiptUploadModal';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
+import { isDemoMode } from '@/contracts';
 import {
     PREVIEW_ATTACHMENT_STATES,
     PREVIEW_RECOGNITION_STATES,
@@ -63,7 +63,7 @@ const ReceiptPreviewRoute = () => {
     const [uploadFile, setUploadFile] = useState<ReceiptFileInfo | null>(null);
     const [enhancement, setEnhancement] = useState<'original' | 'auto' | 'grayscale'>('auto');
 
-    if (!DEMO_MODE) {
+    if (!isDemoMode) {
         return (
             <View style={[styles.screen, styles.centered, { paddingTop: insets.top }]}>
                 <Text style={styles.disabledText}>Receipt UI preview is only available in demo mode.</Text>

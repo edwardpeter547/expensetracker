@@ -7,8 +7,10 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import TeamInviteScreen from '@/components/teams/TeamInviteScreen';
-import { addDemoInvitation, getDemoTeam } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
+import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the Team Invite route.
@@ -17,7 +19,22 @@ import { router, useLocalSearchParams } from 'expo-router';
  */
 const TeamInviteRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (active) setTeam(nextTeam);
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -40,8 +57,14 @@ const TeamInviteRoute = () => {
             team={team}
             onBack={handleBack}
             onSubmit={(input) => {
-                addDemoInvitation({ teamId: team.id, ...input });
-                router.replace({ pathname: '/teams/[teamId]/members' as never, params: { teamId: team.id } });
+                void teamDataSource
+                    .addInvitation({ teamId: team.id, ...input })
+                    .then(() => {
+                        router.replace({
+                            pathname: '/teams/[teamId]/members' as never,
+                            params: { teamId: team.id },
+                        });
+                    });
             }}
         />
     );

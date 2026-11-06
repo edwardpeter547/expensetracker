@@ -5,7 +5,7 @@
  * and recent transactions, with a route to the full transaction list.
  */
 
-import type { PlanningBudget } from '@/constants/planningDemo';
+import type { PlanningBudget } from '@/types/planning';
 import type { PlanningTransactionItem } from '@/utils/planning';
 import { Text, View } from 'react-native';
 import {

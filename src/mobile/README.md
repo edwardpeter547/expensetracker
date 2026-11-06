@@ -67,10 +67,12 @@ app/                       # expo-router file-based routes
   membership.tsx
   receipt-preview.tsx
 src/
-  api/                     # Axios client + API modules + URL resolver
+  api/                     # Axios client + raw API modules + URL resolver
+  contracts/               # data-source contracts, API implementations, factory
+  offline/                 # demo fixtures and demo data-source implementations
   components/              # auth, dashboard, planning, teams, transactions,
                            # receipts, recurring, profile, premium, security, ui
-  constants/               # design tokens, themes, and demo fixtures
+  constants/               # design tokens and theme modules
   contexts/                # Auth, AppLock, FeatureAccess, Locale, Theme
   hooks/                   # data and feature-access hooks
   security/                # biometrics, app lock, biometric credential storage
@@ -102,16 +104,24 @@ users to `/welcome`.
 
 ### Data layer and demo mode
 
-A single `DEMO_MODE` switch in `src/constants/dashboardDemo.ts` selects between
-in-memory demo stores and the live backend:
+Data flows through a set of **data-source contracts** instead of scattered
+`DEMO_MODE` branches:
 
-- Demo fixtures and mutable stores live in `src/constants/*Demo.ts`
-  (`teamsDemo`, `transactionsDemo`, `planningDemo`, `recurringDemo`).
-- Data hooks (`useDashboard`, `useTransactions`, `useCategories`,
-  `useMembership`, `usePlanningBudgets`, `useTransactionFormOptions`) branch on
-  `DEMO_MODE`.
-- Live API access lives in `src/api/*` and goes through the shared
-  `src/api/client.ts` Axios instance.
+- `src/contracts/types.ts` defines the interfaces (`DashboardDataSource`,
+  `TransactionDataSource`, `CategoryDataSource`, `BudgetDataSource`,
+  `PlanningBudgetDataSource`, `MembershipDataSource`, `TeamDataSource`,
+  `RecurringDataSource`, `PlanningDataSource`).
+- `src/contracts/apiDataSources.ts` implements them against the API. Demo-only
+  domains return empty data and throw a clear "not available" error.
+- `src/offline/demoDataSources.ts` implements them against the in-memory demo
+  stores; `src/offline/*Demo.ts` holds the demo fixtures.
+- `src/contracts/index.ts` is the factory. It reads the single `DEMO_MODE`
+  switch and exports the resolved sources plus `isDemoMode`. This is the only
+  production file allowed to import from `@/offline`.
+
+Hooks and routes import the resolved sources from `@/contracts` and never know
+whether they are talking to the API or the demo store. See
+`docs/engineering/mobile-data-layer.md` for the full picture.
 
 ### Feature access (premium gate)
 

@@ -17,8 +17,7 @@ import {
 } from '@/components/transactions/TransactionsScreens';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTransactions } from '@/hooks/useTransactions';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import { deleteDemoTransaction } from '@/constants/transactionsDemo';
+import { transactionDataSource } from '@/contracts';
 import {
     transactionColors,
 } from '@/constants/transactionsTheme';
@@ -149,13 +148,18 @@ const TransactionsRoute = () => {
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="Confirm delete"
-                                onPress={() => {
+                                onPress={async () => {
                                     if (!deleteId) return;
-                                    if (!DEMO_MODE) {
-                                        setDeleteNotice('Deleting is UI-only and unavailable without demo mode.');
+                                    try {
+                                        await transactionDataSource.remove(deleteId);
+                                    } catch (cause) {
+                                        setDeleteNotice(
+                                            cause instanceof Error
+                                                ? cause.message
+                                                : 'Deleting is UI-only and unavailable without demo mode.',
+                                        );
                                         return;
                                     }
-                                    deleteDemoTransaction(deleteId);
                                     setDeleteId(null);
                                     void refreshSilently();
                                 }}

@@ -4,8 +4,10 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import { TeamNewRequestScreen } from '@/components/teams/TeamRequestScreens';
-import { addDemoPlannedRequest, getDemoTeam } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
+import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the new request route.
@@ -14,7 +16,22 @@ import { router, useLocalSearchParams } from 'expo-router';
  */
 const TeamNewRequestRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (active) setTeam(nextTeam);
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -40,11 +57,14 @@ const TeamNewRequestRoute = () => {
             team={team}
             onBack={handleBack}
             onSubmit={(input) => {
-                addDemoPlannedRequest({ teamId: team.id, ...input });
-                router.replace({
-                    pathname: '/teams/[teamId]/planned-expenses' as never,
-                    params: { teamId: team.id },
-                });
+                void teamDataSource
+                    .addPlannedRequest({ teamId: team.id, ...input })
+                    .then(() => {
+                        router.replace({
+                            pathname: '/teams/[teamId]/planned-expenses' as never,
+                            params: { teamId: team.id },
+                        });
+                    });
             }}
         />
     );

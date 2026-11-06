@@ -8,7 +8,7 @@
 
 import { getAccessToken } from '@/api/client';
 import ProfileHome, { type ProfileIdentity } from '@/components/profile/ProfileHome';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
+import { isDemoMode } from '@/contracts';
 import { useAuth } from '@/hooks/useAuth';
 import { useMembership } from '@/hooks/useMembership';
 import type { UserProfile } from '@/types/profile';
@@ -80,7 +80,7 @@ const ProfileScreen = () => {
     );
 
     const identity = useMemo(
-        () => (DEMO_MODE && !user ? DEMO_IDENTITY : identityFromUser(user)),
+        () => (isDemoMode && !user ? DEMO_IDENTITY : identityFromUser(user)),
         [user],
     );
 

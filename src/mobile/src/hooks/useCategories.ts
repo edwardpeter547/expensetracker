@@ -1,26 +1,13 @@
 /**
  * Category management data hook.
  *
- * A single `DEMO_MODE` branch selects between the versioned in-memory demo
- * store and the authenticated category API. Mutations share the same
- * direction-agnostic custom-category contract as the backend: a custom
- * category has no stored income/expense type.
+ * Loads and mutates categories through the resolved `categoryDataSource`.
+ * Mutations share the same direction-agnostic custom-category contract as the
+ * backend: a custom category has no stored income/expense type.
  */
 
 import { normalizeApiError } from '@/api/errors';
-import {
-    createCategory,
-    deleteCategory,
-    fetchCategories,
-    updateCategory,
-} from '@/api/transactions';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import {
-    addDemoCategory,
-    deleteDemoCategory,
-    getDemoCategories,
-    updateDemoCategory,
-} from '@/constants/transactionsDemo';
+import { categoryDataSource } from '@/contracts';
 import type { Category } from '@/types/transaction';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -56,16 +43,8 @@ export const useCategories = (): UseCategoriesResult => {
         setLoading(true);
         setError(null);
 
-        if (DEMO_MODE) {
-            if (requestSequence.current === sequence) {
-                setCategories(getDemoCategories());
-                setLoading(false);
-            }
-            return;
-        }
-
         try {
-            const next = await fetchCategories();
+            const next = await categoryDataSource.list();
             if (requestSequence.current === sequence) {
                 setCategories(next);
             }
@@ -97,19 +76,14 @@ export const useCategories = (): UseCategoriesResult => {
 
         setSaving(true);
         try {
-            if (DEMO_MODE) {
-                addDemoCategory({ name: normalized });
-                setCategories(getDemoCategories());
-                return;
-            }
-            await createCategory({ name: normalized });
-            await reload();
+            await categoryDataSource.create(normalized);
+            setCategories(await categoryDataSource.list());
         } catch (cause) {
             throw new Error(normalizeApiError(cause).message);
         } finally {
             setSaving(false);
         }
-    }, [reload]);
+    }, []);
 
     /**
      * Rename an existing custom category.
@@ -125,19 +99,14 @@ export const useCategories = (): UseCategoriesResult => {
 
         setSaving(true);
         try {
-            if (DEMO_MODE) {
-                updateDemoCategory(id, { name: normalized });
-                setCategories(getDemoCategories());
-                return;
-            }
-            await updateCategory(id, { name: normalized });
-            await reload();
+            await categoryDataSource.rename(id, normalized);
+            setCategories(await categoryDataSource.list());
         } catch (cause) {
             throw new Error(normalizeApiError(cause).message);
         } finally {
             setSaving(false);
         }
-    }, [reload]);
+    }, []);
 
     /**
      * Delete an existing custom category.
@@ -149,19 +118,14 @@ export const useCategories = (): UseCategoriesResult => {
     const remove = useCallback(async (id: string): Promise<void> => {
         setSaving(true);
         try {
-            if (DEMO_MODE) {
-                deleteDemoCategory(id);
-                setCategories(getDemoCategories());
-                return;
-            }
-            await deleteCategory(id);
-            await reload();
+            await categoryDataSource.remove(id);
+            setCategories(await categoryDataSource.list());
         } catch (cause) {
             throw new Error(normalizeApiError(cause).message);
         } finally {
             setSaving(false);
         }
-    }, [reload]);
+    }, []);
 
     return { categories, loading, saving, error, reload, create, rename, remove };
 };

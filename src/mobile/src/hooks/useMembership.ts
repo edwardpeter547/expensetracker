@@ -1,14 +1,14 @@
 /**
  * Membership & Billing data hook.
  *
- * There is currently no authenticated membership or subscription endpoint in
- * the backend, so the live path reports the membership as unavailable rather
- * than inventing a tier. The existing `DEMO_MODE` switch supplies illustrative
- * demo membership and plan data for visual checks only.
+ * Loads the membership through the resolved `membershipDataSource`. The API
+ * implementation reports the membership as unavailable (null) rather than
+ * inventing a tier; the demo implementation supplies illustrative data.
  */
 
-import { DEMO_MEMBERSHIP, DEMO_MODE } from '@/constants/dashboardDemo';
+import { membershipDataSource } from '@/contracts';
 import type { MembershipSummary } from '@/types/membership';
+import { useEffect, useState } from 'react';
 
 /** State exposed to the profile header and Membership & Billing screen. */
 export interface UseMembershipResult {
@@ -23,19 +23,27 @@ export interface UseMembershipResult {
  * @returns {UseMembershipResult} Membership, plan catalog, and load state.
  */
 export const useMembership = (): UseMembershipResult => {
-    if (DEMO_MODE) {
-        return {
-            membership: DEMO_MEMBERSHIP,
-            loading: false,
-            error: null,
-        };
-    }
+    const [membership, setMembership] = useState<MembershipSummary | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // No verified membership/billing source exists yet. Return an unavailable
-    // neutral state instead of assuming a Free tier.
-    return {
-        membership: null,
-        loading: false,
-        error: null,
-    };
+    useEffect(() => {
+        let active = true;
+        membershipDataSource
+            .get()
+            .then((value) => {
+                if (active) setMembership(value);
+            })
+            .catch(() => {
+                if (active) setError('Membership is unavailable right now.');
+            })
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    return { membership, loading, error };
 };

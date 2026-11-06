@@ -9,9 +9,11 @@ import { PlanningScreen } from '@/components/planning/PlanningUI';
 import TeamFinanceScreen, {
     type TeamFinancePage,
 } from '@/components/teams/TeamFinanceScreen';
-import { getDemoTeam } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /** Valid finance page values. */
 const PAGES: readonly TeamFinancePage[] = ['budgets', 'goals', 'insights', 'monthly-plan', 'cash-flow'];
@@ -24,10 +26,25 @@ const PAGES: readonly TeamFinancePage[] = ['budgets', 'goals', 'insights', 'mont
 const TeamFinanceRoute = () => {
     const { teamId, page } = useLocalSearchParams<{ teamId: string; page?: string }>();
     const { language, currency } = useLocale();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
     const resolvedPage: TeamFinancePage = PAGES.includes(page as TeamFinancePage)
         ? (page as TeamFinancePage)
         : 'budgets';
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (active) setTeam(nextTeam);
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {

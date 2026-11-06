@@ -10,7 +10,7 @@ import RecurringScheduleListItem from '@/components/recurring/RecurringScheduleL
 import RecurringStatusBadge from '@/components/recurring/RecurringStatusBadge';
 import RecurringEmptyState from '@/components/recurring/RecurringEmptyState';
 import RecurringConfirmationCard from '@/components/recurring/RecurringConfirmationCard';
-import { DEMO_RECURRING_SCHEDULES } from '@/constants/recurringDemo';
+import { DEMO_RECURRING_SCHEDULES } from '@/offline/recurringDemo';
 
 jest.mock('@expo/vector-icons', () => {
     const Ionicons = () => null;

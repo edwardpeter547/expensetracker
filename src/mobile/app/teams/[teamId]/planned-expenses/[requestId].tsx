@@ -7,15 +7,11 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import { TeamRequestDetailScreen } from '@/components/teams/TeamRequestScreens';
-import {
-    completeDemoPlannedRequest,
-    decideDemoPlannedRequest,
-    getDemoPlannedRequest,
-    getDemoTeam,
-} from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { Team, TeamPlannedRequest } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the request detail route.
@@ -25,8 +21,31 @@ import { useState } from 'react';
 const TeamRequestDetailRoute = () => {
     const { teamId, requestId } = useLocalSearchParams<{ teamId: string; requestId: string }>();
     const { language, currency } = useLocale();
-    const team = getDemoTeam(teamId);
-    const [request, setRequest] = useState(() => getDemoPlannedRequest(requestId));
+    const [team, setTeam] = useState<Team | null>(null);
+    const [request, setRequest] = useState<TeamPlannedRequest | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (active) setTeam(nextTeam);
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        teamDataSource
+            .plannedRequest(requestId)
+            .then((nextRequest) => {
+                if (active) setRequest(nextRequest);
+            })
+            .catch(() => {
+                if (active) setRequest(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId, requestId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -62,16 +81,25 @@ const TeamRequestDetailRoute = () => {
             language={language}
             onBack={handleBack}
             onApprove={() => {
-                const updated = decideDemoPlannedRequest(request.id, 'Approved');
-                if (updated) setRequest(updated);
+                void teamDataSource
+                    .decideRequest(request.id, 'Approved')
+                    .then((updated) => {
+                        if (updated) setRequest(updated);
+                    });
             }}
             onReject={() => {
-                const updated = decideDemoPlannedRequest(request.id, 'Rejected');
-                if (updated) setRequest(updated);
+                void teamDataSource
+                    .decideRequest(request.id, 'Rejected')
+                    .then((updated) => {
+                        if (updated) setRequest(updated);
+                    });
             }}
             onComplete={(actualAmount) => {
-                const result = completeDemoPlannedRequest(request.id, actualAmount);
-                if (result) setRequest(result.request);
+                void teamDataSource
+                    .completeRequest(request.id, actualAmount)
+                    .then((result) => {
+                        if (result) setRequest(result.request);
+                    });
             }}
         />
     );

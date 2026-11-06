@@ -1,15 +1,13 @@
 /**
  * Transactions list data hook.
  *
- * A single `DEMO_MODE` branch selects between the versioned in-memory demo
- * fixture and the authenticated transaction API. The hook owns loading,
- * refreshing, and error state and never mixes the two data sources.
+ * Loads transactions through the resolved `transactionDataSource` and owns
+ * loading, refreshing, and error state. The demo/API selection happens in the
+ * data-source factory, not here.
  */
 
 import { normalizeApiError } from '@/api/errors';
-import { fetchTransactions } from '@/api/transactions';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import { getDemoTransactions } from '@/constants/transactionsDemo';
+import { transactionDataSource } from '@/contracts';
 import type { TransactionRecord } from '@/types/transaction';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -45,20 +43,14 @@ export const useTransactions = (): UseTransactionsResult => {
         }
         setError(null);
 
-        if (DEMO_MODE) {
+        try {
+            const next = await transactionDataSource.list();
             if (requestSequence.current === sequence) {
-                setTransactions(getDemoTransactions());
+                setTransactions(next);
             }
-        } else {
-            try {
-                const next = await fetchTransactions();
-                if (requestSequence.current === sequence) {
-                    setTransactions(next);
-                }
-            } catch (cause) {
-                if (requestSequence.current === sequence) {
-                    setError(normalizeApiError(cause).message);
-                }
+        } catch (cause) {
+            if (requestSequence.current === sequence) {
+                setError(normalizeApiError(cause).message);
             }
         }
 

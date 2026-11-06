@@ -6,16 +6,12 @@
  * transactions for the selected category.
  */
 
-import { fetchBudgets, fetchTransactions } from '@/api/transactions';
+import { fetchTransactions } from '@/api/transactions';
 import BudgetDetailScreen from '@/components/planning/BudgetDetailScreen';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import {
-    getDemoPlanningBudget,
-    type PlanningBudget,
-} from '@/constants/planningDemo';
+import { isDemoMode, planningBudgetDataSource } from '@/contracts';
+import type { PlanningBudget } from '@/types/planning';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
-    mapBudgetToPlanningBudget,
     recentBudgetTransactions,
     type PlanningTransactionItem,
     weeklyBudgetSpending,
@@ -54,30 +50,28 @@ const BudgetDetailRoute = () => {
 
         const load = async (): Promise<void> => {
             setLoading(true);
-            if (DEMO_MODE) {
-                if (active) {
-                    setBudget(getDemoPlanningBudget(id) ?? null);
+            try {
+                const next = await planningBudgetDataSource.get(id);
+                if (!active) return;
+                setBudget(next);
+                if (!next) {
+                    setWeekly([]);
+                    setRecent([]);
+                } else if (isDemoMode) {
                     setWeekly(DEMO_WEEKLY);
                     setRecent(DEMO_RECENT);
+                } else {
+                    const transactions = await fetchTransactions();
+                    if (active) {
+                        setWeekly(weeklyBudgetSpending(transactions, next.id));
+                        setRecent(recentBudgetTransactions(transactions, next.id, language));
+                    }
                 }
-            } else {
-                try {
-                    const [transactions, budgets] = await Promise.all([
-                        fetchTransactions(),
-                        fetchBudgets(),
-                    ]);
-                    const next = budgets.map(mapBudgetToPlanningBudget).find((item) => item.id === id) ?? null;
-                    if (active) {
-                        setBudget(next);
-                        setWeekly(next ? weeklyBudgetSpending(transactions, next.id) : []);
-                        setRecent(next ? recentBudgetTransactions(transactions, next.id, language) : []);
-                    }
-                } catch {
-                    if (active) {
-                        setBudget(null);
-                        setWeekly([]);
-                        setRecent([]);
-                    }
+            } catch {
+                if (active) {
+                    setBudget(null);
+                    setWeekly([]);
+                    setRecent([]);
                 }
             }
             if (active) setLoading(false);

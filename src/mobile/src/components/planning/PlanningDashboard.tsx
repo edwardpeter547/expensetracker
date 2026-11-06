@@ -6,12 +6,13 @@
  * locale-aware money formatting are adapted for the existing app.
  */
 
-import {
-    PLANNING_DASHBOARD_SUMMARIES,
-    PLANNING_TOOLS,
-    type PlanningPeriodKey,
-} from '@/constants/planningDemo';
-import { useMemo, useState } from 'react';
+import { planningDataSource } from '@/contracts';
+import type {
+    PlanningPeriodKey,
+    PlanningPeriodSummary,
+    PlanningTool,
+} from '@/types/planning';
+import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
     PlanningCard,
@@ -69,7 +70,27 @@ const PlanningDashboard = ({
     onBack?: () => void;
 }) => {
     const [period, setPeriod] = useState<PlanningPeriodKey>('month');
-    const summary = useMemo(() => PLANNING_DASHBOARD_SUMMARIES[period], [period]);
+    const [summaries, setSummaries] = useState<Record<PlanningPeriodKey, PlanningPeriodSummary>>({
+        month: { budget: 0, spent: 0, saved: 0, goal: 0, change: 0 },
+        last: { budget: 0, spent: 0, saved: 0, goal: 0, change: 0 },
+        year: { budget: 0, spent: 0, saved: 0, goal: 0, change: 0 },
+    });
+    const [tools, setTools] = useState<PlanningTool[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        planningDataSource.tools().then((items) => {
+            if (active) setTools(items);
+        });
+        planningDataSource.summaries().then((items) => {
+            if (active) setSummaries(items);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const summary = summaries[period];
     const spentPercent = Math.round((summary.spent / summary.budget) * 100);
     const goalsPercent = Math.round((summary.saved / summary.goal) * 100);
 
@@ -197,7 +218,7 @@ const PlanningDashboard = ({
                     rowGap: 12,
                 }}
             >
-                {PLANNING_TOOLS.map((tool) => (
+                {tools.map((tool) => (
                     <TouchableOpacity
                         key={tool.key}
                         onPress={() => onOpenTool(tool.key)}

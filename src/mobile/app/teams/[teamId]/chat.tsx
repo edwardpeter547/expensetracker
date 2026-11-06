@@ -6,9 +6,10 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import TeamChatScreen from '@/components/teams/TeamChatScreen';
-import { addDemoTeamMessage, getDemoTeam, getDemoTeamMessages } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
+import type { Team, TeamChatMessage } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the Team Chat route.
@@ -17,8 +18,29 @@ import { useState } from 'react';
  */
 const TeamChatRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
-    const team = getDemoTeam(teamId);
-    const [messages, setMessages] = useState(() => (teamId ? getDemoTeamMessages(teamId) : []));
+    const [team, setTeam] = useState<Team | null>(null);
+    const [messages, setMessages] = useState<TeamChatMessage[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (!active) return;
+                setTeam(nextTeam);
+                if (nextTeam) {
+                    void teamDataSource.messages(nextTeam.id).then((items) => {
+                        if (active) setMessages(items);
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -42,8 +64,9 @@ const TeamChatRoute = () => {
             messages={messages}
             onBack={handleBack}
             onSend={(message) => {
-                addDemoTeamMessage(team.id, message);
-                setMessages(getDemoTeamMessages(team.id));
+                void teamDataSource.addMessage(team.id, message).then(() => {
+                    void teamDataSource.messages(team.id).then(setMessages);
+                });
             }}
         />
     );

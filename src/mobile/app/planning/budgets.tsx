@@ -6,8 +6,7 @@
  */
 
 import BudgetsScreen from '@/components/planning/BudgetsScreen';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import { addDemoPlanningBudget } from '@/constants/planningDemo';
+import { isDemoMode, planningBudgetDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlanningBudgets } from '@/hooks/usePlanningBudgets';
 import { router } from 'expo-router';
@@ -22,7 +21,7 @@ const BudgetsRoute = () => {
     const { language, currency } = useLocale();
     const { budgets, loading, error, refresh } = usePlanningBudgets();
     const [notice, setNotice] = useState<string | null>(
-        DEMO_MODE ? 'Preview — new budgets are saved in memory only.' : null,
+        isDemoMode ? 'Preview — new budgets are saved in memory only.' : null,
     );
 
     /**
@@ -32,13 +31,17 @@ const BudgetsRoute = () => {
      * @param {number} limit The monthly limit.
      * @returns {void}
      */
-    const handleCreate = (name: string, limit: number): void => {
-        if (DEMO_MODE) {
-            addDemoPlanningBudget(name, limit);
+    const handleCreate = async (name: string, limit: number): Promise<void> => {
+        try {
+            await planningBudgetDataSource.create(name, limit);
             void refresh();
-            return;
+        } catch (cause) {
+            setNotice(
+                cause instanceof Error
+                    ? cause.message
+                    : 'Creating budgets is UI-only and unavailable without demo mode.',
+            );
         }
-        setNotice('Creating budgets is UI-only and unavailable without demo mode.');
     };
 
     /**

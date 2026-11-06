@@ -5,13 +5,9 @@
  * goals endpoint exists yet. Contributions never become spending transactions.
  */
 
-import {
-    addDemoGoalContribution,
-    addDemoPlanningGoal,
-    getDemoPlanningGoals,
-    type PlanningGoal,
-} from '@/constants/planningDemo';
-import { useState } from 'react';
+import { planningDataSource } from '@/contracts';
+import type { PlanningGoal } from '@/types/planning';
+import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
     PlanningButton,
@@ -44,28 +40,38 @@ const SavingsGoalsScreen = ({
     language: string;
     onBack: () => void;
 }) => {
-    const [goals, setGoals] = useState<PlanningGoal[]>(getDemoPlanningGoals());
+    const [goals, setGoals] = useState<PlanningGoal[]>([]);
     const [modal, setModal] = useState<GoalModal>(null);
     const [selected, setSelected] = useState('');
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
 
+    useEffect(() => {
+        let active = true;
+        planningDataSource.goals().then((items) => {
+            if (active) setGoals(items);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
     const saved = goals.reduce((sum, goal) => sum + goal.saved, 0);
     const total = goals.reduce((sum, goal) => sum + goal.target, 0);
     const achievedPercent = total > 0 ? Math.round((saved / total) * 100) : 0;
 
-    const submit = () => {
+    const submit = async () => {
         const numericAmount = Number(amount);
         if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
 
         if (modal === 'new') {
             if (!name.trim()) return;
-            addDemoPlanningGoal(name, numericAmount);
+            await planningDataSource.addGoal(name, numericAmount);
         } else {
-            addDemoGoalContribution(selected, numericAmount);
+            await planningDataSource.contribute(selected, numericAmount);
         }
 
-        setGoals(getDemoPlanningGoals());
+        setGoals(await planningDataSource.goals());
         setName('');
         setAmount('');
         setModal(null);

@@ -153,6 +153,7 @@ cd src/mobile && npm run test:components # mobile Jest component tests
 
 - [System overview](docs/architecture/system-overview.md)
 - [Mobile app guide](src/mobile/README.md)
+- [Mobile data layer](docs/engineering/mobile-data-layer.md)
 - [Coding standards](docs/engineering/coding-standards.md)
 - [Design principles](docs/engineering/design-principles.md)
 - [Testing strategy](docs/engineering/testing-strategy.md)

@@ -21,7 +21,7 @@ import {
     updateProfile,
     type UserSession,
 } from '@/api/user';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
+import { isDemoMode } from '@/contracts';
 import { profileTheme as t } from '@/constants/profileTheme';
 import { useAppLock } from '@/contexts/AppLockContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -235,7 +235,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     }, []);
 
     useEffect(() => {
-        if (section !== 'security' || DEMO_MODE) return;
+        if (section !== 'security' || isDemoMode) return;
         let active = true;
         setSessionsLoading(true);
         setSessionsError(null);
@@ -264,7 +264,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
         setSavingProfile(true);
         setProfileError(null);
         try {
-            if (DEMO_MODE) {
+            if (isDemoMode) {
                 preview('Profile updates');
                 return;
             }
@@ -353,7 +353,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
 
         setPasswordBusy(true);
         try {
-            if (DEMO_MODE) {
+            if (isDemoMode) {
                 preview('Password changes');
                 return;
             }
@@ -377,7 +377,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
      */
     const signOutAllSessions = async () => {
         try {
-            if (DEMO_MODE) {
+            if (isDemoMode) {
                 preview('Session management');
                 return;
             }
@@ -422,7 +422,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
 
         setDeleting(true);
         try {
-            if (DEMO_MODE) {
+            if (isDemoMode) {
                 preview('Account deletion');
                 setDeleteOpen(false);
                 return;
@@ -565,7 +565,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                             ) : null}
                         </SectionCard>
                         <SectionCard title="Device sessions">
-                            {DEMO_MODE ? (
+                            {isDemoMode ? (
                                 <Text style={styles.note}>
                                     Session management requires a signed-in account.
                                 </Text>
@@ -595,7 +595,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                                     />
                                 ))
                             )}
-                            {!DEMO_MODE && sessions.length > 0 ? (
+                            {!isDemoMode && sessions.length > 0 ? (
                                 <Pressable
                                     accessibilityRole="button"
                                     accessibilityLabel="Sign out all sessions"
