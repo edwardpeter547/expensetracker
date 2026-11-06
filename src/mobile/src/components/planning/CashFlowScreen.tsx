@@ -5,10 +5,9 @@
  * to existing recurring-transaction data remains a future integration.
  */
 
-import {
-    PLANNING_DEMO_CASH_FLOW_SERIES,
-    PLANNING_DEMO_CASH_MOVEMENTS,
-} from '@/constants/planningDemo';
+import { planningDataSource } from '@/contracts';
+import type { PlanningCashFlowSeries, PlanningCashMovement } from '@/types/planning';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import PlanningDualLineChart from './PlanningDualLineChart';
 import {
@@ -35,9 +34,28 @@ const CashFlowScreen = ({
     language: string;
     onBack: () => void;
 }) => {
-    const inflows = PLANNING_DEMO_CASH_MOVEMENTS.filter((movement) => movement.amount >= 0)
+    const [movements, setMovements] = useState<PlanningCashMovement[]>([]);
+    const [series, setSeries] = useState<PlanningCashFlowSeries>({
+        labels: [],
+        income: [],
+        expense: [],
+    });
+
+    useEffect(() => {
+        let active = true;
+        planningDataSource.cashFlow().then((flow) => {
+            if (!active) return;
+            setMovements(flow.movements);
+            setSeries(flow.series);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const inflows = movements.filter((movement) => movement.amount >= 0)
         .reduce((sum, movement) => sum + movement.amount, 0);
-    const outflows = PLANNING_DEMO_CASH_MOVEMENTS.filter((movement) => movement.amount < 0)
+    const outflows = movements.filter((movement) => movement.amount < 0)
         .reduce((sum, movement) => sum + movement.amount, 0);
 
     return (
@@ -60,9 +78,9 @@ const CashFlowScreen = ({
                 </Text>
                 <Text style={planningStyles.heading}>Income vs Expenses</Text>
                 <PlanningDualLineChart
-                    labels={PLANNING_DEMO_CASH_FLOW_SERIES.labels}
-                    income={PLANNING_DEMO_CASH_FLOW_SERIES.income}
-                    expense={PLANNING_DEMO_CASH_FLOW_SERIES.expense}
+                    labels={series.labels}
+                    income={series.income}
+                    expense={series.expense}
                 />
             </PlanningCard>
 
@@ -95,7 +113,7 @@ const CashFlowScreen = ({
 
             <PlanningCard>
                 <Text style={planningStyles.heading}>Upcoming Cash Movements</Text>
-                {PLANNING_DEMO_CASH_MOVEMENTS.map((movement) => (
+                {movements.map((movement) => (
                     <View key={movement.name} style={[planningStyles.row, { gap: 12 }]}>
                         <PlanningIconTile
                             icon={movement.icon}

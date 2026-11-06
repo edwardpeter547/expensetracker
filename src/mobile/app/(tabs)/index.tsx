@@ -8,10 +8,11 @@
 
 import { getAccessToken } from '@/api/client';
 import ExpenseDashboard from '@/components/dashboard/ExpenseDashboard';
-import { getDemoTeams } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboard } from '@/hooks/useDashboard';
+import type { Team } from '@/types/team';
 import type {
     DashboardPeriod,
     DashboardPeriodSelection,
@@ -30,7 +31,7 @@ const DashboardScreen = () => {
     const { language, currency } = useLocale();
     const [period, setPeriod] = useState<DashboardPeriod>('This Month');
     const [customRange, setCustomRange] = useState<DateRangeSelection | null>(null);
-    const [teams, setTeams] = useState(() => getDemoTeams());
+    const [teams, setTeams] = useState<Team[]>([]);
 
     const selection = useMemo<DashboardPeriodSelection>(
         () =>
@@ -60,7 +61,18 @@ const DashboardScreen = () => {
 
     useFocusEffect(
         useCallback(() => {
-            setTeams(getDemoTeams());
+            let active = true;
+            teamDataSource
+                .list()
+                .then((items) => {
+                    if (active) setTeams(items);
+                })
+                .catch(() => {
+                    if (active) setTeams([]);
+                });
+            return () => {
+                active = false;
+            };
         }, []),
     );
 

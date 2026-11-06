@@ -5,7 +5,9 @@
  * remain a future integration.
  */
 
-import { PLANNING_DEMO_ALLOCATIONS, PLANNING_DEMO_INCOME } from '@/constants/planningDemo';
+import { planningDataSource } from '@/contracts';
+import type { PlanningAllocation } from '@/types/planning';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import {
     PlanningCard,
@@ -33,9 +35,24 @@ const MonthlyPlanScreen = ({
     language: string;
     onBack: () => void;
 }) => {
-    const allocated = PLANNING_DEMO_ALLOCATIONS.reduce((sum, allocation) => sum + allocation.amount, 0);
-    const unallocated = PLANNING_DEMO_INCOME - allocated;
-    const allocationPercent = Math.round((allocated / PLANNING_DEMO_INCOME) * 100);
+    const [allocations, setAllocations] = useState<PlanningAllocation[]>([]);
+    const [income, setIncome] = useState(0);
+
+    useEffect(() => {
+        let active = true;
+        planningDataSource.monthlyPlan().then((plan) => {
+            if (!active) return;
+            setAllocations(plan.allocations);
+            setIncome(plan.income);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const allocated = allocations.reduce((sum, allocation) => sum + allocation.amount, 0);
+    const unallocated = income - allocated;
+    const allocationPercent = income > 0 ? Math.round((allocated / income) * 100) : 0;
 
     return (
         <PlanningScreen title="Monthly Plan" subtitle="Give every pound a purpose" onBack={onBack}>
@@ -44,7 +61,7 @@ const MonthlyPlanScreen = ({
                     <View>
                         <Text style={planningStyles.muted}>Planned Monthly Income</Text>
                         <Text style={planningStyles.large}>
-                            {formatPlanningMoney(PLANNING_DEMO_INCOME, language, currency)}
+                            {formatPlanningMoney(income, language, currency)}
                         </Text>
                     </View>
                     <PlanningIconTile
@@ -70,7 +87,7 @@ const MonthlyPlanScreen = ({
             </View>
 
             <PlanningCard>
-                {PLANNING_DEMO_ALLOCATIONS.map((allocation) => (
+                {allocations.map((allocation) => (
                     <View key={allocation.name} style={[planningStyles.row, { gap: 12 }]}>
                         <PlanningIconTile
                             icon={allocation.icon}

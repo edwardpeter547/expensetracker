@@ -7,9 +7,11 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import TeamPlannedExpensesScreen from '@/components/teams/TeamPlannedExpensesScreen';
-import { getDemoPlannedRequests, getDemoTeam } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { Team, TeamPlannedRequest } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the Team Planned Expenses route.
@@ -19,7 +21,29 @@ import { router, useLocalSearchParams } from 'expo-router';
 const TeamPlannedExpensesRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
+    const [requests, setRequests] = useState<TeamPlannedRequest[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (!active) return;
+                setTeam(nextTeam);
+                if (nextTeam) {
+                    void teamDataSource.plannedRequests(nextTeam.id).then((items) => {
+                        if (active) setRequests(items);
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -40,7 +64,7 @@ const TeamPlannedExpensesRoute = () => {
     return (
         <TeamPlannedExpensesScreen
             team={team}
-            requests={getDemoPlannedRequests(team.id)}
+            requests={requests}
             currency={currency}
             language={language}
             onBack={handleBack}

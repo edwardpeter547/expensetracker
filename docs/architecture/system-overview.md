@@ -205,18 +205,24 @@ app-level guide.
   session primitives used by biometric sign-in.
 - Data is loaded through hooks (`useDashboard`, `useTransactions`,
   `useCategories`, `useMembership`, `usePlanningBudgets`,
-  `useTransactionFormOptions`) backed by modules in `src/mobile/src/api`.
+  `useTransactionFormOptions`) that consume resolved data sources from
+  `src/mobile/src/contracts`. The raw HTTP functions they use live in
+  `src/mobile/src/api`.
 - Styles come from both the `useStyles` hook (`*.styles.ts`) and static theme
   modules (`*Theme.ts`, `designTokens.ts`).
 
 ### Demo mode and backend integration
-- A single `DEMO_MODE` switch in `src/mobile/src/constants/dashboardDemo.ts`
-  selects in-memory demo stores (`teamsDemo`, `transactionsDemo`,
-  `planningDemo`, `recurringDemo`) versus the live API.
+- A single `DEMO_MODE` switch in
+  `src/mobile/src/offline/dashboardDemo.ts` is read by the factory in
+  `src/mobile/src/contracts/index.ts`, which resolves each data source to its
+  API or demo implementation. All demo fixtures and demo implementations live
+  under `src/mobile/src/offline`.
 - Dashboard, transactions, categories, budgets, profile, sessions, and
   account-deletion surfaces are wired to real backend endpoints. Teams,
   membership/billing, AI chat, receipt OCR, recurring scheduling, premium
   entitlements, and the password-reset UI are frontend-only or demo-backed.
+
+See `docs/engineering/mobile-data-layer.md` for the contracts/offline wiring.
 
 ### Primary data flow
 1. `app/(tabs)/index.tsx` (Home) renders `ExpenseDashboard` with data from

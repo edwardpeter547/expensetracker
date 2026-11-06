@@ -6,9 +6,8 @@
  * change from overwriting the result of a newer request.
  */
 
-import { loadDashboardData } from '@/api/dashboard';
 import { normalizeApiError } from '@/api/errors';
-import { DEMO_DASHBOARD, DEMO_MODE } from '@/constants/dashboardDemo';
+import { dashboardDataSource } from '@/contracts';
 import type { DashboardData, DashboardPeriodSelection } from '@/types/dashboard';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -52,26 +51,16 @@ export const useDashboard = (
             }
             setError(null);
 
-            if (DEMO_MODE) {
-                if (requestSequence.current === sequence) {
-                    setData(DEMO_DASHBOARD);
-                    setLoading(false);
-                }
-                return;
-            }
-
             try {
-                const next = await loadDashboardData(selection, currency, new Date(), locale);
+                const next = await dashboardDataSource.load(selection, currency, locale);
                 if (requestSequence.current === sequence) setData(next);
             } catch (cause) {
                 if (requestSequence.current === sequence) {
                     setError(normalizeApiError(cause).message);
                 }
             } finally {
-                if (requestSequence.current === sequence) {
-                    if (!silent) {
-                        setLoading(false);
-                    }
+                if (requestSequence.current === sequence && !silent) {
+                    setLoading(false);
                 }
             }
         },

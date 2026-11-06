@@ -8,9 +8,10 @@
  */
 
 import TeamsListScreen from '@/components/teams/TeamsListScreen';
-import { getDemoTeams } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useFeatureGate } from '@/hooks/useFeatureAccess';
+import type { Team } from '@/types/team';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
@@ -22,11 +23,22 @@ import { useCallback, useState } from 'react';
 const TeamsTabScreen = () => {
     const { language, currency } = useLocale();
     const { requestAccess } = useFeatureGate();
-    const [teams, setTeams] = useState(() => getDemoTeams());
+    const [teams, setTeams] = useState<Team[]>([]);
 
     useFocusEffect(
         useCallback(() => {
-            setTeams(getDemoTeams());
+            let active = true;
+            teamDataSource
+                .list()
+                .then((items) => {
+                    if (active) setTeams(items);
+                })
+                .catch(() => {
+                    if (active) setTeams([]);
+                });
+            return () => {
+                active = false;
+            };
         }, []),
     );
 

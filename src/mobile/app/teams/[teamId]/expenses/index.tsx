@@ -4,9 +4,11 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import { TeamSharedExpensesScreen } from '@/components/teams/TeamExpensesScreens';
-import { getDemoTeam, getDemoTeamExpenses } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { Team, TeamExpense } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the Team Shared Expenses route.
@@ -16,8 +18,29 @@ import { router, useLocalSearchParams } from 'expo-router';
 const TeamExpensesRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
-    const team = getDemoTeam(teamId);
-    const expenses = team ? getDemoTeamExpenses(team.id) : [];
+    const [team, setTeam] = useState<Team | null>(null);
+    const [expenses, setExpenses] = useState<TeamExpense[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (!active) return;
+                setTeam(nextTeam);
+                if (nextTeam) {
+                    void teamDataSource.expenses(nextTeam.id).then((items) => {
+                        if (active) setExpenses(items);
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {

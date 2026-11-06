@@ -5,13 +5,9 @@
  * remain demo-only until a backend model exists.
  */
 
-import {
-    addDemoPlannedExpense,
-    getDemoPlannedExpenses,
-    type PlannedExpense,
-    type PlannedExpenseStatus,
-} from '@/constants/planningDemo';
-import { useState } from 'react';
+import { planningDataSource } from '@/contracts';
+import type { PlannedExpense, PlannedExpenseStatus } from '@/types/planning';
+import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
     PlanningButton,
@@ -46,20 +42,30 @@ const PlannedExpensesScreen = ({
     language: string;
     onBack: () => void;
 }) => {
-    const [items, setItems] = useState<PlannedExpense[]>(getDemoPlannedExpenses());
+    const [items, setItems] = useState<PlannedExpense[]>([]);
     const [filter, setFilter] = useState<ExpenseFilter>('All');
     const [show, setShow] = useState(false);
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
 
+    useEffect(() => {
+        let active = true;
+        planningDataSource.plannedExpenses().then((expenses) => {
+            if (active) setItems(expenses);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
     const total = items.reduce((sum, item) => sum + item.amount, 0);
     const visibleItems = filter === 'All' ? items : items.filter((item) => item.status === filter);
 
-    const submit = () => {
+    const submit = async () => {
         const numericAmount = Number(amount);
         if (!name.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) return;
-        addDemoPlannedExpense(name, numericAmount);
-        setItems(getDemoPlannedExpenses());
+        await planningDataSource.addPlannedExpense(name, numericAmount);
+        setItems(await planningDataSource.plannedExpenses());
         setName('');
         setAmount('');
         setShow(false);

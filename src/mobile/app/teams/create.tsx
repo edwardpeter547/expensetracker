@@ -6,7 +6,7 @@
 
 import FeatureGate from '@/components/premium/FeatureGate';
 import CreateTeamScreen from '@/components/teams/CreateTeamScreen';
-import { createDemoTeam } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { router } from 'expo-router';
 
 /**
@@ -36,10 +36,11 @@ const CreateTeamRoute = () => {
             <CreateTeamScreen
                 onBack={goBack}
                 onCreate={(input) => {
-                    const team = createDemoTeam(input);
-                    router.replace({
-                        pathname: '/teams/[teamId]' as never,
-                        params: { teamId: team.id },
+                    void teamDataSource.create(input).then((team) => {
+                        router.replace({
+                            pathname: '/teams/[teamId]' as never,
+                            params: { teamId: team.id },
+                        });
                     });
                 }}
             />

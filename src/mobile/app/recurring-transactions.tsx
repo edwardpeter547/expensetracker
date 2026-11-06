@@ -10,14 +10,14 @@ import RecurringEmptyState from '@/components/recurring/RecurringEmptyState';
 import RecurringScheduleListItem from '@/components/recurring/RecurringScheduleListItem';
 import RecurringScreenHeader from '@/components/recurring/RecurringScreenHeader';
 import { Segmented } from '@/components/transactions/TransactionsScreens';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import { DEMO_RECURRING_SCHEDULES } from '@/constants/recurringDemo';
+import { isDemoMode, recurringDataSource } from '@/contracts';
+import type { RecurringSchedule } from '@/types/recurring';
 import {
     transactionColors,
 } from '@/constants/transactionsTheme';
 import { useLocale } from '@/contexts/LocaleContext';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Pressable,
     ScrollView,
@@ -38,13 +38,27 @@ const RecurringTransactionsRoute = () => {
     const insets = useSafeAreaInsets();
     const { language, currency } = useLocale();
     const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+    const [schedules, setSchedules] = useState<RecurringSchedule[]>([]);
 
-    const schedules = DEMO_MODE
-        ? DEMO_RECURRING_SCHEDULES.filter((schedule) => {
-            if (filter === 'all') return true;
-            return schedule.type === (filter === 'income' ? 'INCOME' : 'EXPENSE');
-        })
-        : [];
+    useEffect(() => {
+        let active = true;
+        recurringDataSource
+            .list()
+            .then((items) => {
+                if (active) setSchedules(items);
+            })
+            .catch(() => {
+                if (active) setSchedules([]);
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const visibleSchedules = schedules.filter((schedule) => {
+        if (filter === 'all') return true;
+        return schedule.type === (filter === 'income' ? 'INCOME' : 'EXPENSE');
+    });
 
     const goBack = () => {
         if (router.canGoBack()) {
@@ -83,12 +97,12 @@ const RecurringTransactionsRoute = () => {
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
             >
-                {!DEMO_MODE ? (
+                {!isDemoMode ? (
                     <RecurringEmptyState
                         title="Recurring transactions unavailable"
                         message="Recurring transaction data will appear here once the backend is available."
                     />
-                ) : schedules.length === 0 ? (
+                ) : visibleSchedules.length === 0 ? (
                     <RecurringEmptyState
                         message={
                             filter === 'income'
@@ -102,7 +116,7 @@ const RecurringTransactionsRoute = () => {
                 ) : (
                     <>
                         <Text style={styles.sectionTitle}>Upcoming</Text>
-                        {schedules.map((schedule) => (
+                        {visibleSchedules.map((schedule) => (
                             <RecurringScheduleListItem
                                 key={schedule.id}
                                 schedule={schedule}

@@ -157,7 +157,9 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 ### Demo data and feature gating
 
-- Keep all demo/mock data and in-memory stores in `src/mobile/src/constants/*Demo.ts`, selected by the single `DEMO_MODE` switch in `dashboardDemo.ts`. Do not add a second demo toggle.
+- Keep all demo/mock data, in-memory stores, and demo implementations under `src/mobile/src/offline/`. Expose them through data-source contracts in `src/mobile/src/contracts/`.
+- Production code must never import from `@/offline`. Only `src/mobile/src/contracts/index.ts` may import the demo layer; consumers import the resolved sources from `@/contracts`.
+- The single `DEMO_MODE` switch lives in `src/mobile/src/offline/dashboardDemo.ts` and is read only by the factory. Do not add a second demo toggle.
 - Mark demo-only screens and fixtures clearly (`UI-only`, `demo only`) so they are never mistaken for shipped behavior.
 - For premium/entitlement decisions use `useFeatureAccess`, `useFeatureGate`, or the `FeatureGate` component. Do not compare subscription strings (for example `user.plan === "premium"`) directly in screens.
 

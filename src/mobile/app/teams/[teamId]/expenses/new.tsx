@@ -7,9 +7,11 @@
 
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import { TeamRecordExpenseScreen } from '@/components/teams/TeamExpensesScreens';
-import { addDemoTeamExpense, getDemoMembers, getDemoTeam } from '@/constants/teamsDemo';
+import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { Team, TeamMember } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 /**
  * Render the Record Team Expense route.
@@ -19,7 +21,29 @@ import { router, useLocalSearchParams } from 'expo-router';
 const TeamRecordExpenseRoute = () => {
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
-    const team = getDemoTeam(teamId);
+    const [team, setTeam] = useState<Team | null>(null);
+    const [members, setMembers] = useState<TeamMember[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        teamDataSource
+            .get(teamId)
+            .then((nextTeam) => {
+                if (!active) return;
+                setTeam(nextTeam);
+                if (nextTeam) {
+                    void teamDataSource.members(nextTeam.id).then((items) => {
+                        if (active) setMembers(items);
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) setTeam(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [teamId]);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -40,13 +64,19 @@ const TeamRecordExpenseRoute = () => {
     return (
         <TeamRecordExpenseScreen
             team={team}
-            members={getDemoMembers(team.id)}
+            members={members}
             currency={currency}
             language={language}
             onBack={handleBack}
             onSave={(input) => {
-                addDemoTeamExpense({ teamId: team.id, ...input });
-                router.replace({ pathname: '/teams/[teamId]/expenses' as never, params: { teamId: team.id } });
+                void teamDataSource
+                    .addExpense({ teamId: team.id, ...input })
+                    .then(() => {
+                        router.replace({
+                            pathname: '/teams/[teamId]/expenses' as never,
+                            params: { teamId: team.id },
+                        });
+                    });
             }}
         />
     );

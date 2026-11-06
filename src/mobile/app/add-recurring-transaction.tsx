@@ -14,16 +14,11 @@ import {
     type SelectOption,
 } from '@/components/transactions/TransactionsScreens';
 import { categoryIconName } from '@/components/transactions/categoryPresentation';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import {
-    DEMO_RECURRING_DRAFT,
-    DEMO_RECURRING_SCHEDULES,
-} from '@/constants/recurringDemo';
+import { budgetDataSource, isDemoMode, recurringDataSource } from '@/contracts';
 import {
     transactionColors,
     transactionTypography,
 } from '@/constants/transactionsTheme';
-import { DEMO_BUDGETS } from '@/constants/transactionsDemo';
 import { useLocale } from '@/contexts/LocaleContext';
 import { SYSTEM_CATEGORIES, systemCategoryLabel } from '@/localization/systemCategories';
 import type {
@@ -31,10 +26,11 @@ import type {
     RecurringEndCondition,
     RecurringFrequency,
     RecurringRecordingPreference,
+    RecurringSchedule,
 } from '@/types/recurring';
 import { currencySymbol } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -113,31 +109,23 @@ const repeatDayOptions = (frequency: RecurringFrequency): SelectOption[] => {
  * @param {string|undefined} editId The edit id, when present.
  * @returns {RecurringDraft} The initial form draft.
  */
-const buildInitialDraft = (editId?: string): RecurringDraft => {
-    if (editId) {
-        const schedule = DEMO_RECURRING_SCHEDULES.find((item) => item.id === editId);
-        if (schedule) {
-            return {
-                type: schedule.type,
-                name: schedule.name,
-                amountMode: schedule.amount ? 'FIXED' : 'VARIABLE',
-                amount: schedule.amount ?? '',
-                estimatedAmount: schedule.estimatedAmount ?? '',
-                categoryId: schedule.categoryId,
-                frequency: schedule.frequency,
-                startDate: schedule.startDate,
-                repeatDay: schedule.repeatDay,
-                endCondition: schedule.endCondition,
-                endDate: schedule.endDate ?? '',
-                endOccurrences: schedule.endOccurrences?.toString() ?? '',
-                recordingPreference: schedule.recordingPreference,
-                budgetId: schedule.budgetId ?? null,
-                description: schedule.description ?? '',
-            };
-        }
-    }
-    return DEMO_RECURRING_DRAFT;
-};
+const scheduleToDraft = (schedule: RecurringSchedule): RecurringDraft => ({
+    type: schedule.type,
+    name: schedule.name,
+    amountMode: schedule.amount ? 'FIXED' : 'VARIABLE',
+    amount: schedule.amount ?? '',
+    estimatedAmount: schedule.estimatedAmount ?? '',
+    categoryId: schedule.categoryId,
+    frequency: schedule.frequency,
+    startDate: schedule.startDate,
+    repeatDay: schedule.repeatDay,
+    endCondition: schedule.endCondition,
+    endDate: schedule.endDate ?? '',
+    endOccurrences: schedule.endOccurrences?.toString() ?? '',
+    recordingPreference: schedule.recordingPreference,
+    budgetId: schedule.budgetId ?? null,
+    description: schedule.description ?? '',
+});
 
 /**
  * Render the Add/Edit Recurring Transaction route.
@@ -151,7 +139,7 @@ const AddRecurringTransactionRoute = () => {
     const editId = params.id;
     const isEdit = Boolean(editId);
 
-    const [draft, setDraft] = useState<RecurringDraft>(() => buildInitialDraft(editId));
+    const [draft, setDraft] = useState<RecurringDraft>(() => recurringDataSource.defaultDraft());
     const [previewMessage, setPreviewMessage] = useState<string | null>(null);
     const [selector, setSelector] = useState<'category' | 'frequency' | 'end' | 'repeatDay' | 'budget' | null>(null);
     const [dateField, setDateField] = useState<'start' | 'end' | null>(null);
@@ -165,15 +153,43 @@ const AddRecurringTransactionRoute = () => {
             })),
         [draft.type, language],
     );
-    const budgetOptions: SelectOption[] = useMemo(
-        () =>
-            DEMO_BUDGETS.map((budget) => ({
-                id: budget.id,
-                label: budget.category?.name ?? 'Budget',
-                iconName: categoryIconName(budget.category, 'expense'),
-            })),
-        [],
-    );
+    const [budgetOptions, setBudgetOptions] = useState<SelectOption[]>([]);
+
+    useEffect(() => {
+        if (!editId) return;
+        let active = true;
+        recurringDataSource
+            .get(editId)
+            .then((schedule) => {
+                if (active && schedule) setDraft(scheduleToDraft(schedule));
+            })
+            .catch(() => undefined);
+        return () => {
+            active = false;
+        };
+    }, [editId]);
+
+    useEffect(() => {
+        let active = true;
+        budgetDataSource
+            .list()
+            .then((budgets) => {
+                if (!active) return;
+                setBudgetOptions(
+                    budgets.map((budget) => ({
+                        id: budget.id,
+                        label: budget.category?.name ?? 'Budget',
+                        iconName: categoryIconName(budget.category, 'expense'),
+                    })),
+                );
+            })
+            .catch(() => {
+                if (active) setBudgetOptions([]);
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
     const frequencyOptions = FREQUENCY_OPTIONS;
     const endOptions = END_OPTIONS;
     const repeatOptions = repeatDayOptions(draft.frequency);
@@ -184,7 +200,7 @@ const AddRecurringTransactionRoute = () => {
 
     const save = () => {
         setPreviewMessage(
-            DEMO_MODE
+            isDemoMode
                 ? 'UI preview only — this recurring schedule was not saved.'
                 : 'Recurring scheduling is not available yet.',
         );

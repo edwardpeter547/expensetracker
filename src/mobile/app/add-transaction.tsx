@@ -8,7 +8,6 @@
  */
 
 import { normalizeApiError } from '@/api/errors';
-import { createTransaction } from '@/api/transactions';
 import {
     categoryIconName,
 } from '@/components/transactions/categoryPresentation';
@@ -24,12 +23,7 @@ import ReceiptReviewModal from '@/components/receipts/ReceiptReviewModal';
 import ReceiptScannerModal from '@/components/receipts/ReceiptScannerModal';
 import ReceiptScanPreviewModal from '@/components/receipts/ReceiptScanPreviewModal';
 import ReceiptUploadModal from '@/components/receipts/ReceiptUploadModal';
-import { DEMO_MODE } from '@/constants/dashboardDemo';
-import {
-    addDemoTransaction,
-    getDemoTransaction,
-    updateDemoTransaction,
-} from '@/constants/transactionsDemo';
+import { isDemoMode, transactionDataSource } from '@/contracts';
 import { PREVIEW_SCAN_RESULT } from '@/constants/receiptPreviewFixtures';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTransactionFormOptions } from '@/hooks/useTransactionFormOptions';
@@ -39,6 +33,7 @@ import type {
     Category,
     MerchantDetails,
     PurchasedItem,
+    TransactionRecord,
     TransactionType,
 } from '@/types/transaction';
 import type {
@@ -53,7 +48,7 @@ import {
     validateTransactionForm,
 } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Convert a local `YYYY-MM-DD` string into an ISO instant.
@@ -135,11 +130,9 @@ const AddTransactionRoute = () => {
     const { language, currency } = useLocale();
     const params = useLocalSearchParams<{ id?: string; focus?: string }>();
     const editId = params.id;
-    const editTransaction = DEMO_MODE && editId ? getDemoTransaction(editId) : null;
     const { categories, budgets, loading, error, reload } = useTransactionFormOptions();
-    const [kind, setKind] = useState<TransactionKind>(
-        editTransaction?.transType === 'INCOME' ? 'income' : 'expense',
-    );
+    const [editTransaction, setEditTransaction] = useState<TransactionRecord | null>(null);
+    const [kind, setKind] = useState<TransactionKind>('expense');
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
@@ -159,12 +152,31 @@ const AddTransactionRoute = () => {
     const [recognitionState, setRecognitionState] = useState<ReceiptRecognitionState>({
         status: 'idle',
     });
-    const [merchant, setMerchant] = useState<MerchantDetails>(
-        () => editTransaction?.merchant ?? {},
-    );
-    const [items, setItems] = useState<PurchasedItem[]>(
-        () => editTransaction?.items ?? [],
-    );
+    const [merchant, setMerchant] = useState<MerchantDetails>({});
+    const [items, setItems] = useState<PurchasedItem[]>([]);
+
+    useEffect(() => {
+        if (!editId) return;
+        let active = true;
+        transactionDataSource
+            .get(editId)
+            .then((record) => {
+                if (active) setEditTransaction(record);
+            })
+            .catch(() => {
+                if (active) setEditTransaction(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, [editId]);
+
+    useEffect(() => {
+        if (!editTransaction) return;
+        setKind(editTransaction.transType === 'INCOME' ? 'income' : 'expense');
+        setMerchant(editTransaction.merchant ?? {});
+        setItems(editTransaction.items ?? []);
+    }, [editTransaction]);
 
     const categoryOptions = useMemo(
         () =>
@@ -286,49 +298,30 @@ const AddTransactionRoute = () => {
             return;
         }
 
-        if (editId && !DEMO_MODE) {
-            setFormError('Editing is UI-only and unavailable without demo mode.');
-            return;
-        }
-
         setSaving(true);
         try {
             const dateISO = localDateToISO(draft.date);
-            if (DEMO_MODE) {
-                if (editId) {
-                    updateDemoTransaction(editId, {
-                        amount: draft.amount,
-                        transType: type,
-                        category: category.name,
-                        categoryId: category.id,
-                        description: draft.description.trim() || null,
-                        transactionDate: dateISO,
-                        merchant: draft.merchant ?? merchant,
-                        items: draft.items ?? items,
-                    });
-                    router.back();
-                    return;
-                }
-                addDemoTransaction({
+            if (editId) {
+                await transactionDataSource.update(editId, {
+                    amount: draft.amount,
+                    transType: type,
+                    category: category.name,
+                    categoryId: category.id,
+                    description: draft.description.trim() || null,
+                    transactionDate: dateISO,
+                    merchant: draft.merchant ?? merchant,
+                    items: draft.items ?? items,
+                });
+            } else {
+                await transactionDataSource.create({
                     amount: draft.amount,
                     type,
-                    category,
-                    date: dateISO,
-                    currency,
+                    category: category.name,
+                    categoryId: category.id,
                     description: draft.description.trim() || undefined,
+                    date: dateISO,
                 });
-                router.back();
-                return;
             }
-
-            await createTransaction({
-                amount: draft.amount,
-                type,
-                category: category.name,
-                categoryId: category.id,
-                description: draft.description.trim() || undefined,
-                date: dateISO,
-            });
             router.back();
         } catch (cause) {
             setFormError(normalizeApiError(cause).message);
@@ -340,6 +333,7 @@ const AddTransactionRoute = () => {
     return (
         <>
             <AddTransactionScreen
+                key={editTransaction?.id ?? 'create'}
                 categories={categoryOptions}
                 budgets={budgetOptions}
                 currencySymbol={currencySymbol(language, currency)}
@@ -404,7 +398,7 @@ const AddTransactionRoute = () => {
             />
             <ReceiptUploadModal
                 visible={uploadOpen}
-                demoMode={DEMO_MODE}
+                demoMode={isDemoMode}
                 selectedFile={receipt.file?.source === 'upload' ? receipt.file : null}
                 errorKind={uploadError}
                 onClose={() => setUploadOpen(false)}

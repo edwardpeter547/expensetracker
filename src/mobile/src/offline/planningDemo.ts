@@ -7,101 +7,18 @@
  * support in-memory demo interactions without touching the live backend.
  */
 
-import type { PlanningIconSource } from '@/components/planning/planningTheme';
-
-/** A category budget card in the Planning workspace. */
-export interface PlanningBudget {
-    id: string;
-    name: string;
-    /** Amount spent in the current period. */
-    spent: number;
-    /** Budget limit for the current period. */
-    limit: number;
-    icon: PlanningIconSource;
-    color: string;
-    bg: string;
-}
-
-/** A personal savings goal in the Planning workspace. */
-export interface PlanningGoal {
-    id: string;
-    name: string;
-    saved: number;
-    target: number;
-    icon: PlanningIconSource;
-    color: string;
-    bg: string;
-    /** Human-readable target date. */
-    date: string;
-}
-
-/** The three supported planned-expense statuses. */
-export type PlannedExpenseStatus = 'Upcoming' | 'Saving' | 'Completed';
-
-/** A future financial commitment shown on the Planned Expenses screen. */
-export interface PlannedExpense {
-    id: string;
-    name: string;
-    amount: number;
-    date: string;
-    status: PlannedExpenseStatus;
-    icon: PlanningIconSource;
-    color: string;
-    bg: string;
-}
-
-/** A tool entry rendered in the Planning dashboard grid. */
-export interface PlanningTool {
-    key: string;
-    name: string;
-    desc: string;
-    icon: PlanningIconSource;
-    color: string;
-    bg: string;
-}
-
-/** A category breakdown row on the Insights screen. */
-export interface PlanningInsightCategory {
-    name: string;
-    amount: number;
-    /** Share of total spending, expressed as a whole-number percentage. */
-    pct: number;
-    color: string;
-    icon: PlanningIconSource;
-}
-
-/** A projected cash movement on the Cash Flow screen. */
-export interface PlanningCashMovement {
-    name: string;
-    date: string;
-    /** Signed amount; positive is an inflow, negative an outflow. */
-    amount: number;
-    icon: PlanningIconSource;
-    color: string;
-    bg: string;
-}
-
-/** An intended monthly allocation on the Monthly Plan screen. */
-export interface PlanningAllocation {
-    name: string;
-    amount: number;
-    icon: PlanningIconSource;
-    color: string;
-    bg: string;
-}
-
-/** Planning dashboard reporting periods. */
-export type PlanningPeriodKey = 'month' | 'last' | 'year';
-
-/** Period-dependent figures shown on the Planning dashboard. */
-export interface PlanningPeriodSummary {
-    budget: number;
-    spent: number;
-    saved: number;
-    goal: number;
-    /** Whole-number percentage change versus the previous period. */
-    change: number;
-}
+import type {
+    PlannedExpense,
+    PlanningAllocation,
+    PlanningBudget,
+    PlanningCashFlowSeries,
+    PlanningCashMovement,
+    PlanningGoal,
+    PlanningInsightCategory,
+    PlanningPeriodKey,
+    PlanningPeriodSummary,
+    PlanningTool,
+} from '@/types/planning';
 
 /** The six approved Planning tools, in dashboard order. */
 export const PLANNING_TOOLS: readonly PlanningTool[] = [
@@ -151,15 +68,6 @@ export const PLANNING_DEMO_CASH_MOVEMENTS: PlanningCashMovement[] = [
     { name: 'Internet & Utilities', date: 'Nov 8', amount: -145, icon: 'wifi', color: '#9D67E6', bg: '#F3EBFE' },
     { name: 'Subscriptions', date: 'Nov 15', amount: -42, icon: 'repeat', color: '#F3A046', bg: '#FFF0DF' },
 ];
-
-/** Income/expense series for the Cash Flow forecast chart. */
-export interface PlanningCashFlowSeries {
-    labels: string[];
-    /** Cumulative income totals across the month. */
-    income: number[];
-    /** Cumulative expense totals across the month. */
-    expense: number[];
-}
 
 /** Illustrative cumulative income/expense trend for the forecast chart. */
 export const PLANNING_DEMO_CASH_FLOW_SERIES: PlanningCashFlowSeries = {
