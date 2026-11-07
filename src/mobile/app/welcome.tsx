@@ -1,4 +1,3 @@
-import AuditWalletMark from '@/components/ui/AuditWalletMark';
 import WelcomeLandscape from '@/components/ui/WelcomeLandscape';
 import { spacing } from '@/constants/designTokens';
 import useStyles from '@/hooks/useStyles';
@@ -34,7 +33,12 @@ const WelcomeScreen = () => {
         bounces={false}
       >
         <View style={styles.brand}>
-          <AuditWalletMark size={76} variant="navy" />
+          <Image
+            source={require('../assets/images/splash-icon.png')}
+            accessibilityLabel="AuditWallet"
+            resizeMode="contain"
+            style={{ width: 76, height: 76 }}
+          />
           <Image
             source={require('../assets/images/AuditWallet_wordmark_split_light.png')}
             accessibilityLabel="AuditWallet"

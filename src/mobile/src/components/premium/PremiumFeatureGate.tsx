@@ -14,6 +14,7 @@ import type { FeatureKey, GatePresentation } from '@/types/featureAccess';
 import { Ionicons } from '@expo/vector-icons';
 import {
     Alert,
+    Image,
     Linking,
     Pressable,
     ScrollView,
@@ -83,61 +84,66 @@ const PremiumFeatureGate = ({
     };
 
     return (
-        <ScrollView
-            style={[styles.screen, !isFull && styles.compactScreen]}
-            contentContainerStyle={[
-                styles.container,
-                !isFull && styles.compactContainer,
-            ]}
-            showsVerticalScrollIndicator={false}
-        >
-            {isFull ? (
-                <View style={styles.header}>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Close"
-                        onPress={onDismiss}
-                        style={styles.close}
-                    >
-                        <Ionicons name="close" size={24} color={premiumColors.text} />
-                    </Pressable>
-                    <View style={styles.brand}>
-                        <View style={styles.logo}>
-                            <Ionicons name="leaf" size={18} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.brandText}>AuditWallet</Text>
-                    </View>
-                    <Text style={styles.pill}>PREMIUM ACCESS</Text>
-                </View>
-            ) : (
-                <View style={styles.compactEyebrow}>
-                    <Ionicons name="lock-closed" size={13} color={premiumColors.emerald} />
-                    <Text style={styles.compactEyebrowText}>PREMIUM FEATURE</Text>
-                </View>
-            )}
-
-            <View style={[styles.body, !isFull && styles.compactBody]}>
-                {isFull ? <PremiumIllustration /> : null}
-
-                <View style={styles.sparkle}>
-                    <Text style={styles.sparkleText}>✦  UNLOCK MORE WITH PREMIUM</Text>
-                </View>
-
-                <Text style={styles.title}>{content.headline}</Text>
-                <Text style={styles.description}>{content.description}</Text>
-
-                <View style={styles.benefits}>
-                    <Text style={styles.benefitTitle}>What you&apos;ll unlock</Text>
-                    {content.benefits.map((benefit) => (
-                        <View key={benefit} style={styles.benefitRow}>
-                            <View style={styles.tick}>
-                                <Ionicons name="checkmark" size={15} color={premiumColors.emerald} />
+        <View style={styles.screen}>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+            >
+                {isFull ? (
+                    <View style={styles.header}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Close"
+                            onPress={onDismiss}
+                            style={styles.close}
+                        >
+                            <Ionicons name="close" size={24} color={premiumColors.text} />
+                        </Pressable>
+                        <View style={styles.brand}>
+                            <View style={styles.logo}>
+                                <Image
+                                    source={require('../../../assets/images/favicon.png')}
+                                    resizeMode="contain"
+                                    style={{ width: 18, height: 18 }}
+                                />
                             </View>
-                            <Text style={styles.benefitText}>{benefit}</Text>
+                            <Text style={styles.brandText}>AuditWallet</Text>
                         </View>
-                    ))}
-                </View>
+                        <Text style={styles.pill}>PREMIUM ACCESS</Text>
+                    </View>
+                ) : (
+                    <View style={styles.compactEyebrow}>
+                        <Ionicons name="lock-closed" size={13} color={premiumColors.emerald} />
+                        <Text style={styles.compactEyebrowText}>PREMIUM FEATURE</Text>
+                    </View>
+                )}
 
+                <View style={[styles.body, !isFull && styles.compactBody]}>
+                    {isFull ? <PremiumIllustration /> : null}
+
+                    <View style={styles.sparkle}>
+                        <Text style={styles.sparkleText}>✦  UNLOCK MORE WITH PREMIUM</Text>
+                    </View>
+
+                    <Text style={styles.title}>{content.headline}</Text>
+                    <Text style={styles.description}>{content.description}</Text>
+
+                    <View style={styles.benefits}>
+                        <Text style={styles.benefitTitle}>What you&apos;ll unlock</Text>
+                        {content.benefits.map((benefit) => (
+                            <View key={benefit} style={styles.benefitRow}>
+                                <View style={styles.tick}>
+                                    <Ionicons name="checkmark" size={15} color={premiumColors.emerald} />
+                                </View>
+                                <Text style={styles.benefitText}>{benefit}</Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+            </ScrollView>
+
+            <View style={styles.footer}>
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Explore Premium Plans"
@@ -173,7 +179,7 @@ const PremiumFeatureGate = ({
                     </Pressable>
                 ) : null}
             </View>
-        </ScrollView>
+        </View>
     );
 };
 
@@ -183,14 +189,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: premiumColors.background,
     },
-    compactScreen: {
-        flexGrow: 0,
+    scroll: {
+        flex: 1,
     },
-    container: {
-        flexGrow: 1,
-    },
-    compactContainer: {
-        flexGrow: 1,
+    content: {
+        paddingBottom: 20,
     },
     header: {
         paddingHorizontal: 18,
@@ -260,6 +263,14 @@ const styles = StyleSheet.create({
     compactBody: {
         padding: 18,
         gap: 12,
+    },
+    footer: {
+        paddingHorizontal: 24,
+        paddingTop: 12,
+        paddingBottom: 12,
+        borderTopWidth: 1,
+        borderTopColor: premiumColors.border,
+        backgroundColor: premiumColors.background,
     },
     sparkle: {
         paddingHorizontal: 13,
@@ -348,6 +359,7 @@ const styles = StyleSheet.create({
     },
     dismiss: {
         padding: 12,
+        alignItems: 'center',
     },
     dismissText: {
         fontSize: 14,

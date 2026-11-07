@@ -1,4 +1,3 @@
-import AuditWalletMark from '@/components/ui/AuditWalletMark';
 import { Image, StyleSheet, View } from 'react-native';
 
 /**
@@ -10,7 +9,12 @@ import { Image, StyleSheet, View } from 'react-native';
 const AuthBrandHeader = () => (
   <View style={styles.card}>
     <View style={styles.icon}>
-      <AuditWalletMark size={26} variant="mark-white" />
+      <Image
+        source={require('../../../assets/images/favicon.png')}
+        accessibilityLabel="AuditWallet"
+        resizeMode="contain"
+        style={{ width: 26, height: 26 }}
+      />
     </View>
     <Image
       source={require('../../../assets/images/AuditWallet_wordmark_split_dark.png')}
