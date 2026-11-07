@@ -32,8 +32,8 @@ import {
     useState,
     type ReactNode,
 } from 'react';
-import { Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Development-only mock entitlement map. Replace with a server adapter. */
 const DEMO_ENTITLEMENTS: Record<FeatureKey, FeatureAccessStatus> = {
@@ -250,6 +250,10 @@ export const FeatureAccessProvider = ({
         await adapter?.refresh?.();
     }, [adapter]);
 
+    const insets = useSafeAreaInsets();
+    const isFullScreen = !(modal?.kind === 'gate' && modal.presentation === 'compact');
+    const topPadding = Platform.OS === 'ios' && isFullScreen ? insets.top : 0;
+
     const value = useMemo<FeatureAccessContextValue>(
         () => ({
             getAccess: resolveAccess,
@@ -266,36 +270,63 @@ export const FeatureAccessProvider = ({
             {children}
             <Modal
                 visible={modal !== null}
+                transparent
                 animationType="slide"
-                presentationStyle={
-                    modal?.kind === 'gate' && modal.presentation === 'compact'
-                        ? 'pageSheet'
-                        : 'fullScreen'
-                }
                 onRequestClose={closeModal}
             >
-                <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-                    {modal?.kind === 'gate' ? (
-                        <PremiumFeatureGate
-                            feature={modal.featureId}
-                            presentation={modal.presentation}
-                            onDismiss={closeModal}
+                {modal?.kind === 'gate' ? (
+                    <View style={styles.overlay}>
+                        <Pressable
+                            style={StyleSheet.absoluteFill}
+                            onPress={closeModal}
+                            accessibilityRole="button"
+                            accessibilityLabel="Dismiss upgrade"
                         />
-                    ) : null}
-                    {modal?.kind === 'loading' ? (
-                        <FeatureAccessLoading onBack={closeModal} />
-                    ) : null}
-                    {modal?.kind === 'unknown' ? (
-                        <FeatureAccessUnavailable
-                            onRetry={retryUnknown}
-                            onBack={closeModal}
-                        />
-                    ) : null}
-                </SafeAreaView>
+                        <View style={[styles.sheet, { paddingBottom: insets.bottom }]}>
+                            <PremiumFeatureGate
+                                feature={modal.featureId}
+                                presentation={modal.presentation}
+                                onDismiss={closeModal}
+                            />
+                        </View>
+                    </View>
+                ) : (
+                    <View style={[styles.fullScreen, { paddingTop: topPadding, paddingBottom: insets.bottom }]}>
+                        {modal?.kind === 'loading' ? (
+                            <FeatureAccessLoading onBack={closeModal} />
+                        ) : null}
+                        {modal?.kind === 'unknown' ? (
+                            <FeatureAccessUnavailable
+                                onRetry={retryUnknown}
+                                onBack={closeModal}
+                            />
+                        ) : null}
+                    </View>
+                )}
             </Modal>
         </FeatureAccessContext.Provider>
     );
 };
+
+/** Upgrade modal layout styles. */
+const styles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(8, 16, 38, 0.45)',
+    },
+    sheet: {
+        height: '72%',
+        backgroundColor: '#F7F8F6',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        overflow: 'hidden',
+    },
+    fullScreen: {
+        flex: 1,
+        backgroundColor: '#F7F8F6',
+    },
+});
 
 /**
  * Consume the feature-access context.

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';
 import {
+    Alert,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -103,9 +104,11 @@ const AiChatScreen = ({ onClose }: AiChatScreenProps) => {
     const insets = useSafeAreaInsets();
     const [messages, setMessages] = useState<AiChatMessage[]>([INITIAL_MESSAGE]);
     const [draft, setDraft] = useState('');
+    const [focused, setFocused] = useState(false);
     const scrollRef = useRef<ScrollView>(null);
     const canSend = draft.trim().length > 0;
     const hasUserMessage = messages.some((message) => message.role === 'user');
+    const keyboardVerticalOffset = Platform.OS === 'ios' ? insets.top + 68 : 0;
 
     /**
      * Append the current draft as a user message and clear the composer.
@@ -118,6 +121,28 @@ const AiChatScreen = ({ onClose }: AiChatScreenProps) => {
             { id: `user-${Date.now()}`, role: 'user', text },
         ]);
         setDraft('');
+    };
+
+    /**
+     * Placeholder for image/file attachment until the media picker modules and
+     * the AI backend are connected.
+     */
+    const handleAttach = () => {
+        Alert.alert(
+            'Attachments',
+            'Image and file upload will be available once the media picker modules are connected.',
+        );
+    };
+
+    /**
+     * Placeholder for voice recording until the audio module and the AI
+     * backend are connected.
+     */
+    const handleRecord = () => {
+        Alert.alert(
+            'Voice recording',
+            'Voice recording will be available once the audio module is connected.',
+        );
     };
 
     return (
@@ -151,7 +176,8 @@ const AiChatScreen = ({ onClose }: AiChatScreenProps) => {
 
             <KeyboardAvoidingView
                 style={styles.body}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={keyboardVerticalOffset}
             >
                 <ScrollView
                     ref={scrollRef}
@@ -171,25 +197,56 @@ const AiChatScreen = ({ onClose }: AiChatScreenProps) => {
                     )}
                 </ScrollView>
 
-                <View style={styles.composer}>
-                    <TextInput
-                        style={styles.input}
-                        value={draft}
-                        onChangeText={setDraft}
-                        placeholder="Ask about your money…"
-                        placeholderTextColor={C.muted}
-                        accessibilityLabel="Message the AI assistant"
-                        multiline
-                    />
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Send message"
-                        onPress={send}
-                        disabled={!canSend}
-                        style={[styles.send, !canSend && styles.sendDisabled]}
-                    >
-                        <Ionicons name="arrow-up" size={22} color={C.white} />
-                    </Pressable>
+                <View style={styles.composerShell}>
+                    <View style={[styles.composerCard, focused && styles.composerCardFocused]}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Attach image or file"
+                            onPress={handleAttach}
+                            style={styles.composerAction}
+                        >
+                            <Ionicons name="add" size={22} color={C.green} />
+                        </Pressable>
+
+                        <TextInput
+                            style={styles.input}
+                            value={draft}
+                            onChangeText={setDraft}
+                            onFocus={() => setFocused(true)}
+                            onBlur={() => setFocused(false)}
+                            placeholder="Ask about your money…"
+                            placeholderTextColor={C.muted}
+                            accessibilityLabel="Message the AI assistant"
+                            multiline
+                        />
+
+                        {canSend ? (
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Send message"
+                                onPress={send}
+                                style={styles.send}
+                            >
+                                <LinearGradient
+                                    colors={[C.green, C.greenBright]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.sendGradient}
+                                >
+                                    <Ionicons name="arrow-up" size={22} color={C.white} />
+                                </LinearGradient>
+                            </Pressable>
+                        ) : (
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Record audio"
+                                onPress={handleRecord}
+                                style={styles.composerAction}
+                            >
+                                <Ionicons name="mic-outline" size={20} color={C.green} />
+                            </Pressable>
+                        )}
+                    </View>
                 </View>
                 <Text style={styles.note}>
                     {hasUserMessage
@@ -299,37 +356,60 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         color: C.white,
     },
-    composer: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        gap: 10,
+    composerShell: {
         paddingHorizontal: 16,
         paddingTop: 10,
     },
-    input: {
-        flex: 1,
-        minHeight: 46,
-        maxHeight: 120,
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: C.border,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+    composerCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        padding: 5,
+        borderRadius: 28,
         backgroundColor: C.white,
-        color: C.ink,
-        fontSize: 15,
-        textAlignVertical: 'center',
+        borderWidth: 1.5,
+        borderColor: C.border,
+        shadowColor: '#0B1F33',
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
     },
-    send: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
+    composerCardFocused: {
+        borderColor: C.green,
+    },
+    composerAction: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: C.green,
+        backgroundColor: '#E5F7ED',
     },
-    sendDisabled: {
-        opacity: 0.4,
+    input: {
+        flex: 1,
+        minHeight: 42,
+        maxHeight: 120,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        color: C.ink,
+        fontSize: 15,
+    },
+    send: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        overflow: 'hidden',
+        shadowColor: C.green,
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+    },
+    sendGradient: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     note: {
         textAlign: 'center',
