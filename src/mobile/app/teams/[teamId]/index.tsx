@@ -10,8 +10,8 @@ import TeamWorkspaceScreen from '@/components/teams/TeamWorkspaceScreen';
 import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team } from '@/types/team';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 
 /** Finance tool keys that map to the generic team finance route. */
 const FINANCE_KEYS = ['budgets', 'goals', 'insights', 'monthly-plan', 'cash-flow'];
@@ -29,7 +29,7 @@ const TeamWorkspaceRoute = () => {
     const [messageCount, setMessageCount] = useState(0);
     const [activityCount, setActivityCount] = useState(0);
 
-    useEffect(() => {
+    const load = useCallback(() => {
         let active = true;
         teamDataSource
             .get(teamId)
@@ -55,6 +55,8 @@ const TeamWorkspaceRoute = () => {
             active = false;
         };
     }, [teamId]);
+
+    useFocusEffect(load);
 
     const handleBack = () => {
         if (router.canGoBack()) {
@@ -122,6 +124,17 @@ const TeamWorkspaceRoute = () => {
                     params: { teamId: team.id },
                 })
             }
+            onSettings={() =>
+                router.push({
+                    pathname: '/teams/[teamId]/settings' as never,
+                    params: { teamId: team.id },
+                })
+            }
+            onRestore={() => {
+                void teamDataSource.restore(team.id).then(() => {
+                    router.replace('/(tabs)/goals');
+                });
+            }}
         />
     );
 };

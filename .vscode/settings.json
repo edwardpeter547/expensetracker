@@ -5,7 +5,16 @@
         "**/.hg": true,
         "**/.jj": true,
         "**/.DS_Store": true,
-        "**/Thumbs.db": true
+        "**/Thumbs.db": true,
+        "[!s]*/**": true,
+        "s[!r]*/**": true,
+        "sr[!c]*/**": true,
+        "src/[!m]*/**": true,
+        "src/m[!o]*/**": true,
+        "src/mo[!b]*/**": true,
+        "src/mob[!i]*/**": true,
+        "src/mobi[!l]*/**": true,
+        "src/mobil[!e]*/**": true
     },
     "editor.codeActionsOnSave": {
         "source.organizeImports": "never",
