@@ -16,6 +16,11 @@ tasks:
     cmds:
       - cd "{{.ROOT_DIR}}/src/mobile" && npm run test:typecheck
 
+  test:components:
+    desc: Run mobile Jest component tests
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run test:components
+
   backend:check:
     desc: Run backend quality checks
     deps:
@@ -30,6 +35,7 @@ tasks:
       - lint
       - test:mobile
       - test:typecheck
+      - test:components
 
   check:
     desc: Run backend + mobile quality checks

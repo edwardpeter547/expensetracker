@@ -41,6 +41,7 @@ tasks:
       - cd "{{.ROOT_DIR}}/src/mobile" && npm run lint
       - cd "{{.ROOT_DIR}}/src/mobile" && npm run test:typecheck
       - cd "{{.ROOT_DIR}}/src/mobile" && npm test
+      - cd "{{.ROOT_DIR}}/src/mobile" && npm run test:components
 
   ci:python:
     desc: Run Python ticket tooling validation for CI
