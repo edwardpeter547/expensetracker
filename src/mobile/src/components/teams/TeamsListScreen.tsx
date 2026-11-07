@@ -28,6 +28,7 @@ export interface TeamsListScreenProps {
     onBack: () => void;
     onCreate: () => void;
     onOpenTeam: (teamId: string) => void;
+    onRestoreTeam: (teamId: string) => void;
 }
 
 /**
@@ -43,12 +44,17 @@ const TeamsListScreen = ({
     onBack,
     onCreate,
     onOpenTeam,
-}: TeamsListScreenProps) => (
-    <PlanningScreen
-        title="Teams"
-        subtitle="Your shared financial spaces"
-        onBack={onBack}
-    >
+    onRestoreTeam,
+}: TeamsListScreenProps) => {
+    const activeTeams = teams.filter((team) => team.status !== 'archived');
+    const archivedTeams = teams.filter((team) => team.status === 'archived');
+
+    return (
+        <PlanningScreen
+            title="Teams"
+            subtitle="Your shared financial spaces"
+            onBack={onBack}
+        >
         <TeamCard>
             <Text style={planningStyles.muted}>Your Shared Spaces</Text>
             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
@@ -65,7 +71,7 @@ const TeamsListScreen = ({
 
         <TeamSectionHeading title="My Teams" subtitle="Tap a team to open its workspace" />
 
-        {teams.length === 0 ? (
+        {activeTeams.length === 0 ? (
             <TeamCard>
                 <Text style={planningStyles.body}>No teams yet.</Text>
                 <Text style={planningStyles.muted}>
@@ -73,7 +79,7 @@ const TeamsListScreen = ({
                 </Text>
             </TeamCard>
         ) : (
-            teams.map((team) => {
+            activeTeams.map((team) => {
                 const progress = team.budgetTarget > 0
                     ? Math.round((team.spent / team.budgetTarget) * 100)
                     : 0;
@@ -122,6 +128,39 @@ const TeamsListScreen = ({
             })
         )}
 
+        {archivedTeams.length > 0 ? (
+            <>
+                <TeamSectionHeading
+                    title="Archived"
+                    subtitle="Archived teams keep their history"
+                />
+                {archivedTeams.map((team) => (
+                    <TeamCard key={team.id}>
+                        <View style={[planningStyles.row, { gap: 12 }]}>
+                            <PlanningIconTile
+                                icon={teamKindIcon(team.kind)}
+                                color={planningColors.muted}
+                                bg="#F0F3F8"
+                                size={42}
+                            />
+                            <View style={{ flex: 1, gap: 4 }}>
+                                <Text style={planningStyles.body}>{team.name}</Text>
+                                <Text style={planningStyles.muted}>
+                                    {team.memberCount} members · {team.kind}
+                                </Text>
+                            </View>
+                            <Text style={styles.archivedBadge}>Archived</Text>
+                        </View>
+                        <PlanningButton
+                            label="Restore Team"
+                            outline
+                            onPress={() => onRestoreTeam(team.id)}
+                        />
+                    </TeamCard>
+                ))}
+            </>
+        ) : null}
+
         <TeamCard style={styles.privacyCard}>
             <PlanningIcon name="shield-check" color="#315D75" size={20} />
             <Text style={styles.privacyTitle}>Your personal finances stay private</Text>
@@ -136,7 +175,8 @@ const TeamsListScreen = ({
             Preview data only — team records are kept in memory and are not persisted.
         </Text>
     </PlanningScreen>
-);
+    );
+};
 
 /** Teams list screen styles. */
 const styles = StyleSheet.create({
@@ -157,6 +197,16 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 12,
         color: planningColors.muted,
+    },
+    archivedBadge: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#708296',
+        backgroundColor: '#F0F3F6',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 10,
+        overflow: 'hidden',
     },
 });
 

@@ -18,6 +18,9 @@ export type TeamKind = 'Family' | 'Couple' | 'Travel' | 'Other';
 /** The three member roles. */
 export type TeamRole = 'Owner' | 'Admin' | 'Member';
 
+/** Lifecycle state of a team workspace. */
+export type TeamStatus = 'active' | 'archived';
+
 /** Lifecycle states for a pooled planned-expense request. */
 export type TeamRequestStatus =
     | 'Pending'
@@ -42,6 +45,12 @@ export interface Team {
     budgetTarget: number;
     /** Recorded actual team spending. */
     spent: number;
+    /** Lifecycle state. */
+    status: TeamStatus;
+    /** ISO timestamp when the team was archived, or null while active. */
+    archivedAt?: string | null;
+    /** ISO timestamp of the last metadata change. */
+    updatedAt?: string | null;
 }
 
 /** A member of a specific team. */

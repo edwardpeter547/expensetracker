@@ -62,6 +62,12 @@ const TeamsTabScreen = () => {
             onOpenTeam={(teamId) =>
                 router.push({ pathname: '/teams/[teamId]' as never, params: { teamId } })
             }
+            onRestoreTeam={(teamId) => {
+                void teamDataSource
+                    .restore(teamId)
+                    .then(() => teamDataSource.list())
+                    .then(setTeams);
+            }}
         />
     );
 };

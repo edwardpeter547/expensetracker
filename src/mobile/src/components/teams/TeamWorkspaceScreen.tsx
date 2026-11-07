@@ -55,6 +55,8 @@ export interface TeamWorkspaceScreenProps {
     onTool: (key: string) => void;
     onInvite: () => void;
     onBreakdown: () => void;
+    onSettings: () => void;
+    onRestore: () => void;
 }
 
 /**
@@ -76,6 +78,8 @@ const TeamWorkspaceScreen = ({
     onTool,
     onInvite,
     onBreakdown,
+    onSettings,
+    onRestore,
 }: TeamWorkspaceScreenProps) => {
     const pooled = team.mode === 'POOLED';
     const progress = team.budgetTarget > 0
@@ -123,6 +127,17 @@ const TeamWorkspaceScreen = ({
                         : 'Each member keeps their own money; totals are recorded purchases.'}
                 </Text>
             </TeamCard>
+
+            {team.status === 'archived' ? (
+                <TeamCard style={styles.archivedCard}>
+                    <PlanningIcon name="archive-outline" color="#708296" size={20} />
+                    <Text style={styles.archivedTitle}>This team is archived</Text>
+                    <Text style={styles.archivedText}>
+                        Financial history is retained. Restore the team to resume working in it.
+                    </Text>
+                    <PlanningButton label="Restore Team" onPress={onRestore} />
+                </TeamCard>
+            ) : null}
 
             <View style={styles.tileRow}>
                 <ToolTile
@@ -194,6 +209,8 @@ const TeamWorkspaceScreen = ({
             </TeamCard>
 
             <PlanningButton label="Invite Team Member" outline onPress={onInvite} />
+
+            <PlanningButton label="Team Settings" outline onPress={onSettings} />
 
             <TeamCard style={styles.personalCard}>
                 <PlanningIcon name="shield-check" color="#315D75" size={20} />
@@ -323,6 +340,19 @@ const styles = StyleSheet.create({
     },
     personalCard: {
         backgroundColor: '#EAF5F9',
+    },
+    archivedCard: {
+        backgroundColor: '#F0F3F6',
+    },
+    archivedTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#4A5B6A',
+    },
+    archivedText: {
+        fontSize: 12,
+        lineHeight: 17,
+        color: '#708296',
     },
     personalTitle: {
         fontSize: 13,

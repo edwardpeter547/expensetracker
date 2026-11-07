@@ -11,7 +11,6 @@ const AuthBrandHeader = () => (
     <View style={styles.icon}>
       <Image
         source={require('../../../assets/images/favicon.png')}
-        accessibilityLabel="AuditWallet"
         resizeMode="contain"
         style={{ width: 26, height: 26 }}
       />

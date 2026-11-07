@@ -91,6 +91,15 @@ export const apiTeamDataSource: TeamDataSource = {
     addInvitation: async () => {
         throw new Error('Teams are not available yet.');
     },
+    edit: async () => {
+        throw new Error('Teams are not available yet.');
+    },
+    archive: async () => {
+        throw new Error('Teams are not available yet.');
+    },
+    restore: async () => {
+        throw new Error('Teams are not available yet.');
+    },
     addPlannedRequest: async () => {
         throw new Error('Teams are not available yet.');
     },

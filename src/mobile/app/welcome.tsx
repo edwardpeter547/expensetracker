@@ -35,7 +35,6 @@ const WelcomeScreen = () => {
         <View style={styles.brand}>
           <Image
             source={require('../assets/images/splash-icon.png')}
-            accessibilityLabel="AuditWallet"
             resizeMode="contain"
             style={{ width: 76, height: 76 }}
           />

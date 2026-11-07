@@ -125,6 +125,9 @@ export interface TeamDataSource {
         method: 'Phone' | 'Email';
         role: Exclude<TeamMember['role'], 'Owner'>;
     }): Promise<TeamInvitation>;
+    edit(id: string, input: { name?: string; kind?: TeamKind }): Promise<Team | null>;
+    archive(id: string): Promise<Team | null>;
+    restore(id: string): Promise<Team | null>;
     addPlannedRequest(input: {
         teamId: string;
         name: string;

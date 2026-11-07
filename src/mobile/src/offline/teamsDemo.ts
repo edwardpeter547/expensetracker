@@ -32,6 +32,7 @@ export const SEED_TEAMS: Team[] = [
         memberCount: 4,
         budgetTarget: 3500,
         spent: 2180,
+        status: 'active',
     },
     {
         id: 'holiday',
@@ -41,6 +42,7 @@ export const SEED_TEAMS: Team[] = [
         memberCount: 6,
         budgetTarget: 2200,
         spent: 880,
+        status: 'active',
     },
 ];
 
@@ -188,6 +190,7 @@ export const createDemoTeam = (input: {
         memberCount: 1,
         budgetTarget: 0,
         spent: 0,
+        status: 'active',
     };
     demoTeams = [...demoTeams, team];
     demoMembers = [...demoMembers, { id: `me-${team.id}`, teamId: team.id, name: 'You', role: 'Owner' }];
@@ -489,4 +492,71 @@ export const resetDemoTeams = (): void => {
     demoExpenses = [...SEED_EXPENSES];
     demoMessages = [...SEED_MESSAGES];
     demoActivity = [...SEED_ACTIVITY];
+};
+
+/**
+ * Update editable team metadata without touching the finance mode.
+ *
+ * @param {string} id The team id.
+ * @param {{name?: string, kind?: TeamKind}} input The fields to update.
+ * @returns {Team|null} The updated team, or null when not found.
+ */
+export const editDemoTeam = (
+    id: string,
+    input: { name?: string; kind?: TeamKind },
+): Team | null => {
+    let updated: Team | null = null;
+    demoTeams = demoTeams.map((team) => {
+        if (team.id !== id) return team;
+        updated = {
+            ...team,
+            name: input.name?.trim() || team.name,
+            kind: input.kind ?? team.kind,
+            updatedAt: new Date().toISOString(),
+        };
+        return updated;
+    });
+    return updated;
+};
+
+/**
+ * Soft-archive a team while retaining its financial history.
+ *
+ * @param {string} id The team id.
+ * @returns {Team|null} The archived team, or null when not found or already archived.
+ */
+export const archiveDemoTeam = (id: string): Team | null => {
+    let updated: Team | null = null;
+    demoTeams = demoTeams.map((team) => {
+        if (team.id !== id || team.status === 'archived') return team;
+        updated = {
+            ...team,
+            status: 'archived',
+            archivedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        return updated;
+    });
+    return updated;
+};
+
+/**
+ * Restore a previously archived team.
+ *
+ * @param {string} id The team id.
+ * @returns {Team|null} The restored team, or null when not found or not archived.
+ */
+export const restoreDemoTeam = (id: string): Team | null => {
+    let updated: Team | null = null;
+    demoTeams = demoTeams.map((team) => {
+        if (team.id !== id || team.status !== 'archived') return team;
+        updated = {
+            ...team,
+            status: 'active',
+            archivedAt: null,
+            updatedAt: new Date().toISOString(),
+        };
+        return updated;
+    });
+    return updated;
 };
