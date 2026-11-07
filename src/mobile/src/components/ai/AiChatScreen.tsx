@@ -9,9 +9,10 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -105,10 +106,24 @@ const AiChatScreen = ({ onClose }: AiChatScreenProps) => {
     const [messages, setMessages] = useState<AiChatMessage[]>([INITIAL_MESSAGE]);
     const [draft, setDraft] = useState('');
     const [focused, setFocused] = useState(false);
+    const [keyboardInset, setKeyboardInset] = useState(0);
     const scrollRef = useRef<ScrollView>(null);
     const canSend = draft.trim().length > 0;
     const hasUserMessage = messages.some((message) => message.role === 'user');
-    const keyboardVerticalOffset = Platform.OS === 'ios' ? insets.top + 68 : 0;
+
+    useEffect(() => {
+        if (Platform.OS !== 'ios') return;
+        const showSub = Keyboard.addListener('keyboardWillChangeFrame', (event) => {
+            setKeyboardInset(event.endCoordinates.height);
+        });
+        const hideSub = Keyboard.addListener('keyboardWillHide', () => {
+            setKeyboardInset(0);
+        });
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
 
     /**
      * Append the current draft as a user message and clear the composer.
@@ -175,9 +190,8 @@ const AiChatScreen = ({ onClose }: AiChatScreenProps) => {
             </LinearGradient>
 
             <KeyboardAvoidingView
-                style={styles.body}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={keyboardVerticalOffset}
+                style={[styles.body, { paddingBottom: keyboardInset }]}
+                behavior={Platform.OS === 'ios' ? undefined : 'height'}
             >
                 <ScrollView
                     ref={scrollRef}
