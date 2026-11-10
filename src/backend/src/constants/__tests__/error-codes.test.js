@@ -18,16 +18,31 @@ import {
 } from '../error-codes.js';
 
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
-const backendRoot = path.resolve(testDirectory, '../../..');
-const repositoryRoot = path.resolve(backendRoot, '../..');
-const mobileCataloguePath = path.join(
-    repositoryRoot,
-    'src',
-    'mobile',
-    'src',
-    'api',
-    'errors.ts',
-);
+
+/**
+ * Locate the repository root by walking up until the mobile catalogue exists.
+ *
+ * The backend suite can run from a package-only checkout (for example a
+ * container whose filesystem root is the backend `src` tree), so a fixed
+ * number of `..` segments is not portable. The search stops at the filesystem
+ * root and returns null when the mobile package is not present.
+ *
+ * @returns {string|null} The absolute mobile catalogue path, or null.
+ */
+const findMobileCatalogue = () => {
+    let directory = testDirectory;
+
+    while (true) {
+        const candidate = path.join(directory, 'src', 'mobile', 'src', 'api', 'errors.ts');
+        if (fs.existsSync(candidate)) return candidate;
+
+        const parent = path.dirname(directory);
+        if (parent === directory) return null;
+        directory = parent;
+    }
+};
+
+const mobileCataloguePath = findMobileCatalogue();
 
 /**
  * Extract the declared error-code keys from the mobile catalogue source.
@@ -94,7 +109,9 @@ describe('error-code registry', () => {
     });
 });
 
-describe('cross-platform error-code contract', () => {
+const contractDescribe = mobileCataloguePath ? describe : describe.skip;
+
+contractDescribe('cross-platform error-code contract', () => {
     /**
      * The backend registry and the mobile catalogue must list exactly the same
      * identifiers so a code emitted by the API can always be mapped by the
