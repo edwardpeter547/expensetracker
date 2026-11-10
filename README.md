@@ -152,11 +152,16 @@ cd src/mobile && npm run test:components # mobile Jest component tests
 ## Documentation
 
 - [System overview](docs/architecture/system-overview.md)
+- [Internationalisation architecture](docs/architecture/internationalisation.md)
 - [Mobile app guide](src/mobile/README.md)
 - [Mobile data layer](docs/engineering/mobile-data-layer.md)
 - [Coding standards](docs/engineering/coding-standards.md)
 - [Design principles](docs/engineering/design-principles.md)
 - [Testing strategy](docs/engineering/testing-strategy.md)
+- [Localization and currency detection](docs/engineering/localization.md)
+- [Translation developer guide](docs/engineering/translation-guide.md)
+- [Financial localisation standards](docs/engineering/financial-localisation.md)
+- [Internationalisation gap analysis](docs/audits/internationalisation-gap-analysis.md)
 - [Biometric authentication](docs/engineering/biometric-authentication.md)
 - [Premium feature gate](docs/engineering/premium-feature-gate.md)
 - [Teams UI integration](docs/engineering/teams-ui-integration.md)

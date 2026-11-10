@@ -7,6 +7,7 @@ This directory holds Architecture Decision Records (ADRs) for significant, hard-
 - [0001 — Authentication and Authorization Architecture (Epic #7)](0001-authentication-and-authorization-architecture.md) — Accepted
 - [0002 — Container-First Backend Development and CI](0002-container-first-backend-development-and-ci.md) — Proposed
 - [0003 — Independent Backend and Mobile Versioning](0003-independent-backend-and-mobile-versioning.md) — Proposed
+- [0004 — Internationalisation and Localisation Architecture](0004-internationalisation-architecture.md) — Accepted
 
 ## When to write an ADR
 

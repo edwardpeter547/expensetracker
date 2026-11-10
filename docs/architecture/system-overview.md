@@ -148,9 +148,9 @@ The Prisma schema is split across `src/backend/src/prisma/schema.prisma` (genera
 Core models:
 
 - `User` — credentials, profile fields, verification flags, preferences (`currency`, `timezone`, `language`, `theme`), and `tokenVersion` for access-token invalidation.
-- `Transaction` — `amount` (`Float`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`.
+- `Transaction` — `amount` (`Decimal`, `NUMERIC(19,4)`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`.
 - `Category` — `name`, `icon`, `isSystem`, optional `userId`.
-- `Budget` — `amount` (`Float`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
+- `Budget` — `amount` (`Decimal`, `NUMERIC(19,4)`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
 - `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken`, `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
 - `AuthAuditEvent` — persistent, secret-safe authentication audit trail (see `docs/authentication-audit-logging.md`).
 - `Notification` — defined but not yet used.
@@ -246,6 +246,7 @@ See `docs/engineering/mobile-data-layer.md` for the contracts/offline wiring.
 ## Related product documentation
 - Product domain model: `docs/architecture/product-domain-design.md`
 - Product strategy: `docs/product/` (vision, inventory, roadmap, subscription strategy).
+- Internationalisation: `docs/architecture/internationalisation.md` and `docs/decisions/0004-internationalisation-architecture.md`.
 
 ## Known risks and gaps
 These are the remaining observations after the Phase 0 stabilization pass.
