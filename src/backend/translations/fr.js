@@ -26,6 +26,7 @@ export default {
         </ul>
         <p>Si vous avez des questions, n'hésitez pas à contacter notre équipe d'assistance.</p>
     `,
+    VERIFICATION_COMPLETE_EMAIL_SUBJECT: `{{brandName}} — E-mail vérifié avec succès`,
     RESEND_VERIFICATION_EMAIL_SUBJECT: `{{brandName}} — Vérifiez votre adresse e-mail`,
     RESET_PASSWORD_EMAIL_SUBJECT: `{{brandName}} Compte : Demande de réinitialisation de mot de passe reçue`,
     RESEND_VERIFICATION_EMAIL_TEXT: `
@@ -46,6 +47,7 @@ export default {
     RESPONSE_PASSWORD_RESET_CODE_SENT: 'Le code de vérification de réinitialisation du mot de passe a été envoyé',
     RESPONSE_PASSWORD_CHANGED: 'Votre mot de passe a été mis à jour.',
     RESPONSE_LOGIN_SUCCESSFUL: 'Connexion réussie',
+    RESPONSE_LOGOUT_SUCCESSFUL: 'Déconnexion réussie',
     RESPONSE_SESSIONS_LISTED: 'Sessions récupérées avec succès',
     RESPONSE_SESSION_REVOKED: 'Session révoquée avec succès',
     RESPONSE_ALL_SESSIONS_REVOKED: 'Toutes les sessions ont été révoquées avec succès',

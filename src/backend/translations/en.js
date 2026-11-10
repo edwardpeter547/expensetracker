@@ -26,6 +26,7 @@ export default {
         </ul>
         <p>If you have any questions, feel free to reach out to our support team.</p>
     `,
+    VERIFICATION_COMPLETE_EMAIL_SUBJECT: `{{brandName}} — Email Verified Successfully`,
     RESEND_VERIFICATION_EMAIL_SUBJECT: `{{brandName}} — Verify Your Email Address`,
     RESET_PASSWORD_EMAIL_SUBJECT: `{{brandName}} Account: Password Reset Request Received`,
     RESEND_VERIFICATION_EMAIL_TEXT: `
@@ -46,6 +47,7 @@ export default {
     RESPONSE_PASSWORD_RESET_CODE_SENT: 'Password reset verification code has been sent',
     RESPONSE_PASSWORD_CHANGED: 'Your password has been updated',
     RESPONSE_LOGIN_SUCCESSFUL:  'Login successful',
+    RESPONSE_LOGOUT_SUCCESSFUL: 'Logout successful',
     RESPONSE_SESSIONS_LISTED: 'Sessions listed successfully',
     RESPONSE_SESSION_REVOKED: 'Session revoked successfully',
     RESPONSE_ALL_SESSIONS_REVOKED: 'All sessions revoked successfully',
