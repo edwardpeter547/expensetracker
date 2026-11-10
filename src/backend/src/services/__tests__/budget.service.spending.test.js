@@ -88,4 +88,26 @@ describe('budget spending aggregation', () => {
         expect(result[0].spent).toBe('0');
         expect(result[0].remaining).toBe('100');
     });
+
+    /**
+     * Monthly spending boundaries must be derived from the user's timezone and
+     * converted into UTC instants for the database query.
+     */
+    test('derives monthly spending boundaries from the user timezone', async () => {
+        aggregateSpending.mockResolvedValue({ _sum: { amount: '10' } });
+        const currentDate = new Date('2026-05-10T12:00:00.000Z');
+
+        await budgetService.getBudgetWithSpending(
+            [makeBudget()],
+            currentDate,
+            USER_ID,
+            'America/New_York',
+        );
+
+        const where = aggregateSpending.mock.calls[0][0].where;
+        expect(where.transactionDate).toEqual({
+            gte: new Date('2026-05-01T04:00:00.000Z'),
+            lt: new Date('2026-06-01T04:00:00.000Z'),
+        });
+    });
 });

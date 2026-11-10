@@ -88,6 +88,41 @@ describe('user.controller', () => {
     });
 
     /**
+     * `getDashboard` must derive the month-to-date start from the user's
+     * timezone and pass the resulting UTC instant to the summary service.
+     */
+    test('getDashboard derives the month boundary from the user timezone', async () => {
+        jest.useFakeTimers({doNotFake: ['setImmediate']});
+        jest.setSystemTime(new Date('2026-05-10T12:00:00.000Z'));
+
+        try {
+            mockProfileService.getUserSummary.mockResolvedValue({
+                currency: 'GBP',
+                balance: '0',
+                totalIncome: '0',
+                totalExpenses: '0',
+                recentTransactions: [],
+            });
+            const { json, status } = makeResponse();
+
+            await userController.getDashboard(
+                { user: { id: 1, currency: 'GBP', timezone: 'America/New_York' } },
+                { status, json },
+                jest.fn(),
+            );
+            await flushAsync();
+
+            expect(mockProfileService.getUserSummary).toHaveBeenCalledWith(
+                1,
+                new Date('2026-05-01T04:00:00.000Z'),
+                'GBP',
+            );
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    /**
      * `updateProfile` forwards the validated editable fields and returns the
      * updated DTO.
      */
