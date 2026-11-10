@@ -70,6 +70,8 @@ describe('authenticate middleware', () => {
             headers: {
                 authorization: `Bearer ${signToken({ userId: 1, email: 'a@b.c', tokenVersion: 0 })}`,
             },
+            query: {},
+            setLocale: jest.fn(),
         };
         const next = jest.fn();
 
@@ -78,6 +80,36 @@ describe('authenticate middleware', () => {
         expect(next).toHaveBeenCalledWith();
         expect(mockUserProfile).toHaveBeenCalledWith({ userId: 1 });
         expect(request.user).toEqual(expect.objectContaining({ id: 1, tokenVersion: 0 }));
+        expect(request.setLocale).toHaveBeenCalledWith('en');
+    });
+
+    /**
+     * Once the authenticated principal is attached, the request locale must be
+     * re-resolved so a stored account language overrides the pre-auth header.
+     */
+    test('re-applies the authenticated account language after authentication', async () => {
+        mockUserProfile.mockResolvedValue({
+            id: 1,
+            email: 'a@b.c',
+            isActive: true,
+            tokenVersion: 0,
+            language: 'fr',
+        });
+        const setLocale = jest.fn();
+        const request = {
+            headers: {
+                authorization: `Bearer ${signToken({ userId: 1, email: 'a@b.c', tokenVersion: 0 })}`,
+                'accept-language': 'en',
+            },
+            query: {},
+            setLocale,
+        };
+        const next = jest.fn();
+
+        await authenticate(request, {}, next);
+
+        expect(setLocale).toHaveBeenCalledWith('fr');
+        expect(next).toHaveBeenCalledWith();
     });
 
     test('rejects a missing bearer token with 401', async () => {
