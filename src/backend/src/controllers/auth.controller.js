@@ -100,7 +100,7 @@ const recordRepeatedAuthFailures = async ({user, ipAddress, correlationId}) => {
 export const register = catchAsync(async (request, response) => {
 
     const {email, username, password, firstName, lastName, language: bodyLanguage, currency} = request.body;
-    const language = bodyLanguage || request.headers['accept-language']?.split('-')[0] || Config.defaultLocale
+    const language = bodyLanguage || getAppLocale(request);
 
     let user;
     try {

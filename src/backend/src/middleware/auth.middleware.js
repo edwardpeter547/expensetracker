@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import Config from '../configurations/env.config.js';
 import { userProfile } from '../services/profile.service.js';
 import AppError from '../utils/appError.js';
+import { getAppLocale } from '../utils/helpers.js';
 import { recordAuthAuditEvent } from '../services/auth-audit.service.js';
 import { AUTH_AUDIT_EVENT_TYPES, AUTH_AUDIT_OUTCOMES, AUTH_AUDIT_REASONS } from '../constants/auth-audit.constants.js';
 
@@ -82,7 +83,9 @@ const getEstablishedRoles = (user) => {
  *
  * Decodes and verifies the JWT, loads a safe user projection, and rejects
  * missing, invalid, expired, or inactive users with a 401. On success
- * `request.user` is populated from `userProfile` (no password field).
+ * `request.user` is populated from `userProfile` (no password field) and the
+ * request locale is re-resolved so the stored account language takes effect
+ * after authentication.
  *
  * @param {import('express').Request} request Express request.
  * @param {import('express').Response} response Express response.
@@ -116,6 +119,7 @@ export const authenticate = async (request, response, next) => {
         }
 
         request.user = user;
+        request.setLocale(getAppLocale(request));
         next();
 
     }catch(error){
