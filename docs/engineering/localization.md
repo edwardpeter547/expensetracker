@@ -3,6 +3,21 @@
 ExpenseTracker detects its initial language and currency from the device and
 keeps display formatting separate from stored monetary values.
 
+> **Status.** Device language/currency detection, preference persistence,
+> money/date formatting, and system-category labels described below are
+> **implemented**. A full mobile UI translation layer
+> (`i18next`/`react-i18next`), stable API error codes, preference
+> synchronisation, and a language selection UI are the **approved target** and
+> remain planned.
+
+Related documents:
+
+- [Internationalisation architecture](../architecture/internationalisation.md)
+- [ADR 0004 — Internationalisation and Localisation Architecture](../decisions/0004-internationalisation-architecture.md)
+- [Translation developer guide](translation-guide.md)
+- [Financial localisation standards](financial-localisation.md)
+- [Internationalisation gap analysis and roadmap](../audits/internationalisation-gap-analysis.md)
+
 ## Supported languages
 
 The registry lives in two places and must stay in sync:
@@ -69,3 +84,19 @@ labels from `src/mobile/src/localization/systemCategories.ts`.
 Transaction records reference the category through `Transaction.categoryId`.
 Historical rows whose old free-text category name cannot be matched to exactly
 one system or user-owned category remain `NULL` and are not arbitrarily mapped.
+
+## Planned target architecture
+
+The approved design extends — not replaces — the behaviours above. In the
+target state:
+
+- The mobile UI is translated through `i18next`/`react-i18next` feature-based
+  catalogues, with `LocaleContext` supplying the resolved language.
+- Explicit language/currency choices synchronise to `PUT /user/profile` when
+  authenticated.
+- API requests carry `Accept-Language`; the backend negotiates gracefully and
+  returns a stable, localisable error `code`.
+- `User.timezone` is applied to financial period boundaries.
+
+The full specification, diagrams, and phased roadmap are in the documents
+linked at the top of this page.

@@ -214,13 +214,18 @@ A concise one-line docstring is acceptable only for trivial functions with no pa
 ## Financial correctness conventions
 
 - Treat monetary values as data, not display strings: keep parsing/formatting consistent and centralized.
-- Use exact arithmetic for money. Amounts are currently Prisma `Float`; until a representation decision is approved, do **not** introduce new floating-point financial calculations. Prefer integer minor units or `Decimal` when the schema is revisited (see `docs/decisions/README.md`).
+- Use exact arithmetic for money. Amounts are Prisma `Decimal` / PostgreSQL `NUMERIC(19,4)` and are serialised as canonical decimal strings; do **not** introduce floating-point financial calculations. See `docs/engineering/financial-localisation.md`.
 - Define currency precision and rounding explicitly; round once at a documented boundary, not repeatedly during sums.
 - Use UTC storage for timestamps and derive financial periods from the user's timezone; never mix timezone semantics silently.
 - Preserve the income/expense distinction (`transType`) rather than relying on sign alone.
 - Keep budget aggregation consistent with the transaction category model; resolve the `Transaction.category` string vs `Budget.categoryId` mismatch before relying on budget totals.
 - Model transfers as two equal, opposite legs that are excluded from net income/expense.
 - Make financial writes idempotent and include duplicate detection to avoid double-counting.
+
+Localisation rules live in `docs/engineering/localization.md`,
+`docs/engineering/translation-guide.md`, and
+`docs/engineering/financial-localisation.md`; the approved architecture is
+`docs/architecture/internationalisation.md`.
 
 ## Security conventions
 
