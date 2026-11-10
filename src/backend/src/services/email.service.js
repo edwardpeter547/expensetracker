@@ -5,6 +5,7 @@ import Config from '../configurations/env.config.js';
 import logger from '../configurations/logger.config.js';
 import { APPLICATION_MODE } from '../constants/audit.actions.js';
 import i18n from '../configurations/i18n.config.js';
+import { resolveRequestLocale } from '../utils/locale.js';
 
 
 /**
@@ -104,7 +105,7 @@ class EmailService {
      */
     async sendRegistrationComplete(user, token){
 
-        const locale = user.language || Config.defaultLocale;
+        const locale = resolveRequestLocale({userLanguage: user.language});
 
         return this._send({
             to: user.email,
@@ -127,7 +128,7 @@ class EmailService {
      * @returns {Promise<object>} The send result.
      */
     async sendVerificationConfirmation(user){
-        const locale = user.language || Config.defaultLocale;
+        const locale = resolveRequestLocale({userLanguage: user.language});
 
         return this._send({
             to: user.email,
@@ -149,7 +150,7 @@ class EmailService {
      * @returns {Promise<object>} The send result.
      */
     async resendEmailVerificationLink(user, token){
-        const locale = user.language || Config.defaultLocale;
+        const locale = resolveRequestLocale({userLanguage: user.language});
         return this._send({
             to: user.email,
             subject: i18n.__({phrase: 'RESEND_VERIFICATION_EMAIL_SUBJECT', locale}, {brandName: Config.brandName}),
@@ -173,7 +174,7 @@ class EmailService {
      * @returns {Promise<object>} The send result.
      */
     async sendPasswordResetCode(user, resetPasswordCode){
-        const locale = user.language || Config.defaultLocale;
+        const locale = resolveRequestLocale({userLanguage: user.language});
         return this._send({
             to: user.email,
             subject: i18n.__({phrase: 'RESET_PASSWORD_EMAIL_SUBJECT', locale}, {brandName: Config.brandName}),

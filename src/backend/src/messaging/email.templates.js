@@ -17,7 +17,12 @@ import Handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
 import Config from '../configurations/env.config.js';
+import {
+    DEFAULT_CURRENCY,
+    DEFAULT_LANGUAGE,
+} from '../constants/localization.js';
 import { getDirectory } from '../utils/helpers.js';
+import { resolveRequestLocale } from '../utils/locale.js';
 import i18n from '../configurations/i18n.config.js';
 
 
@@ -80,9 +85,9 @@ class EmailTemplateService {
      * Registers custom Handlebars helpers for use in email templates
      *
      * Available helpers:
-     * - `__` : i18n translation helper, uses i18n.__() for locale-aware strings
-     * - `formatCurrency` : Formats numbers as currency (e.g., $1,250.50)
-     * - `formatDate` : Formats dates in human-readable US format
+     * - `__` : i18n translation helper scoped to the render's locale
+     * - `formatCurrency` : Formats numbers with `Intl.NumberFormat`
+     * - `formatDate` : Formats dates with `Intl.DateTimeFormat`
      * - `ifEquals` : Conditional block helper for equality comparisons
      *
      * @private
@@ -90,7 +95,11 @@ class EmailTemplateService {
      */
     _registerHelpers() {
         /**
-         * Translation helper — wraps i18n.__() for use in templates
+         * Translation helper scoped to the locale of the current render.
+         *
+         * The locale is read from the render context instead of the shared
+         * `i18n` singleton, so translations are request-independent and safe
+         * to render concurrently.
          *
          * @example
          * {{__ "WELCOME_TITLE" firstName=user.firstName}}
@@ -98,33 +107,62 @@ class EmailTemplateService {
         Handlebars.registerHelper('__', (key, ...args) => {
             const options = args.pop();
             const replacements = options.hash || {};
-            return i18n.__.call(i18n, key, replacements);
+            const locale = options.data?.root?.locale || DEFAULT_LANGUAGE;
+            return i18n.__({phrase: key, locale}, replacements);
         });
 
         /**
-         * Currency formatting helper
+         * Currency formatting helper scoped to the render's locale.
+         *
+         * Uses `Intl.NumberFormat` so symbols and separators come from the
+         * locale and currency rather than hardcoded `$`/`toFixed(2)`. The
+         * input value is only formatted, never mutated.
          *
          * @example
-         * {{formatCurrency amount}}
-         * // Output: $1,250.50
+         * {{formatCurrency amount currency="EUR"}}
          */
-        Handlebars.registerHelper('formatCurrency', (amount) => {
-            return `$${amount.toFixed(2)}`;
+        Handlebars.registerHelper('formatCurrency', (amount, ...args) => {
+            const options = args.pop();
+            const locale = options.data?.root?.locale || DEFAULT_LANGUAGE;
+            const currency = options.hash?.currency || args[0] || DEFAULT_CURRENCY;
+            const number = Number(amount);
+
+            if (Number.isNaN(number)) {
+                return '';
+            }
+
+            return new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency,
+            }).format(number);
         });
 
         /**
-         * Date formatting helper — displays date in long US format
+         * Date formatting helper scoped to the render's locale.
+         *
+         * Uses `Intl.DateTimeFormat` with the render locale. The timezone is
+         * an explicit option (default UTC) and is never derived from the
+         * language, keeping language and timezone independent.
          *
          * @example
          * {{formatDate createdAt}}
-         * // Output: January 15, 2024
+         * {{formatDate createdAt timeZone="Europe/Paris"}}
          */
-        Handlebars.registerHelper('formatDate', (date) => {
-            return new Date(date).toLocaleDateString('en-US', {
+        Handlebars.registerHelper('formatDate', (date, options) => {
+            const locale = options.data?.root?.locale || DEFAULT_LANGUAGE;
+            const timeZone = options.hash?.timeZone || 'UTC';
+            const parsed = new Date(date);
+
+            if (Number.isNaN(parsed.getTime())) {
+                return '';
+            }
+
+            return new Intl.DateTimeFormat(locale, {
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
-            });
+                day: 'numeric',
+                timeZone,
+            }).format(parsed);
         });
 
         /**
@@ -147,13 +185,15 @@ class EmailTemplateService {
      *
      * Compiles the named template (caching it for future use), renders it
      * with the provided data, then wraps the result in the base layout with
-     * global data (logo URL, year, footer links). The locale is set on the
-     * i18n instance before rendering to ensure translations use the correct
-     * language.
+     * global data (logo URL, year, footer links). The locale is resolved and
+     * passed through the render context; the shared `i18n` instance is never
+     * mutated.
      *
      * @param {string} templateName - Name of the template file (without .hbs extension)
      * @param {Object} data - Data object passed to the template and layout
-     * @param {string} [locale='en'] - Locale code for translations (e.g., 'en', 'fr', 'es')
+     * @param {string} [locale='en'] - Recipient language code (e.g., 'en', 'fr');
+     *   regional variants resolve to their base language and unsupported values
+     *   fall back to `en`.
      * @returns {string} Complete HTML email string ready to be sent
      *
      * @example
@@ -163,9 +203,8 @@ class EmailTemplateService {
      *     unsubscribeToken: 'abc123'
      * }, 'en');
      */
-    render(templateName, data, locale = Config.defaultLocale) {
-        // Set the locale for i18n before rendering
-        i18n.setLocale(locale);
+    render(templateName, data, locale = DEFAULT_LANGUAGE) {
+        const effectiveLocale = resolveRequestLocale({userLanguage: locale});
 
         // Compile and cache the template on first use
         if (!this.templates[templateName]) {
@@ -176,7 +215,8 @@ class EmailTemplateService {
             this.templates[templateName] = Handlebars.compile(source);
         }
 
-        const body = this.templates[templateName](data);
+        const renderData = {...data, locale: effectiveLocale};
+        const body = this.templates[templateName](renderData);
 
         return this.layout({
             body,
@@ -184,17 +224,17 @@ class EmailTemplateService {
             logoAltText: `${Config.brandName} Logo`,
             year: new Date().getFullYear(),
             unsubscribeUrl: `${Config.clientUrl}/unsubscribe?token=${data.unsubscribeToken}`,
-            unsubscribeLinkText: `${i18n.__({phrase: 'UNSUBSCRIBE', locale: locale})}`,
+            unsubscribeLinkText: `${i18n.__({phrase: 'UNSUBSCRIBE', locale: effectiveLocale})}`,
             privacyUrl: `${Config.clientUrl}/privacy`,
-            privacyLinkText: `${i18n.__({phrase: 'PRIVACY_POLICY', locale: locale})}`,
+            privacyLinkText: `${i18n.__({phrase: 'PRIVACY_POLICY', locale: effectiveLocale})}`,
             supportUrl: `${Config.clientUrl}/support`,
-            supportLinkText: `${i18n.__({phrase: 'SUPPORT', locale: locale})}`,
-            emailFooterInfo: `${i18n.__({phrase: 'EMAIL_FOOTER_INFO', locale: locale})}`,
+            supportLinkText: `${i18n.__({phrase: 'SUPPORT', locale: effectiveLocale})}`,
+            emailFooterInfo: `${i18n.__({phrase: 'EMAIL_FOOTER_INFO', locale: effectiveLocale})}`,
             brandName: Config.brandName,
             developerName: Config.developerName,
-            copyrightText: `${i18n.__({phrase: 'COPYRIGHT_TEXT', locale: locale})}`,
-            salutationText: `${i18n.__({phrase: 'EMAIL_SALUTATION_TEXT', locale: locale})}`,
-            signatureText: `${i18n.__({phrase: 'EMAIL_SIGNATURE_TEXT', locale: locale}, {brandName: Config.brandName})}`
+            copyrightText: `${i18n.__({phrase: 'COPYRIGHT_TEXT', locale: effectiveLocale})}`,
+            salutationText: `${i18n.__({phrase: 'EMAIL_SALUTATION_TEXT', locale: effectiveLocale})}`,
+            signatureText: `${i18n.__({phrase: 'EMAIL_SIGNATURE_TEXT', locale: effectiveLocale}, {brandName: Config.brandName})}`
         });
     }
 }
