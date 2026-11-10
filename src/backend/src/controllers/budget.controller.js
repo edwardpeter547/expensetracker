@@ -21,7 +21,12 @@ export const getBudgets = catchAsync(async (request, response) => {
 
     // Calculate spending for each budget
     const currentDate = new Date();
-    const budgetWithSpending = await getBudgetWithSpending(budgets, currentDate, userId);
+    const budgetWithSpending = await getBudgetWithSpending(
+        budgets,
+        currentDate,
+        userId,
+        request.user?.timezone,
+    );
 
     response.status(StatusCodes.OK).json({
         success: true,

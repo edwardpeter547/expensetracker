@@ -22,6 +22,7 @@ import {
 import { getUserSummary, getUserProfileDto, updateUserProfile } from "../services/profile.service.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
+import { startOfMonthInTimeZone } from "../utils/financial-period.js";
 import { maskEmail } from "../utils/helpers.js";
 
 
@@ -61,9 +62,9 @@ export const getProfile = catchAsync(async (request, response) => {
  */
 export const getDashboard = catchAsync(async (request, response) => {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const userId = request.user?.id;
     const currency = request.user?.currency || 'USD';
+    const startOfMonth = startOfMonthInTimeZone(now, request.user?.timezone);
 
     const summary = await getUserSummary(userId, startOfMonth, currency);
 

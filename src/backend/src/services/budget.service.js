@@ -1,8 +1,8 @@
 import prisma from "../configurations/prisma.connect.js";
 import { StatusCodes } from "http-status-codes";
-import { FIRST_DAY_OF_MONTH, FIRST_MONTH_OF_YEAR } from "../constants/app.constants.js";
 import { Prisma } from "../generated/client.js";
 import AppError from "../utils/appError.js";
+import { getPeriodBounds } from "../utils/financial-period.js";
 
 /**
  * List active budgets for a user, including their category.
@@ -25,30 +25,17 @@ export const getBudgetList = async (userId) => {
  * @param {object[]} budgets The budgets to augment.
  * @param {Date} currentDate The reference date for period boundaries.
  * @param {number} userId The owning user id.
+ * @param {string|undefined|null} [timeZone] The recipient IANA timezone.
  * @returns {Promise<object[]>} Budgets with `spent`, `remaining`,
  *   `percentage`, and `isOverBudget`.
  */
-export const getBudgetWithSpending = async (budgets, currentDate, userId) => {
+export const getBudgetWithSpending = async (budgets, currentDate, userId, timeZone) => {
 
     const budgetWithSpending = await Promise.all(
         budgets.map(async (budget) => {
-            let startDate, nextPeriod;
-
-            if(budget.period === "MONTHLY"){
-                startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                nextPeriod = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-            } else if( budget.period === "WEEKLY") {
-                const dayOfWeek = currentDate.getDay();
-                startDate = new Date(currentDate);
-                startDate.setDate(currentDate.getDate() - dayOfWeek);
-                startDate.setHours(0, 0, 0, 0);
-
-                nextPeriod = new Date(startDate);
-                nextPeriod.setDate(startDate.getDate() + 7);
-            } else {
-                startDate = new Date(currentDate.getFullYear(), FIRST_MONTH_OF_YEAR, FIRST_DAY_OF_MONTH);
-                nextPeriod = new Date(currentDate.getFullYear() + 1, FIRST_MONTH_OF_YEAR, FIRST_DAY_OF_MONTH);
-            }
+            const {start: periodStart, end: periodEnd} = getPeriodBounds(currentDate, budget.period, timeZone);
+            let startDate = periodStart;
+            let nextPeriod = periodEnd;
 
             // If budget has custom dates, use those
             if(budget.startDate > startDate) startDate = budget.startDate;
