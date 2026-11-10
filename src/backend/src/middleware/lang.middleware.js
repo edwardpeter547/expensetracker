@@ -1,13 +1,12 @@
-import AppError from "../utils/appError.js";
-import { langSchema } from "../validations/general.validation.js";
-import i18n from "../configurations/i18n.config.js";
-import Config from "../configurations/env.config.js";
-import { getAppLocale } from "../utils/helpers.js";
-
-
+import { resolveRequestLocale } from '../utils/locale.js';
 
 /**
- * Set the request locale from the `Accept-Language` header.
+ * Set the request locale using the documented resolution precedence.
+ *
+ * The resolved locale is always one of the configured supported languages:
+ * authenticated user language, negotiated `Accept-Language`, explicit `lang`
+ * query, then the default. Unsupported or malformed values fall back instead
+ * of producing a 400 error.
  *
  * @param {import('express').Request} request Express request.
  * @param {import('express').Response} response Express response.
@@ -15,17 +14,12 @@ import { getAppLocale } from "../utils/helpers.js";
  * @returns {void}
  */
 export const langHandler = (request, response, next) => {
+    const locale = resolveRequestLocale({
+        userLanguage: request.user?.language,
+        acceptLanguage: request.headers?.['accept-language'],
+        langQuery: request.query?.lang,
+    });
 
-    const lang = getAppLocale(request);
-    
-    const {error, value} = langSchema.validate({lang});
-    if(error){
-        return next(new AppError('Invalid language parameter', 400));
-    }
-
-    // Language detection
-    if(lang && i18n.getLocales().includes(lang)){
-        request.setLocale(lang);
-    }
+    request.setLocale(locale);
     next();
-}
+};
