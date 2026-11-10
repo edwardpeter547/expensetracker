@@ -3,11 +3,7 @@
 ## 1. Purpose and scope
 
 This document defines the approved target architecture for multilingual
-support in the ExpenseTracker repository and the AuditWallet product. It
-covers the backend (Express 5, JavaScript, Prisma 7, PostgreSQL), the mobile
-application (Expo SDK 57, React Native, TypeScript, Expo Router), their shared
-contracts, and the migration from the current partial implementation to the
-approved design.
+support in the product. It covers the backend (Express 5, JavaScript, Prisma 7, PostgreSQL), the mobile application (Expo SDK 57, React Native, TypeScript, Expo Router), their shared contracts, and the migration from the current partial implementation to the approved design.
 
 The fourteen approved decision statements are recorded in
 [`docs/decisions/0004-internationalisation-architecture.md`](../decisions/0004-internationalisation-architecture.md).
