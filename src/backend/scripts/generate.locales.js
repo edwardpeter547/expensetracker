@@ -37,7 +37,34 @@ const __dirname = getDirectory(import.meta.url);
 const getLanguages = () => {
     const transDir = path.join(__dirname, '../translations');
     const transFiles = fs.readdirSync(transDir);
-    return transFiles.map(language => (language.split('.')[0]));
+    return transFiles
+        .filter((fileName) => fileName.endsWith('.js'))
+        .map((fileName) => path.basename(fileName, '.js'));
+}
+
+/**
+ * Remove generated locale JSON files that no longer have a translation source.
+ *
+ * The locales directory is owned by this generator. Pruning stale outputs
+ * keeps it a faithful mirror of `translations/` and prevents orphaned locale
+ * artefacts (for example a leftover `<code>.json` after its source is removed)
+ * from being shipped or loaded by `i18n-node`.
+ *
+ * @param {string[]} languages The active language codes discovered from the
+ *   translations directory.
+ * @returns {string[]} The absolute paths of the stale files that were removed.
+ */
+const pruneStaleLocales = (languages) => {
+    const localesDir = path.join(__dirname, '../src/locales');
+    const activeFiles = new Set(languages.map((language) => `${language}.json`));
+
+    return fs.readdirSync(localesDir)
+        .filter((fileName) => fileName.endsWith('.json') && !activeFiles.has(fileName))
+        .map((fileName) => {
+            const stalePath = path.join(localesDir, fileName);
+            fs.unlinkSync(stalePath);
+            return stalePath;
+        });
 }
 
 /**
@@ -101,8 +128,15 @@ const convert = async () => {
        fs.writeFileSync(jsonFile, JSON.stringify(cleaned, null, 4) + '\n');
     }
 
+    const removedFiles = pruneStaleLocales(languages);
+
     logger.info(`✅ Locales generated for the the following language: [${languages.join(', ')}]`);
     console.log(`✅ Locales generated for the the following languages: [${languages.join(', ')}]`);
+
+    if (removedFiles.length > 0) {
+        logger.info(`🧹 Removed stale locale artefacts: [${removedFiles.join(', ')}]`);
+        console.log(`🧹 Removed stale locale artefacts: [${removedFiles.join(', ')}]`);
+    }
 }
 
 convert();
