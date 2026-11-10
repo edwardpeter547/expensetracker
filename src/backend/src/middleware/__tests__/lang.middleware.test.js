@@ -1,114 +1,130 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
-import i18n from '../../configurations/i18n.config.js';
+import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '../../constants/localization.js';
 import { langHandler } from '../lang.middleware.js';
 
-
 /**
- * Language Middleware Test Suite
+ * Language middleware test suite.
  *
- * Tests the langHandler middleware which detects the user's preferred language
- * from the request headers (accept-language) or query parameters (lang) and
- * sets the locale on the request object via request.setLocale().
- *
- * @module lang.middleware.test
+ * Covers the documented request-locale precedence and graceful fallback.
  */
 describe('Test Language Middleware - langHandler', () => {
-
-    const mockRequest = (headers, query={}, setLocale) => ({headers, query, setLocale: jest.fn()});
-    const mockResponse = () => ({}) ;
+    /**
+     * Build a minimal request with headers, query and an optional user.
+     *
+     * @param {object} [headers] Request headers.
+     * @param {object} [query] Request query parameters.
+     * @param {object} [user] Authenticated principal, when present.
+     * @returns {object} A request double with a mocked `setLocale`.
+     */
+    const mockRequest = (headers = {}, query = {}, user) => ({
+        headers,
+        query,
+        ...(user ? { user } : {}),
+        setLocale: jest.fn(),
+    });
+    const mockResponse = () => ({});
     const mockNext = jest.fn();
 
     beforeEach(() => {
         mockNext.mockClear();
-    })
+    });
 
     /**
-     * Validates that the middleware calls next() when a valid locale
-     * is provided in the accept-language request header.
+     * A valid accept-language header selects that locale.
      */
-    test('request header with accept-language parameter and expected lang parameter validates', () => {
+    test('sets the locale from a valid accept-language header', () => {
+        const request = mockRequest({ 'accept-language': 'en' });
 
-        const headers = {};
-        headers['accept-language'] = 'en' ;
+        langHandler(request, mockResponse(), mockNext);
 
-        const req = mockRequest(headers);
-        const res = mockResponse();
-
-        langHandler(req, res, mockNext);
-
+        expect(request.setLocale).toHaveBeenCalledWith('en');
         expect(mockNext).toHaveBeenCalledTimes(1);
     });
 
     /**
-     * Validates that the middleware accepts all locales configured in i18n
-     * and sets the locale on the request for each valid locale.
+     * Every configured language can be selected from the header.
      */
-    test('validates when request header\'s accept-language parameter has only valid locales', () => {
+    test('sets the locale for every configured language', () => {
+        SUPPORTED_LANGUAGES.forEach((locale) => {
+            const request = mockRequest({ 'accept-language': locale });
 
-        const validLocales = i18n.getLocales();
+            langHandler(request, mockResponse(), mockNext);
 
-        validLocales.forEach(locale => {
-            const headers = {}
-            headers['accept-language'] = locale;
-            const req = mockRequest(headers);
-            const res = mockResponse();
+            expect(request.setLocale).toHaveBeenCalledWith(locale);
+        });
 
-            langHandler(req, res, mockNext);
-            expect(mockNext).toHaveBeenCalled();
-            expect(req.setLocale).toHaveBeenCalledWith(locale);
-        })
-
-        expect(mockNext).toHaveBeenCalledTimes(validLocales.length);
-
+        expect(mockNext).toHaveBeenCalledTimes(SUPPORTED_LANGUAGES.length);
     });
 
     /**
-     * Validates that the middleware calls next() with an AppError when
-     * an unsupported locale is provided in the accept-language header.
-     * The locale should not be set on the request.
+     * An unsupported header falls back to the default locale instead of erroring.
      */
-    test('fails when an invalid locale is sent in request header', () => {
-        const headers = {}
-        const invalidLocale = 'soo-gho'
-        headers['accept-language'] = invalidLocale;
+    test('falls back to the default locale for an unsupported header', () => {
+        const request = mockRequest({ 'accept-language': 'soo-gho' });
 
-        const req = mockRequest(headers);
-        const res = mockResponse();
-        langHandler(req, res, mockNext);
+        langHandler(request, mockResponse(), mockNext);
+
+        expect(request.setLocale).toHaveBeenCalledWith(DEFAULT_LANGUAGE);
         expect(mockNext).toHaveBeenCalledTimes(1);
-        expect(req.setLocale).not.toHaveBeenCalled();
     });
 
     /**
-     * Validates that the middleware also accepts a valid locale passed
-     * via the lang query parameter when no accept-language header is present.
+     * A weighted regional header resolves to its supported base language.
      */
-    test('langhandler also accepts a query parameter with a valid locale', () => {
-        const headers = {}
-        const query = {lang: 'en'};
-        const req = mockRequest(headers, query);
-        const res = mockResponse();
+    test('resolves a weighted regional header to its base language', () => {
+        const request = mockRequest({ 'accept-language': 'fr-CA, fr;q=0.9, en;q=0.7' });
 
-        langHandler(req, res, mockNext);
-        expect(mockNext).toHaveBeenCalledTimes(1);
-        expect(req.setLocale).toHaveBeenCalledWith(query.lang);
+        langHandler(request, mockResponse(), mockNext);
+
+        expect(request.setLocale).toHaveBeenCalledWith('fr');
     });
 
     /**
-     * Validates that the accept-language header takes precedence over
-     * the lang query parameter when both are present in the request.
+     * A valid lang query parameter selects that locale.
      */
-    test('request.header locale takes precedence over request.query locale', () => {
-        const headers = {}
-        headers['accept-language'] = 'fr'
-        const query = {lang: 'en'};
-        const req = mockRequest(headers, query);
-        const res = mockResponse();
+    test('accepts a valid lang query parameter', () => {
+        const request = mockRequest({}, { lang: 'en' });
 
-        langHandler(req, res, mockNext);
-        expect(mockNext).toHaveBeenCalledTimes(1);
-        expect(req.setLocale).toHaveBeenCalledWith(headers['accept-language']);
-        expect(req.setLocale).not.toHaveBeenCalledWith(query.lang);
-    })
+        langHandler(request, mockResponse(), mockNext);
 
-})
+        expect(request.setLocale).toHaveBeenCalledWith('en');
+    });
+
+    /**
+     * The accept-language header takes precedence over the lang query.
+     */
+    test('prefers the accept-language header over the lang query', () => {
+        const request = mockRequest({ 'accept-language': 'fr' }, { lang: 'en' });
+
+        langHandler(request, mockResponse(), mockNext);
+
+        expect(request.setLocale).toHaveBeenCalledWith('fr');
+        expect(request.setLocale).not.toHaveBeenCalledWith('en');
+    });
+
+    /**
+     * An authenticated user language takes precedence over header and query.
+     */
+    test('prefers the authenticated user language over headers and query', () => {
+        const request = mockRequest(
+            { 'accept-language': 'en' },
+            { lang: 'en' },
+            { language: 'fr' },
+        );
+
+        langHandler(request, mockResponse(), mockNext);
+
+        expect(request.setLocale).toHaveBeenCalledWith('fr');
+    });
+
+    /**
+     * An unsupported header falls through to a supported query value.
+     */
+    test('falls back to a supported query when the header is unsupported', () => {
+        const request = mockRequest({ 'accept-language': 'de-DE' }, { lang: 'fr' });
+
+        langHandler(request, mockResponse(), mockNext);
+
+        expect(request.setLocale).toHaveBeenCalledWith('fr');
+    });
+});

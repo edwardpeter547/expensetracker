@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Config from '../configurations/env.config.js';
 import AppError from './appError.js';
+import { resolveRequestLocale } from './locale.js';
 
 /**
  * Generate an access/refresh token pair for an authenticated user.
@@ -97,11 +98,12 @@ export const normalizeUsername = (username) => String(username).trim().toLowerCa
  * @returns {string} The resolved locale code.
  */
 export const getAppLocale = (request) => {
-    const requestLocale = request.headers['accept-language']?.split('-')[0] || request.query.lang;
-    const userLocale = request.user?.language;
-    const lang = userLocale || requestLocale || Config.defaultLocale;
-    return lang;
-}
+    return resolveRequestLocale({
+        userLanguage: request.user?.language,
+        acceptLanguage: request.headers?.['accept-language'],
+        langQuery: request.query?.lang,
+    });
+};
 
 
 /**
