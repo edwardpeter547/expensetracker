@@ -77,6 +77,34 @@ describe('AppError Class Test Suite - AppError', () => {
         expect(error.errors.length).toBe(2);
     });
 
+    /**
+     * The optional fourth argument carries the stable code and interpolation
+     * params without disturbing the positional `errors` argument.
+     */
+    test('stores the stable code and params from the options argument', () => {
+        const error = new AppError(
+            'Budget limit exceeded',
+            409,
+            null,
+            {code: 'BUDGET_LIMIT_EXCEEDED', params: {limit: '500.00'}},
+        );
+
+        expect(error.code).toBe('BUDGET_LIMIT_EXCEEDED');
+        expect(error.params).toEqual({limit: '500.00'});
+        expect(error.errors).toBeNull();
+    });
+
+    /**
+     * Omitting the options argument must leave code and params null so
+     * existing callers are unchanged.
+     */
+    test('defaults code and params to null when options are omitted', () => {
+        const error = new AppError('Not found', 404);
+
+        expect(error.code).toBeNull();
+        expect(error.params).toBeNull();
+    });
+
     // test('captures a stack trace', () => {
     //     const error = new AppError('Not found', 404);
     //     expect(error.stack).toBeDefined();

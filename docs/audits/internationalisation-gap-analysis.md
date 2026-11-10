@@ -34,8 +34,8 @@ implemented, or unable to verify.
 | BK-01 | Backend | Needs improvement | Unsupported `Accept-Language` returns 400 — `src/backend/src/middleware/lang.middleware.js` | High | Fall back to `en`; validate only explicit `lang` query strictly | BK-02, SH-01 |
 | BK-02 | Backend | Partially implemented | `request.user.language` read before auth attaches the user — `src/backend/src/utils/helpers.js`, `src/backend/src/app.js` | High | Resolve locale lazily after authentication | BK-01 |
 | BK-03 | Backend | Partially implemented | Naive header parsing (no q-values/order) — `helpers.js` | Medium | Add pure negotiation helper with tests | SH-01 |
-| BK-04 | API | Not implemented | Error envelope lacks stable `code` — `src/backend/src/middleware/error.middleware.js`, `src/backend/src/utils/appError.js` | High | Add `code`/`params` to `AppError` and envelope | BK-05, MB-07 |
-| BK-05 | Backend | Not implemented | Joi `detail.message` is English prose — `src/backend/src/middleware/validation.middleware.js` | High | Map Joi details to stable codes | BK-04 |
+| BK-04 | API | Implemented | Error envelope carries stable `code`/`params` — `src/backend/src/constants/error-codes.js`, `src/backend/src/middleware/error.middleware.js`, `src/backend/src/utils/appError.js` | High | Add `code`/`params` to `AppError` and envelope | BK-05, MB-07 |
+| BK-05 | Backend | Partially implemented | Joi details now emit stable field codes via `src/backend/src/utils/validation-errors.js`; `message` remains English prose until #205 | High | Map Joi details to stable codes | BK-04 |
 | BK-06 | Backend | Not implemented | Domain errors hardcoded English — transaction/budget/category services and controllers | Medium | Throw coded `AppError`; localise at boundary | BK-04 |
 | BK-07 | Backend | Needs improvement | `RESPONSE_LOGOUT_SUCCESSFUL` and `VERIFICATION_COMPLETE_EMAIL_SUBJECT` referenced but undefined; unused keys present — `src/backend/src/controllers/auth.controller.js:518`, `src/backend/src/services/email.service.js:134` | High | Add missing keys, remove dead keys, add parity test | TS-01 |
 | BK-08 | Backend | Needs improvement | Stray `src/backend/src/locales/og.json` (only `HEALTH_MSG`) | Low | Delete during catalogue cleanup | BK-07 |
@@ -43,14 +43,14 @@ implemented, or unable to verify.
 | BK-10 | Backend | Needs improvement | `i18n.setLocale()` mutates a global singleton — `src/backend/src/messaging/email.templates.js:168` | Low | Pass locale explicitly to helpers | BK-09 |
 | BK-11 | Backend | Needs improvement | Registration can persist an unvalidated header language — `src/backend/src/controllers/auth.controller.js:93` | Medium | Canonicalise through the shared negotiation helper | BK-03 |
 | BK-12 | Backend | Partially implemented | `User.timezone` stored/validated but not applied to period boundaries — `src/backend/src/controllers/user.controller.js` | High | Derive periods in the user's timezone | None |
-| BK-13 | API | Needs improvement | Success and error envelopes differ (`status` only on errors) | Medium | Decide and document one envelope; add `code` | BK-04 |
+| BK-13 | API | Partially implemented | Error envelope documented with `code`/`params` in OpenAPI; the success/error `status` difference is retained as a documented compatibility choice | Medium | Decide and document one envelope; add `code` | BK-04 |
 | MB-01 | Mobile | Not implemented | No UI translation catalogue; screens/tabs hardcoded English — `src/mobile/app/welcome.tsx`, `src/mobile/app/(tabs)/_layout.tsx` | Critical | Add `i18next`/`react-i18next` catalogues and `t()` | MB-06 |
 | MB-02 | Mobile | Partially implemented | Explicit language change persists only locally — `src/mobile/src/contexts/LocaleContext.tsx` | High | Call `PUT /user/profile` when authenticated | MB-04 |
 | MB-03 | Shared | Not implemented | API client sends no `Accept-Language` — `src/mobile/src/api/client.ts` | High | Add request interceptor | MB-01 |
 | MB-04 | Mobile | Not implemented | No language selection UI in Profile/Settings | Medium | Add selector: Follow device / English / Français | MB-02 |
 | MB-05 | Mobile | Not implemented | `Today`/`Yesterday` and `formatDate` hardcode English — `src/mobile/src/utils/transactions.ts`, `src/mobile/utils/utils.ts` | Medium | Move to catalogue/`Intl` | MB-01 |
 | MB-06 | Mobile | Needs improvement | Supported-language list duplicated — `src/mobile/src/localization/registry.ts` vs `detect.ts` | Medium | Single source of truth | None |
-| MB-07 | Mobile | Not implemented | Client error fallbacks English-only — `src/mobile/src/api/errors.ts` | Medium | Localise by `ApiErrorKind` and server `code` | MB-01, BK-04 |
+| MB-07 | Mobile | Partially implemented | Client code-to-key mapping and fallback implemented in `src/mobile/src/api/errors.ts`; `i18next` error resources remain pending (#188) | Medium | Localise by `ApiErrorKind` and server `code` | MB-01, BK-04 |
 | SH-01 | Shared | Not implemented | No shared locale canonicalisation/matching contract | High | Record and implement BCP 47 base-language matching | None |
 | TS-01 | Testing | Not implemented | No catalogue completeness/parity tests | High | Add parity, orphan, and missing-key CI checks | BK-07 |
 | TS-02 | Testing | Not implemented | No pluralisation/placeholder compatibility tests | Medium | Add placeholder/plural checks | TS-01 |
@@ -118,7 +118,9 @@ procedure.
 
 ## Open implementation questions
 
-- Exact `code` naming registry and its location (single source of truth).
+- Exact `code` naming registry and its location — resolved:
+  `src/backend/src/constants/error-codes.js`, mirrored by the mobile catalogue
+  in `src/mobile/src/api/errors.ts`.
 - Whether the `lang` query parameter should reject or fall back on invalid
   values (the ADR specifies fallback; confirm the strict-query edge case).
 - Translation review workflow and pseudolocalisation tooling.

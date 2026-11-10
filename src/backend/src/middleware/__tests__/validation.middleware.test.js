@@ -70,6 +70,23 @@ describe('Test Validation Middleware - validate', () => {
     });
 
     /**
+     * Failed body validation must produce the additive field-error contract:
+     * a top-level `VALIDATION_ERROR` code and per-field stable codes.
+     */
+    test('attaches stable top-level and field-level validation codes', () => {
+        const req = mockRequest({});
+        const res = mockResponse();
+
+        validate(testSchema)(req, res, mockNext);
+        const error = mockNext.mock.calls[0][0];
+
+        expect(error.code).toBe('VALIDATION_ERROR');
+        expect(error.errors[0].code).toBe('VALIDATION_REQUIRED');
+        expect(error.errors[1].code).toBe('VALIDATION_REQUIRED');
+        expect(error.errors.every((item) => typeof item.field === 'string')).toBe(true);
+    });
+
+    /**
      * Validates that the middleware replaces req.body with the sanitized
      * validated data when schema validation passes.
      */

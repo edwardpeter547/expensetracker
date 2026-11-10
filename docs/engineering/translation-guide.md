@@ -189,21 +189,26 @@ await setLanguage('fr'); // updates context + cache + i18next
 No restart is required. Navigation titles, active screens, forms, validation
 messages, and accessibility labels all react to the changed language.
 
-## Backend error-code translation (proposed)
+## Backend error-code translation
 
-The backend emits a stable `code`; the mobile app maps codes to localised
-messages:
+The backend emits a stable machine-readable `code` (declared in
+`src/backend/src/constants/error-codes.js`). The mobile app maps codes to
+localised messages through the resolver in `src/mobile/src/api/errors.ts`:
 
 ```ts
-// Proposed (not yet implemented)
-const t = i18n.getFixedT(language, 'errors');
-const message = t(error.code, {
-    defaultValue: error.message,
-    ...error.params,
-});
+// Implemented — src/mobile/src/api/errors.ts
+import { normalizeApiError, translateApiError } from '@/api/errors';
+
+const error = normalizeApiError(cause);
+const { message, fieldErrors } = translateApiError(error, t);
 ```
 
-Unknown codes fall back to `error.message`, then to a generic error string.
+Known codes translate through their `errors.*` key with safe interpolation
+params and never fall back to raw server prose. Unknown codes and legacy
+payloads fall back to the server `message`, then to a generic string.
+
+The `i18next` `errors` namespace resources and the `t` wiring remain
+`Proposed (not yet implemented)` — see issue #188.
 
 ## Adding a new language
 

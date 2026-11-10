@@ -233,7 +233,99 @@ describe('Error Handler Middleware Test - errorHandler', () => {
                 message: 'Token Expired'
             })
         );
-    })
+    });
+
+    /**
+     * An uncoded AppError must still receive a deterministic status-derived
+     * code so the additive `code` field is always present in the envelope.
+     */
+    test('assigns a status-derived code to an uncoded AppError', () => {
+        errorHandler(new AppError('Not found', 404), mockRequest, mockResponse, mockNext);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'NOT_FOUND',
+                params: null,
+                errors: null,
+            })
+        );
+    });
+
+    /**
+     * A coded AppError must preserve its explicit code and sanitize its
+     * interpolation params, dropping nested or unsafe values.
+     */
+    test('preserves explicit code and sanitizes interpolation params', () => {
+        errorHandler(
+            new AppError(
+                'Budget limit exceeded',
+                409,
+                null,
+                {code: 'BUDGET_LIMIT_EXCEEDED', params: {limit: '500.00', nested: {}}},
+            ),
+            mockRequest,
+            mockResponse,
+            mockNext,
+        );
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'BUDGET_LIMIT_EXCEEDED',
+                params: {limit: '500.00'},
+            })
+        );
+    });
+
+    /**
+     * A Prisma unique-constraint failure must surface the stable constraint
+     * code and the affected field as a safe interpolation parameter.
+     */
+    test('maps Prisma P2002 to the unique-constraint code with a field param', () => {
+        const error = new Error('Unique constraint failed');
+        error.code = 'P2002';
+        error.meta = {target: ['email']};
+
+        errorHandler(error, mockRequest, mockResponse, mockNext);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'UNIQUE_CONSTRAINT_VIOLATION',
+                params: {field: 'email'},
+            })
+        );
+    });
+
+    /**
+     * Field-level errors passed on an AppError must be normalised to the
+     * `{ field, code, message, params }` contract at the response boundary.
+     */
+    test('normalizes field-level validation errors in the envelope', () => {
+        errorHandler(
+            new AppError(
+                'Validation failed',
+                400,
+                [{field: 'email', code: 'VALIDATION_INVALID_FORMAT', message: 'invalid email'}],
+                {code: 'VALIDATION_ERROR'},
+            ),
+            mockRequest,
+            mockResponse,
+            mockNext,
+        );
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'VALIDATION_ERROR',
+                errors: [
+                    {
+                        field: 'email',
+                        code: 'VALIDATION_INVALID_FORMAT',
+                        message: 'invalid email',
+                        params: null,
+                    },
+                ],
+            })
+        );
+    });
 
 
 });

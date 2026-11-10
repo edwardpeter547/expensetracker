@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { StatusCodes } from 'http-status-codes';
 import Config from './env.config.js';
+import { ERROR_CODES } from '../constants/error-codes.js';
 
 /**
  * Build an express-rate-limit middleware with the standard API error envelope
@@ -25,7 +26,9 @@ export const createAuthRateLimiter = ({windowMs, limit}) => rateLimit({
         response.status(StatusCodes.TOO_MANY_REQUESTS).json({
             success: false,
             status: StatusCodes.TOO_MANY_REQUESTS,
+            code: ERROR_CODES.RATE_LIMIT_EXCEEDED,
             message: 'Too many requests, please try again later.',
+            params: null,
             errors: null,
         });
     },

@@ -120,8 +120,8 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 ### Errors and async
 
-- Throw `AppError(message, statusCode, errors?)` for operational failures.
-- Let the centralized `errorHandler` translate Prisma/JWT errors; do not scatter try/catch in every handler.
+- Throw `AppError(message, statusCode, errors?, { code, params })` for operational failures; use stable identifiers from `src/backend/src/constants/error-codes.js` and keep `params` limited to safe, serialisable interpolation values.
+- Let the centralized `errorHandler` translate Prisma/JWT errors and derive a status-based `code` for uncoded errors; do not scatter try/catch in every handler.
 - `catchAsync` is the established pattern for async error propagation — reuse it.
 
 ### Logging
@@ -178,7 +178,7 @@ stateful behavior genuinely benefits (for example, `EmailService` and
 
 - Send all requests through `src/mobile/src/api/client.ts`; do not create ad-hoc Axios instances.
 - The interceptor already handles `401` refresh; keep token storage in `expo-secure-store`.
-- Handle `loading`, `error`, and `empty` states explicitly in screens; show user-facing error text from `error.response.data.message` where available.
+- Normalize failures with `normalizeApiError` and render through `translateApiError`, which maps stable server `code` values to `errors.*` translation keys with safe interpolation and a predictable fallback; do not surface raw `error.response.data.message` when a mapped translation exists.
 
 ### Forms and validation
 

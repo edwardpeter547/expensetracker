@@ -1,9 +1,19 @@
 /**
- * Shared API error normalization for the mobile client.
+ * Shared API error normalization and translation-key mapping for the mobile
+ * client.
  *
  * This module converts Axios/network errors into a stable shape so screens can
  * distinguish timeouts, authorization failures, server errors, and transport
- * failures without inspecting Axios internals.
+ * failures without inspecting Axios internals. It also maps the backend's
+ * stable error codes to mobile translation keys, so user-facing errors can be
+ * translated into the selected application language without exposing raw
+ * backend technical prose.
+ *
+ * The translation-key catalogue below is the client-side mirror of
+ * `src/backend/src/constants/error-codes.js`. It stores only key references,
+ * not translated strings; the actual `errors` namespace resources arrive with
+ * the `i18next` integration (#188). Until then `translateApiError` falls back
+ * safely for every key.
  */
 
 import { StatusCodes } from 'http-status-codes';
@@ -21,14 +31,155 @@ export type ApiErrorKind =
     | 'unknown';
 
 /**
+ * A safe, serialisable interpolation value.
+ */
+export type ErrorParam = string | number | boolean | null;
+
+/**
+ * A contract-shaped field-level validation error.
+ */
+export interface FieldError {
+    field: string;
+    code: string | null;
+    message: string | null;
+    params: Record<string, ErrorParam> | null;
+    translationKey: string | null;
+}
+
+/**
  * A normalized API error.
  */
 export interface NormalizedApiError {
     kind: ApiErrorKind;
     message: string;
     status?: number;
+    code?: string;
+    params?: Record<string, ErrorParam> | null;
+    fieldErrors?: FieldError[];
+    translationKey?: string | null;
     cause?: unknown;
 }
+
+/**
+ * A translator compatible with the future `i18next` integration.
+ *
+ * The function returns the translated string for a key, or undefined when the
+ * key is unavailable, so callers can apply the documented fallback chain.
+ */
+export type ErrorTranslator = (
+    key: string,
+    options?: Record<string, unknown> & { defaultValue?: string },
+) => string | undefined;
+
+/**
+ * Stable API error code to translation-key mapping.
+ *
+ * Keys are one-per-line and alphabetically ordered so the backend contract
+ * test can parse this file and assert both packages stay in sync.
+ */
+export const API_ERROR_TRANSLATION_KEYS = {
+    'AUTH_ACCOUNT_DEACTIVATED': 'errors.auth.accountDeactivated',
+    'AUTH_EMAIL_NOT_VERIFIED': 'errors.auth.emailNotVerified',
+    'AUTH_INVALID_CREDENTIALS': 'errors.auth.invalidCredentials',
+    'AVATAR_INVALID': 'errors.avatar.invalid',
+    'AVATAR_REQUIRED': 'errors.avatar.required',
+    'AVATAR_STORAGE_UNAVAILABLE': 'errors.avatar.storageUnavailable',
+    'AVATAR_TOO_LARGE': 'errors.avatar.tooLarge',
+    'BAD_REQUEST': 'errors.badRequest',
+    'BUDGET_ALREADY_EXISTS': 'errors.budget.alreadyExists',
+    'BUDGET_LIMIT_EXCEEDED': 'errors.budget.limitExceeded',
+    'BUDGET_NOT_FOUND': 'errors.budget.notFound',
+    'CATEGORY_ALREADY_EXISTS': 'errors.category.alreadyExists',
+    'CATEGORY_IN_USE': 'errors.category.inUse',
+    'CATEGORY_NOT_FOUND': 'errors.category.notFound',
+    'CONFLICT': 'errors.conflict',
+    'DELETION_ALREADY_IN_PROGRESS': 'errors.deletion.alreadyInProgress',
+    'DELETION_NOT_CANCELLABLE': 'errors.deletion.notCancellable',
+    'DELETION_REQUEST_NOT_FOUND': 'errors.deletion.notFound',
+    'EMAIL_ALREADY_EXISTS': 'errors.auth.emailAlreadyExists',
+    'FORBIDDEN': 'errors.forbidden',
+    'INTERNAL_SERVER_ERROR': 'errors.internalServerError',
+    'INVALID_DATE': 'errors.invalidDate',
+    'NOT_FOUND': 'errors.notFound',
+    'PASSWORD_INCORRECT': 'errors.auth.passwordIncorrect',
+    'PASSWORD_PREVIOUSLY_USED': 'errors.auth.passwordPreviouslyUsed',
+    'PASSWORD_SAME_AS_CURRENT': 'errors.auth.passwordSameAsCurrent',
+    'PAYLOAD_TOO_LARGE': 'errors.payloadTooLarge',
+    'RATE_LIMIT_EXCEEDED': 'errors.rateLimitExceeded',
+    'REFRESH_TOKEN_EXPIRED': 'errors.auth.refreshTokenExpired',
+    'REFRESH_TOKEN_INVALID': 'errors.auth.refreshTokenInvalid',
+    'RESET_TOKEN_EXPIRED': 'errors.auth.resetTokenExpired',
+    'RESET_TOKEN_INVALID': 'errors.auth.resetTokenInvalid',
+    'RESOURCE_NOT_FOUND': 'errors.resource.notFound',
+    'SERVICE_UNAVAILABLE': 'errors.serviceUnavailable',
+    'SESSION_NOT_FOUND': 'errors.auth.sessionNotFound',
+    'TOKEN_EXPIRED': 'errors.auth.tokenExpired',
+    'TOKEN_INVALID': 'errors.auth.tokenInvalid',
+    'TOKEN_MISSING': 'errors.auth.tokenMissing',
+    'TRANSACTION_NOT_FOUND': 'errors.transaction.notFound',
+    'UNAUTHORIZED': 'errors.unauthorized',
+    'UNIQUE_CONSTRAINT_VIOLATION': 'errors.uniqueConstraintViolation',
+    'UNKNOWN_ERROR': 'errors.unknown',
+    'UNSUPPORTED_MEDIA_TYPE': 'errors.unsupportedMediaType',
+    'USERNAME_ALREADY_EXISTS': 'errors.auth.usernameAlreadyExists',
+    'VALIDATION_EMPTY': 'errors.validation.empty',
+    'VALIDATION_ERROR': 'errors.validation',
+    'VALIDATION_INVALID_FORMAT': 'errors.validation.invalidFormat',
+    'VALIDATION_INVALID_TYPE': 'errors.validation.invalidType',
+    'VALIDATION_INVALID_VALUE': 'errors.validation.invalidValue',
+    'VALIDATION_NOT_ALLOWED': 'errors.validation.notAllowed',
+    'VALIDATION_REQUIRED': 'errors.validation.required',
+    'VALIDATION_TOO_LARGE': 'errors.validation.tooLarge',
+    'VALIDATION_TOO_LONG': 'errors.validation.tooLong',
+    'VALIDATION_TOO_SHORT': 'errors.validation.tooShort',
+    'VALIDATION_TOO_SMALL': 'errors.validation.tooSmall',
+    'VERIFICATION_TOKEN_EXPIRED': 'errors.auth.verificationTokenExpired',
+    'VERIFICATION_TOKEN_INVALID': 'errors.auth.verificationTokenInvalid',
+} as const;
+
+/**
+ * The set of stable backend error codes the mobile client understands.
+ */
+export type ApiErrorCode = keyof typeof API_ERROR_TRANSLATION_KEYS;
+
+/**
+ * Every known code as a plain string list.
+ */
+export const KNOWN_API_ERROR_CODES: readonly string[] = Object.keys(API_ERROR_TRANSLATION_KEYS);
+
+/**
+ * The translation key used when no specific error key applies.
+ */
+const GENERIC_ERROR_KEY = 'errors.generic';
+
+/**
+ * The hardcoded fallback text used before `i18next` resources exist.
+ */
+const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
+
+/**
+ * Report whether a value is a known stable API error code.
+ *
+ * @param {string} value The candidate code.
+ * @returns {boolean} True when the code exists in the catalogue.
+ */
+export const isKnownApiErrorCode = (value: string): value is ApiErrorCode => {
+    return Object.prototype.hasOwnProperty.call(API_ERROR_TRANSLATION_KEYS, value);
+};
+
+/**
+ * Resolve the mobile translation key for a backend error code.
+ *
+ * Unknown, missing, or non-string codes resolve to null so callers apply the
+ * documented fallback instead of constructing a key from untrusted input.
+ *
+ * @param {string|null|undefined} code The backend error code.
+ * @returns {string|null} The translation key, or null when unmapped.
+ */
+export const apiErrorTranslationKey = (code: string | null | undefined): string | null => {
+    if (typeof code !== 'string' || !isKnownApiErrorCode(code)) return null;
+    return (API_ERROR_TRANSLATION_KEYS as Record<string, string>)[code];
+};
 
 /**
  * Best-effort extraction of a server-provided message from an error payload.
@@ -45,7 +196,98 @@ const readServerMessage = (data: unknown): string | undefined => {
 };
 
 /**
- * Normalize an unknown thrown value into an `NormalizedApiError`.
+ * Best-effort extraction of the stable server error code from a payload.
+ *
+ * @param {unknown} data The error response body.
+ * @returns {string|undefined} The stable error code, when present.
+ */
+const readErrorCode = (data: unknown): string | undefined => {
+    if (data && typeof data === 'object' && 'code' in data) {
+        const code = (data as { code?: unknown }).code;
+        if (typeof code === 'string' && code.trim()) return code;
+    }
+    return undefined;
+};
+
+/**
+ * Report whether a value is a safe, serialisable interpolation primitive.
+ *
+ * @param {unknown} value The candidate value.
+ * @returns {boolean} True when the value is a finite number, boolean, string,
+ *   or null.
+ */
+const isSafeParam = (value: unknown): value is ErrorParam => {
+    if (value === null) return true;
+    if (typeof value === 'boolean') return true;
+    if (typeof value === 'string') return true;
+    return typeof value === 'number' && Number.isFinite(value);
+};
+
+/**
+ * Reduce an arbitrary value to bounded, serialisable interpolation params.
+ *
+ * This mirrors the backend `sanitizeErrorParams` policy so client and server
+ * never interpolate nested or unbounded values into user-facing text.
+ *
+ * @param {unknown} value The candidate params value.
+ * @returns {Record<string, ErrorParam>|null} Safe params, or null.
+ */
+const sanitizeErrorParams = (value: unknown): Record<string, ErrorParam> | null => {
+    if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+    }
+
+    const params: Record<string, ErrorParam> = {};
+    let count = 0;
+
+    for (const [key, entry] of Object.entries(value)) {
+        if (count >= 20) break;
+        if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(key)) continue;
+        if (!isSafeParam(entry)) continue;
+
+        params[key] = typeof entry === 'string' && entry.length > 200
+            ? entry.slice(0, 200)
+            : entry;
+        count += 1;
+    }
+
+    return Object.keys(params).length > 0 ? params : null;
+};
+
+/**
+ * Normalize a server field-error array into the mobile field-error shape.
+ *
+ * @param {unknown} data The error response body.
+ * @returns {FieldError[]|undefined} Normalized field errors, or undefined.
+ */
+const normalizeFieldErrors = (data: unknown): FieldError[] | undefined => {
+    const errors = data && typeof data === 'object'
+        ? (data as { errors?: unknown }).errors
+        : undefined;
+
+    if (!Array.isArray(errors)) return undefined;
+
+    const fieldErrors = errors
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((item) => {
+            const field = typeof item.field === 'string' ? item.field : '';
+            const code = typeof item.code === 'string' && item.code ? item.code : null;
+            const message = typeof item.message === 'string' && item.message ? item.message : null;
+
+            return {
+                field,
+                code,
+                message,
+                params: sanitizeErrorParams(item.params),
+                translationKey: apiErrorTranslationKey(code),
+            };
+        });
+
+    return fieldErrors.length > 0 ? fieldErrors : undefined;
+};
+
+/**
+ * Normalize an unknown thrown value into a `NormalizedApiError`.
  *
  * @param {unknown} error The thrown value, typically an Axios error.
  * @returns {NormalizedApiError} A stable, user-presentable error.
@@ -74,13 +316,23 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
         };
     }
 
-    const status = candidate?.response?.status;
     const response = candidate?.response;
+    const data = response?.data;
+    const status = response?.status;
+    const code = readErrorCode(data);
+    const params = sanitizeErrorParams((data as { params?: unknown } | undefined)?.params);
+    const fieldErrors = normalizeFieldErrors(data);
+    const translationKey = apiErrorTranslationKey(code);
+
     if (status === 401) {
         return {
             kind: 'unauthorized',
-            message: readServerMessage(response?.data) || 'Your session has expired. Please sign in again.',
+            message: readServerMessage(data) || 'Your session has expired. Please sign in again.',
             status,
+            code,
+            params,
+            fieldErrors,
+            translationKey,
             cause: error,
         };
     }
@@ -88,8 +340,12 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     if (status === 403) {
         return {
             kind: 'forbidden',
-            message: readServerMessage(response?.data) || 'You do not have permission to do that.',
+            message: readServerMessage(data) || 'You do not have permission to do that.',
             status,
+            code,
+            params,
+            fieldErrors,
+            translationKey,
             cause: error,
         };
     }
@@ -97,8 +353,12 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     if (status === StatusCodes.BAD_REQUEST || status === StatusCodes.UNPROCESSABLE_ENTITY) {
         return {
             kind: 'validation',
-            message: readServerMessage(response?.data) || 'Please check your input and try again.',
+            message: readServerMessage(data) || 'Please check your input and try again.',
             status,
+            code,
+            params,
+            fieldErrors,
+            translationKey,
             cause: error,
         };
     }
@@ -108,6 +368,10 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
             kind: 'server',
             message: 'The server encountered an error. Please try again later.',
             status,
+            code,
+            params,
+            fieldErrors,
+            translationKey,
             cause: error,
         };
     }
@@ -115,15 +379,107 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     if (status) {
         return {
             kind: 'unknown',
-            message: readServerMessage(response?.data) || 'Something went wrong. Please try again.',
+            message: readServerMessage(data) || 'Something went wrong. Please try again.',
             status,
+            code,
+            params,
+            fieldErrors,
+            translationKey,
             cause: error,
         };
     }
 
     return {
         kind: 'unknown',
-        message: candidate?.message || 'Something went wrong. Please try again.',
+        message: candidate?.message || GENERIC_ERROR_MESSAGE,
         cause: error,
     };
+};
+
+/**
+ * Resolve a safe fallback message when a translation is unavailable.
+ *
+ * Empty and whitespace-only strings are treated as absent so the generic
+ * fallback is returned instead of a blank user-facing message.
+ *
+ * @param {string|undefined} message The candidate fallback message.
+ * @returns {string|undefined} The non-empty message, or undefined.
+ */
+const nonEmptyFallback = (message: string | undefined): string | undefined => {
+    return message && message.trim() ? message : undefined;
+};
+
+/**
+ * Resolve the localisable generic fallback through the shared translator.
+ *
+ * The generic fallback is requested by key so it can be localised once the
+ * `i18next` resources exist; the hardcoded English text is only the final
+ * safety net.
+ *
+ * @param {ErrorTranslator} translator The translation function.
+ * @returns {string} The generic user-facing error text.
+ */
+const resolveGenericMessage = (translator: ErrorTranslator): string => {
+    const translated = translator(GENERIC_ERROR_KEY, {defaultValue: GENERIC_ERROR_MESSAGE});
+    return nonEmptyFallback(translated) ?? GENERIC_ERROR_MESSAGE;
+};
+
+/**
+ * Translate one field-level error using the shared translator.
+ *
+ * Known field codes translate through their key with safe params; otherwise
+ * the legacy server message (when present) or the generic fallback is used.
+ *
+ * @param {FieldError} fieldError The normalized field error.
+ * @param {ErrorTranslator} translator The translation function.
+ * @returns {string} The user-facing field error message.
+ */
+const translateFieldError = (fieldError: FieldError, translator: ErrorTranslator): string => {
+    if (fieldError.translationKey) {
+        const translated = translator(fieldError.translationKey, {
+            defaultValue: GENERIC_ERROR_MESSAGE,
+            ...(fieldError.params ?? {}),
+        });
+        return nonEmptyFallback(translated) ?? resolveGenericMessage(translator);
+    }
+
+    return nonEmptyFallback(fieldError.message ?? undefined) ?? resolveGenericMessage(translator);
+};
+
+/**
+ * Translate a normalized API error into user-facing text.
+ *
+ * Recognized backend codes are translated through their catalogue key (with
+ * safe interpolation params) and never fall back to raw server prose, so a
+ * technical English message is not shown when a localised entry exists.
+ * Unknown codes and legacy payloads fall back to the server message, then to
+ * the generic error text.
+ *
+ * @param {NormalizedApiError} error The normalized API error.
+ * @param {ErrorTranslator} translator The translation function.
+ * @returns {{message: string, fieldErrors: {field: string, message: string}[]}}
+ *   The translated message and field-level messages.
+ */
+export const translateApiError = (
+    error: NormalizedApiError,
+    translator: ErrorTranslator,
+): {message: string; fieldErrors: {field: string; message: string}[]} => {
+    let message: string;
+
+    if (error.translationKey) {
+        const translated = translator(error.translationKey, {
+            defaultValue: GENERIC_ERROR_MESSAGE,
+            ...(error.params ?? {}),
+        });
+        message = nonEmptyFallback(translated) ?? resolveGenericMessage(translator);
+    } else {
+        message = nonEmptyFallback(error.message) ?? resolveGenericMessage(translator);
+    }
+
+    const fieldErrors = (error.fieldErrors ?? []).map((fieldError) => ({
+        field: fieldError.field,
+        message: translateFieldError(fieldError, translator),
+    }));
+
+    return {message, fieldErrors};
 };

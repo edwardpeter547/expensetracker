@@ -1362,13 +1362,38 @@ components:
   schemas:
     ErrorResponse:
       type: object
-      required: [success, status, message]
+      required: [success, status, code, message]
       properties:
         success: { type: boolean }
         status: { type: integer }
+        code: { type: string }
         message: { type: string }
-        errors: {}
+        params:
+          oneOf:
+            - type: object
+              additionalProperties:
+                type: [string, number, boolean, "null"]
+            - type: "null"
+        errors:
+          oneOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/ValidationErrorItem"
+            - type: "null"
         stack: { type: string }
+    ValidationErrorItem:
+      type: object
+      required: [field, code]
+      properties:
+        field: { type: string }
+        code: { type: string }
+        message: { type: [string, "null"] }
+        params:
+          oneOf:
+            - type: object
+              additionalProperties:
+                type: [string, number, boolean, "null"]
+            - type: "null"
     User:
       type: object
       properties:
