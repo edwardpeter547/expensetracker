@@ -47,4 +47,64 @@ describe('normalizeApiError', () => {
         assert.equal(error.kind, 'validation');
         assert.equal(error.message, 'Bad input');
     });
+
+    test('extracts the stable code and its translation key', () => {
+        const error = normalizeApiError({
+            isAxiosError: true,
+            response: {
+                status: 409,
+                data: {code: 'BUDGET_LIMIT_EXCEEDED', message: 'Budget limit exceeded'},
+            },
+        });
+
+        assert.equal(error.code, 'BUDGET_LIMIT_EXCEEDED');
+        assert.equal(error.translationKey, 'errors.budget.limitExceeded');
+    });
+
+    test('preserves field-level validation errors with sanitized params', () => {
+        const error = normalizeApiError({
+            isAxiosError: true,
+            response: {
+                status: 400,
+                data: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Validation failed',
+                    errors: [
+                        {field: 'name', code: 'VALIDATION_TOO_SHORT', message: 'too short', params: {limit: 3, nested: {}}},
+                    ],
+                },
+            },
+        });
+
+        assert.equal(error.kind, 'validation');
+        assert.equal(error.fieldErrors?.length, 1);
+        assert.equal(error.fieldErrors?.[0].field, 'name');
+        assert.equal(error.fieldErrors?.[0].translationKey, 'errors.validation.tooShort');
+        assert.deepEqual(error.fieldErrors?.[0].params, {limit: 3});
+    });
+
+    test('treats unknown codes as unmapped without losing the raw code', () => {
+        const error = normalizeApiError({
+            isAxiosError: true,
+            response: {
+                status: 409,
+                data: {code: 'FUTURE_CODE', message: 'Unmapped problem'},
+            },
+        });
+
+        assert.equal(error.code, 'FUTURE_CODE');
+        assert.equal(error.translationKey, null);
+    });
+
+    test('handles legacy payloads without code or field errors', () => {
+        const error = normalizeApiError({
+            isAxiosError: true,
+            response: {status: 409, data: {message: 'Already exists'}},
+        });
+
+        assert.equal(error.code, undefined);
+        assert.equal(error.translationKey, null);
+        assert.equal(error.fieldErrors, undefined);
+        assert.equal(error.message, 'Already exists');
+    });
 });

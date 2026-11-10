@@ -20,11 +20,16 @@ of writing.
   `src/backend/translations/fr.js` by `src/backend/scripts/generate.locales.js`.
   A stray `src/backend/src/locales/og.json` is not registered.
 - **Backend negotiation.** `src/backend/src/middleware/lang.middleware.js`
-  resolves a language and rejects unsupported values with HTTP 400. It runs
-  before authentication, so `request.user.language` is not yet available.
+  resolves the request locale through `src/backend/src/utils/locale.js` and
+  falls back to `en` for unsupported or malformed values. It runs before
+  authentication, so `request.user.language` is re-applied by the auth
+  middleware once the user is attached.
 - **Backend error contract.** `src/backend/src/middleware/error.middleware.js`
-  returns `{ success, status, message, errors, stack? }` with no stable
-  machine-readable `code`.
+  returns `{ success, status, code, message, params, errors, stack? }` with a
+  stable machine-readable `code`. Identifiers are declared in
+  `src/backend/src/constants/error-codes.js` and mirrored by the mobile
+  catalogue in `src/mobile/src/api/errors.ts`; Joi field errors use
+  `{ field, code, message, params }`.
 - **Backend content.** Email subjects and some auth messages use
   `i18n.__`; most controllers and services return hardcoded English.
 - **Preferences.** `User` stores `language` (`en`), `currency` (`USD`),

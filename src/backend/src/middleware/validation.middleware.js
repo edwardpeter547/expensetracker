@@ -1,4 +1,6 @@
 import AppError from "../utils/appError.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
+import { buildValidationErrors } from "../utils/validation-errors.js";
 
 /**
  * Middleware factory function for validating request body against a Joi schema.
@@ -30,12 +32,12 @@ export const validate = (schema) => {
         });
 
         if(error){
-            const errors = error.details.map(detail => ({
-                field: detail.path.join('.'),
-                message: detail.message
-            }));
-
-            return next(new AppError('Validation failed', 400, errors));
+            return next(new AppError(
+                'Validation failed',
+                400,
+                buildValidationErrors(error.details),
+                {code: ERROR_CODES.VALIDATION_ERROR}
+            ));
         }
 
         request.body = value;
@@ -73,11 +75,12 @@ export const validateQuery = (schema) => {
         });
 
         if(error){
-            const errors = error.details.map(detail => ({
-                field: detail.path.join('.'),
-                message: detail.message
-            }))
-            return next(new AppError('Invalid Query parameters', 400, errors));
+            return next(new AppError(
+                'Invalid Query parameters',
+                400,
+                buildValidationErrors(error.details),
+                {code: ERROR_CODES.VALIDATION_ERROR}
+            ));
         }
 
         // Express 5 exposes `req.query` as a getter, so assigning to it throws.
@@ -121,11 +124,12 @@ export const validateParams = (schema) => {
             stripUnknown: true
         });
         if(error){
-            const errors = error.details.map(detail => ({
-                field: detail.path.join('.'),
-                message: detail.message
-            }))
-            return next(new AppError('Invalid parameters', 400, errors));
+            return next(new AppError(
+                'Invalid parameters',
+                400,
+                buildValidationErrors(error.details),
+                {code: ERROR_CODES.VALIDATION_ERROR}
+            ));
         }
 
         request.params = value;

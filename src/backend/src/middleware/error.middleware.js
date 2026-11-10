@@ -40,15 +40,23 @@ import AppError from '../utils/appError.js';
 import Config from '../configurations/env.config.js';
 import logger from '../configurations/logger.config.js';
 import { StatusCodes } from 'http-status-codes';
+import {
+    ERROR_CODES,
+    defaultErrorCodeForStatus,
+} from '../constants/error-codes.js';
+import { sanitizeErrorParams } from '../utils/error-params.js';
+import { normalizeFieldErrors } from '../utils/validation-errors.js';
 
 
 /**
  * Central error handler that maps operational and framework errors to the
- * standard `{ success, status, message, errors }` error envelope.
+ * standard `{ success, status, code, message, params, errors }` error envelope.
  *
- * Prisma `P2025`/`P2002` and JWT errors are translated to stable HTTP codes;
- * the stack is included only in development. Server errors (5xx) are logged
- * at `error` level with a stack; expected client errors (4xx) are intentionally
+ * Prisma `P2025`/`P2002` and JWT errors are translated to stable HTTP codes and
+ * stable machine-readable error codes. Uncoded `AppError` instances receive a
+ * generic status-derived code so the additive `code` field is always present.
+ * The stack is included only in development. Server errors (5xx) are logged at
+ * `error` level with a stack; expected client errors (4xx) are intentionally
  * not logged, because they are routine request outcomes rather than defects.
  *
  * @param {Error|AppError} appError The thrown error.
@@ -59,42 +67,76 @@ import { StatusCodes } from 'http-status-codes';
  */
 export const errorHandler = (appError, request, response, next) => {
 
-    let normalizedError = appError instanceof AppError
-        ? appError
-        : new AppError(
+    let normalizedError;
+
+    if (appError instanceof AppError) {
+        normalizedError = appError;
+    } else {
+        normalizedError = new AppError(
             appError?.message || appError || 'Internal server Error',
             appError?.statusCode || StatusCodes.INTERNAL_SERVER_ERROR
-        )
+        );
+        if (Array.isArray(appError?.errors)) {
+            normalizedError.errors = appError.errors;
+        }
+    }
 
     //Prisma error: Record not found
-    if(appError.code === 'P2025'){
-        normalizedError = new AppError('Record not found', StatusCodes.NOT_FOUND);
+    if(appError?.code === 'P2025'){
+        normalizedError = new AppError(
+            'Record not found',
+            StatusCodes.NOT_FOUND,
+            null,
+            {code: ERROR_CODES.NOT_FOUND}
+        );
     }
 
     // Prisma error: Unique constraint failed
-    if(appError.code === 'P2002'){
+    if(appError?.code === 'P2002'){
         const field = appError.meta?.target?.[0] || 'field';
-        normalizedError = new AppError(`${field} already exists`, StatusCodes.CONFLICT);
+        normalizedError = new AppError(
+            `${field} already exists`,
+            StatusCodes.CONFLICT,
+            null,
+            {
+                code: ERROR_CODES.UNIQUE_CONSTRAINT_VIOLATION,
+                params: {field},
+            }
+        );
     }
 
     // JWT error
-    if(appError.name === 'JsonWebTokenError'){
-        normalizedError = new AppError('Invalid Token', StatusCodes.UNAUTHORIZED);
+    if(appError?.name === 'JsonWebTokenError'){
+        normalizedError = new AppError(
+            'Invalid Token',
+            StatusCodes.UNAUTHORIZED,
+            null,
+            {code: ERROR_CODES.TOKEN_INVALID}
+        );
     }
 
     // Token expired error
-    if(appError.name === 'TokenExpiredError'){
-        normalizedError = new AppError("Token Expired", StatusCodes.UNAUTHORIZED);
+    if(appError?.name === 'TokenExpiredError'){
+        normalizedError = new AppError(
+            "Token Expired",
+            StatusCodes.UNAUTHORIZED,
+            null,
+            {code: ERROR_CODES.TOKEN_EXPIRED}
+        );
     }
 
     const statusCode = normalizedError.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     const message = normalizedError.message || 'Internal Server Error';
+    const code = normalizedError.code || defaultErrorCodeForStatus(statusCode);
+    const params = sanitizeErrorParams(normalizedError.params);
+    const fieldErrors = normalizeFieldErrors(normalizedError.errors);
 
     if (statusCode >= StatusCodes.INTERNAL_SERVER_ERROR) {
         logger.error('Error:', {
             name: normalizedError.name,
             message,
             status: statusCode,
+            code,
             path: request.path,
             method: request.method,
             correlationId: request.id,
@@ -104,9 +146,11 @@ export const errorHandler = (appError, request, response, next) => {
 
     response.status(statusCode).json({
         success: false,
-        status: statusCode, 
+        status: statusCode,
+        code,
         message: message,
-        errors: normalizedError.errors,
+        params,
+        errors: fieldErrors,
         stack: Config.nodeEnv === 'development' ? normalizedError.stack : undefined
     })
 

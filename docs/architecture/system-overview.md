@@ -51,8 +51,8 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 ### API contract
 - Base path: `/api/v1`.
 - Success envelope: `{ success: true, message, data, errors: null }`.
-- Error envelope (from `error.middleware.js`): `{ success: false, status, message, errors, stack? }`.
-- Prisma `P2025` maps to `404`, `P2002` maps to `409`; JWT errors map to `401`.
+- Error envelope (from `error.middleware.js`): `{ success: false, status, code, message, params, errors, stack? }`.
+- Stable machine-readable `code` identifiers are declared in `src/backend/src/constants/error-codes.js`; validation field errors use `{ field, code, message, params }`. Prisma `P2025` maps to `404` (`NOT_FOUND`), `P2002` maps to `409` (`UNIQUE_CONSTRAINT_VIOLATION` with a `field` param); JWT errors map to `401` (`TOKEN_INVALID` / `TOKEN_EXPIRED`).
 - Authentication uses `Authorization: Bearer <accessToken>`. Access tokens are HS256 JWTs carrying `iss`, `aud`, `jti`, and `tokenVersion`; verification pins the algorithm and validates issuer/audience/version. Refresh tokens are random hex strings whose SHA-256 digests are stored server-side with expiry, revocation, and device metadata.
 - Status codes come from `http-status-codes`.
 
