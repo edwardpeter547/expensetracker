@@ -46,6 +46,8 @@ import {
 } from '../constants/error-codes.js';
 import { sanitizeErrorParams } from '../utils/error-params.js';
 import { normalizeFieldErrors } from '../utils/validation-errors.js';
+import { localizeErrorMessage } from '../utils/localize-error.js';
+import { getAppLocale } from '../utils/helpers.js';
 
 
 /**
@@ -87,7 +89,7 @@ export const errorHandler = (appError, request, response, next) => {
             'Record not found',
             StatusCodes.NOT_FOUND,
             null,
-            {code: ERROR_CODES.NOT_FOUND}
+            {code: ERROR_CODES.RESOURCE_NOT_FOUND}
         );
     }
 
@@ -126,15 +128,26 @@ export const errorHandler = (appError, request, response, next) => {
     }
 
     const statusCode = normalizedError.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
-    const message = normalizedError.message || 'Internal Server Error';
+    const rawMessage = normalizedError.message || 'Internal Server Error';
     const code = normalizedError.code || defaultErrorCodeForStatus(statusCode);
     const params = sanitizeErrorParams(normalizedError.params);
-    const fieldErrors = normalizeFieldErrors(normalizedError.errors);
+    const locale = getAppLocale(request);
+    const message = localizeErrorMessage(code, locale, params, rawMessage);
+
+    const rawFieldErrors = normalizeFieldErrors(normalizedError.errors);
+    const fieldErrors = rawFieldErrors
+        ? rawFieldErrors.map((fieldError) => ({
+            ...fieldError,
+            message: fieldError.code
+                ? localizeErrorMessage(fieldError.code, locale, fieldError.params, fieldError.message || 'Invalid value')
+                : (fieldError.message || 'Invalid value'),
+        }))
+        : null;
 
     if (statusCode >= StatusCodes.INTERNAL_SERVER_ERROR) {
         logger.error('Error:', {
             name: normalizedError.name,
-            message,
+            message: rawMessage,
             status: statusCode,
             code,
             path: request.path,
@@ -173,5 +186,10 @@ export const errorHandler = (appError, request, response, next) => {
  * app.use(notFoundHandler);
  */
 export const notFoundHandler = (request, response, next) => {
-    next(new AppError(`Cannot find ${request.originalUrl} on this server`, StatusCodes.NOT_FOUND));
+    next(new AppError(
+        `Cannot find ${request.originalUrl} on this server`,
+        StatusCodes.NOT_FOUND,
+        null,
+        {code: ERROR_CODES.NOT_FOUND}
+    ));
 }

@@ -6,6 +6,7 @@ import { getCategoryRecord } from "../services/category.service.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { maskEmail } from "../utils/helpers.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 
 /**
@@ -50,7 +51,7 @@ export const getBudget = catchAsync(async (request, response) => {
     const budget = await getBudgetRecord(userId, budgetId);
     if(!budget){
         logger.warn("Budget not found", {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.NOT_FOUND});
-        throw new AppError("Budget not found", StatusCodes.NOT_FOUND)
+        throw new AppError("Budget not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.BUDGET_NOT_FOUND})
     }   
     response.status(StatusCodes.OK).json({
         success: true,
@@ -74,7 +75,7 @@ export const createBudget = catchAsync(async (request, response) => {
 
     const category = await getCategoryRecord(categoryId, userId);
     if(!category){
-        throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+        throw new AppError("Category not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
     }
 
     const existing = await checkBudget(userId, categoryId, period);
@@ -83,7 +84,7 @@ export const createBudget = catchAsync(async (request, response) => {
             "A budget already exists for this category and period", 
             {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.CONFLICT}
         );
-        throw new AppError("A budget already exists for this category and period", StatusCodes.CONFLICT);
+        throw new AppError("A budget already exists for this category and period", StatusCodes.CONFLICT, null, {code: ERROR_CODES.BUDGET_ALREADY_EXISTS});
     }
 
     const budgetData = {
@@ -125,7 +126,7 @@ export const updateBudget = catchAsync(async (request, response) => {
 
     if(!budget){
         logger.error("Budget not found", {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.NOT_FOUND});
-        throw new AppError("Budget not found", StatusCodes.NOT_FOUND);
+        throw new AppError("Budget not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.BUDGET_NOT_FOUND});
     }
 
     const budgetData = {
@@ -164,7 +165,7 @@ export const deleteBudget = catchAsync(async (request, response) => {
 
     if(!budget){
         logger.error("Budget not found", {user: maskEmail(request.user?.email), action: BUDGET_ACTIONS.NOT_FOUND});
-        throw new AppError("Budget not found", StatusCodes.NOT_FOUND);
+        throw new AppError("Budget not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.BUDGET_NOT_FOUND});
     }
 
     await deleteBudgetRecord(budgetId, userId);

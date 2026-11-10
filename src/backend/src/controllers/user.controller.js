@@ -24,6 +24,7 @@ import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { startOfMonthInTimeZone } from "../utils/financial-period.js";
 import { maskEmail } from "../utils/helpers.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 
 /**
@@ -39,7 +40,7 @@ export const getProfile = catchAsync(async (request, response) => {
 
     if(!profile){
         logger.warn("User not Found", {user: maskEmail(request.user?.email), action: USER_ACTIONS.USER_NOT_FOUND});
-        throw new AppError('User not found', StatusCodes.NOT_FOUND)
+        throw new AppError('User not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.RESOURCE_NOT_FOUND})
     }
 
     response.status(StatusCodes.OK).json({
@@ -184,7 +185,7 @@ export const changePassword = catchAsync(async (request, response) => {
 export const uploadAvatar = catchAsync(async (request, response) => {
     const file = request.file;
     if (!file) {
-        throw new AppError('Avatar file is required', StatusCodes.BAD_REQUEST);
+        throw new AppError('Avatar file is required', StatusCodes.BAD_REQUEST, null, {code: ERROR_CODES.AVATAR_REQUIRED});
     }
 
     await replaceAvatar({ userId: request.user.id, inputBuffer: file.buffer });
