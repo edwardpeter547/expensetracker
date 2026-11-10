@@ -8,6 +8,7 @@ import { getUser } from '../../services/auth.service.js';
 import { getUserProfileDto } from '../../services/profile.service.js';
 import AppError from '../../utils/appError.js';
 import { DEFAULT_POLICY_VERSION, DELETE_CONFIRMATION_TEXT, VOLUNTARY_RECOVERY_DAYS } from '../../constants/deletion.constants.js';
+import { ERROR_CODES } from '../../constants/error-codes.js';
 import { DeletionCoordinator } from './coordinator.js';
 import { createDefaultDeletionPolicy } from '../policies/policy.js';
 import { ErasureRegistry } from '../erasure/registry.js';
@@ -68,7 +69,7 @@ export const createProgressRepository = ({ prisma }) => ({
     async loadContext(requestId) {
         const request = await prisma.accountDeletionRequest.findUnique({ where: { id: requestId } });
         if (!request) {
-            throw new AppError('Deletion request not found', StatusCodes.NOT_FOUND);
+            throw new AppError('Deletion request not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.DELETION_REQUEST_NOT_FOUND});
         }
         return {
             userId: request.context?.userId ?? request.userId,
@@ -257,10 +258,10 @@ export const captureDeletionContext = async (userId) => {
 export const requestVoluntaryDeletion = async ({ userId, password, now = new Date() }) => {
     const user = await getUser({ id: userId });
     if (!user || !user.isActive) {
-        throw new AppError('User not found or account deactivated', StatusCodes.NOT_FOUND);
+        throw new AppError('User not found or account deactivated', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.RESOURCE_NOT_FOUND});
     }
     if (!(await bcrypt.compare(password, user.password))) {
-        throw new AppError('Current password is incorrect', StatusCodes.UNAUTHORIZED);
+        throw new AppError('Current password is incorrect', StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.PASSWORD_INCORRECT});
     }
 
     const existing = await prisma.accountDeletionRequest.findFirst({
@@ -268,7 +269,7 @@ export const requestVoluntaryDeletion = async ({ userId, password, now = new Dat
         select: { id: true },
     });
     if (existing) {
-        throw new AppError('A deletion request is already in progress', StatusCodes.CONFLICT);
+        throw new AppError('A deletion request is already in progress', StatusCodes.CONFLICT, null, {code: ERROR_CODES.DELETION_ALREADY_IN_PROGRESS});
     }
 
     const recoveryDeadline = addDays(now, VOLUNTARY_RECOVERY_DAYS);
@@ -289,7 +290,7 @@ export const requestVoluntaryDeletion = async ({ userId, password, now = new Dat
             });
         } catch (error) {
             if (error?.code === 'P2002') {
-                throw new AppError('A deletion request is already in progress', StatusCodes.CONFLICT);
+                throw new AppError('A deletion request is already in progress', StatusCodes.CONFLICT, null, {code: ERROR_CODES.DELETION_ALREADY_IN_PROGRESS});
             }
             throw error;
         }
@@ -324,7 +325,7 @@ export const requestVoluntaryDeletion = async ({ userId, password, now = new Dat
 export const cancelDeletion = async ({ email, password, now = new Date() }) => {
     const user = await getUser({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-        throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED);
+        throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.AUTH_INVALID_CREDENTIALS});
     }
 
     const request = await prisma.accountDeletionRequest.findFirst({
@@ -332,7 +333,7 @@ export const cancelDeletion = async ({ email, password, now = new Date() }) => {
         select: { id: true },
     });
     if (!request) {
-        throw new AppError('No eligible deletion request to cancel', StatusCodes.CONFLICT);
+        throw new AppError('No eligible deletion request to cancel', StatusCodes.CONFLICT, null, {code: ERROR_CODES.DELETION_NOT_CANCELLABLE});
     }
 
     const cancelled = await prisma.accountDeletionRequest.updateMany({
@@ -340,7 +341,7 @@ export const cancelDeletion = async ({ email, password, now = new Date() }) => {
         data: { status: 'CANCELLED' },
     });
     if (cancelled.count !== 1) {
-        throw new AppError('Deletion can no longer be cancelled', StatusCodes.CONFLICT);
+        throw new AppError('Deletion can no longer be cancelled', StatusCodes.CONFLICT, null, {code: ERROR_CODES.DELETION_NOT_CANCELLABLE});
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { isActive: true } });
@@ -365,7 +366,7 @@ export const cancelDeletion = async ({ email, password, now = new Date() }) => {
 export const createStatutoryErasureRequest = async ({ userId, scope = 'ALL', now = new Date() }) => {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) {
-        throw new AppError('User not found', StatusCodes.NOT_FOUND);
+        throw new AppError('User not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.RESOURCE_NOT_FOUND});
     }
 
     const requiresReview = scope !== 'ALL';
@@ -397,14 +398,14 @@ export const createStatutoryErasureRequest = async ({ userId, scope = 'ALL', now
  */
 export const recordRetentionDecision = async ({ requestId, category, action, reason = null, reviewer = null, reviewDue = null }) => {
     if (!['RETAIN', 'REVIEW'].includes(action)) {
-        throw new AppError('Invalid retention decision', StatusCodes.BAD_REQUEST);
+        throw new AppError('Invalid retention decision', StatusCodes.BAD_REQUEST, null, {code: ERROR_CODES.DELETION_INVALID_RETENTION});
     }
 
     const step = await prisma.deletionStep.findUnique({
         where: { requestId_category: { requestId, category } },
     });
     if (!step) {
-        throw new AppError('Deletion step not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Deletion step not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.RESOURCE_NOT_FOUND});
     }
 
     const data = action === 'RETAIN'

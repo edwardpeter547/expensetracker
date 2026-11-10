@@ -2,6 +2,7 @@ import prisma from "../configurations/prisma.connect.js";
 import { StatusCodes } from "http-status-codes";
 import { USER_OWNER_SELECT } from "../constants/user.select.js";
 import AppError from "../utils/appError.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 /**
  * Create a transaction record for its owner.
@@ -75,7 +76,7 @@ export const deleteTransactionById = async (transactionId, userId) => {
     });
 
     if(count === 0){
-        throw new AppError('Transaction not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Transaction not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.TRANSACTION_NOT_FOUND});
     }
 }
 
@@ -100,7 +101,7 @@ export const updateTransactionRecord = async (transactionId, userId, transaction
     });
 
     if(count === 0){
-        throw new AppError('Transaction not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Transaction not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.TRANSACTION_NOT_FOUND});
     }
 
     return prisma.transaction.findFirst({

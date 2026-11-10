@@ -78,6 +78,7 @@ export type ErrorTranslator = (
  * test can parse this file and assert both packages stay in sync.
  */
 export const API_ERROR_TRANSLATION_KEYS = {
+    'ACCOUNT_ALREADY_EXISTS': 'errors.auth.accountAlreadyExists',
     'AUTH_ACCOUNT_DEACTIVATED': 'errors.auth.accountDeactivated',
     'AUTH_EMAIL_NOT_VERIFIED': 'errors.auth.emailNotVerified',
     'AUTH_INVALID_CREDENTIALS': 'errors.auth.invalidCredentials',
@@ -94,6 +95,7 @@ export const API_ERROR_TRANSLATION_KEYS = {
     'CATEGORY_NOT_FOUND': 'errors.category.notFound',
     'CONFLICT': 'errors.conflict',
     'DELETION_ALREADY_IN_PROGRESS': 'errors.deletion.alreadyInProgress',
+    'DELETION_INVALID_RETENTION': 'errors.deletion.invalidRetention',
     'DELETION_NOT_CANCELLABLE': 'errors.deletion.notCancellable',
     'DELETION_REQUEST_NOT_FOUND': 'errors.deletion.notFound',
     'EMAIL_ALREADY_EXISTS': 'errors.auth.emailAlreadyExists',
@@ -108,6 +110,7 @@ export const API_ERROR_TRANSLATION_KEYS = {
     'RATE_LIMIT_EXCEEDED': 'errors.rateLimitExceeded',
     'REFRESH_TOKEN_EXPIRED': 'errors.auth.refreshTokenExpired',
     'REFRESH_TOKEN_INVALID': 'errors.auth.refreshTokenInvalid',
+    'REFRESH_TOKEN_MISSING': 'errors.auth.refreshTokenMissing',
     'RESET_TOKEN_EXPIRED': 'errors.auth.resetTokenExpired',
     'RESET_TOKEN_INVALID': 'errors.auth.resetTokenInvalid',
     'RESOURCE_NOT_FOUND': 'errors.resource.notFound',

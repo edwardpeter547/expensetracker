@@ -16,6 +16,7 @@ import {
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { maskEmail } from "../utils/helpers.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 
 /**
@@ -53,7 +54,7 @@ export const getCategory = catchAsync(async (request, response) => {
 
     if(!category){
         logger.warn("Category not found", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.NOT_FOUND});
-        throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+        throw new AppError("Category not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
     }
 
     response.status(StatusCodes.OK).json({
@@ -80,7 +81,7 @@ export const createCategory = catchAsync(async (request, response) => {
 
     if(existing){
         logger.warn("Category Already exist", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.ALREADY_EXIST});
-        throw new AppError("Category Already exist", StatusCodes.CONFLICT)
+        throw new AppError("Category Already exist", StatusCodes.CONFLICT, null, {code: ERROR_CODES.CATEGORY_ALREADY_EXISTS})
     }
 
     const categoryData = {
@@ -116,7 +117,7 @@ export const updateCategory = catchAsync(async (request, response) => {
 
     if(!existingCategory){
         logger.error("Category not found or cannot be edited.", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.NOT_FOUND});
-        throw new AppError("Category not found or cannot be edited.", StatusCodes.NOT_FOUND);
+        throw new AppError("Category not found or cannot be edited.", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
     }
 
     // If renaming, check no conflict
@@ -124,7 +125,7 @@ export const updateCategory = catchAsync(async (request, response) => {
         const conflict = await checkConflict(categoryId, name, userId);
         if(conflict){
             logger.error("Category Already exist", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.ALREADY_EXIST});
-            throw new AppError("Category Already exist", StatusCodes.CONFLICT);
+            throw new AppError("Category Already exist", StatusCodes.CONFLICT, null, {code: ERROR_CODES.CATEGORY_ALREADY_EXISTS});
         }
     }
 
@@ -160,7 +161,7 @@ export const deleteCategory = catchAsync(async (request, response) => {
 
     if(!category){
         logger.error("Category not found or cannot be deleted.", {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.NOT_FOUND});
-        throw new AppError("Category not found or cannot be deleted.", StatusCodes.NOT_FOUND);
+        throw new AppError("Category not found or cannot be deleted.", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
     }
 
     const transactionCount = await countTransaction(userId, category.name);
@@ -172,7 +173,12 @@ export const deleteCategory = catchAsync(async (request, response) => {
             {user: maskEmail(request.user?.email), action: CATEGORY_ACTIONS.CONFLICT}
         )
 
-        throw new AppError(`Category is in use by ${budgetCount} budgets and ${transactionCount} transactions`, StatusCodes.CONFLICT);
+        throw new AppError(
+            `Category is in use by ${budgetCount} budgets and ${transactionCount} transactions`,
+            StatusCodes.CONFLICT,
+            null,
+            {code: ERROR_CODES.CATEGORY_IN_USE, params: {budgetCount, transactionCount}}
+        );
     }
 
     await deleteCategoryRecord(categoryId, userId);

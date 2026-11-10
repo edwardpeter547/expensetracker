@@ -5,6 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import AppError from "../utils/appError.js";
 import { normalizeUsername } from "../utils/helpers.js";
 import { buildAvatarDto, buildDisplayName } from "./avatar.service.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 /**
  * Load a user's middleware-safe profile by id.
@@ -115,7 +116,7 @@ export const updateUserProfile = async (userId, profileData) => {
         return toProfileDto(user);
     } catch (error) {
         if (error?.code === 'P2002') {
-            throw new AppError('Username already exists', StatusCodes.CONFLICT);
+            throw new AppError('Username already exists', StatusCodes.CONFLICT, null, {code: ERROR_CODES.USERNAME_ALREADY_EXISTS});
         }
         throw error;
     }

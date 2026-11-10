@@ -40,6 +40,7 @@ import AppError from '../utils/appError.js';
 import catchAsync from '../utils/catchAsync.js';
 import { generateNumericCode, generateTokens, getAppLocale, maskEmail } from '../utils/helpers.js';
 import { DUMMY_PASSWORD_HASH } from '../constants/app.constants.js';
+import { ERROR_CODES } from '../constants/error-codes.js';
 
 /**
  * Record suspicious repeated-failure evidence once per lockout engagement.
@@ -167,13 +168,13 @@ export const verifyEmail = catchAsync(async (request, response) => {
 
     if(!verification){
         logger.warn("Invalid Verification Token", {action: AUTH_ACTIONS.TOKEN_INVALID});
-        throw new AppError('Invalid or expired verification token', 400);
+        throw new AppError('Invalid or expired verification token', 400, null, {code: ERROR_CODES.VERIFICATION_TOKEN_INVALID});
     }
 
     if(verification.expiresAt < new Date()){
         await removeVerificationToken(verification.id);
         logger.warn("Verification token has expired", {user: maskEmail(verification.user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
-        throw new AppError('Verification token has expired', 400);
+        throw new AppError('Verification token has expired', 400, null, {code: ERROR_CODES.VERIFICATION_TOKEN_EXPIRED});
     }
 
     // Mark user as verified
@@ -255,6 +256,8 @@ export const login = catchAsync(async (request, response) => {
     const genericFailure = () => new AppError(
         i18n.__({phrase: "ERROR_INVALID_USER", locale: locale}),
         StatusCodes.UNAUTHORIZED,
+        null,
+        {code: ERROR_CODES.AUTH_INVALID_CREDENTIALS}
     );
 
     // Compare against the real hash when the user exists, and against a fixed
@@ -374,7 +377,7 @@ export const resetPassword = catchAsync(async (request, response) => {
             metadata: {reason: AUTH_AUDIT_REASONS.INVALID_RESET_CODE},
         });
         logger.warn("Password reset attempted for unknown email", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale}), StatusCodes.UNAUTHORIZED);
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale}), StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.RESET_TOKEN_INVALID});
     }
 
     const result = await resetPasswordWithCode({
@@ -395,7 +398,7 @@ export const resetPassword = catchAsync(async (request, response) => {
             metadata: {reason: AUTH_AUDIT_REASONS.INVALID_RESET_CODE},
         });
         logger.warn("Password reset code invalid or already used", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: user.language || locale}), StatusCodes.UNAUTHORIZED);
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: user.language || locale}), StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.RESET_TOKEN_INVALID});
     }
 
     response.status(StatusCodes.OK).json({
@@ -422,7 +425,7 @@ export const verifyToken = catchAsync(async (request, response) => {
 
     if(!user){
         logger.warn("Password reset code verification failed", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: getAppLocale(request)}), StatusCodes.UNAUTHORIZED);
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: getAppLocale(request)}), StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.RESET_TOKEN_INVALID});
     }
 
     const locale = user.language || Config.defaultLocale;
@@ -430,7 +433,7 @@ export const verifyToken = catchAsync(async (request, response) => {
     const result = await verifyResetPasswordToken(code, user);
     if(!result.valid){
         logger.warn("Invalid password reset token", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED})
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: locale}), StatusCodes.UNAUTHORIZED);
+        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: locale}), StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.RESET_TOKEN_INVALID});
     }
 
     response.status(StatusCodes.OK).json({
@@ -574,7 +577,7 @@ export const revokeSession = catchAsync(async (request, response) => {
     const {count} = await revokeUserSession(request.user.id, sessionId);
 
     if (count === 0) {
-        throw new AppError(request.__('ERROR_SESSION_NOT_FOUND'), StatusCodes.NOT_FOUND);
+        throw new AppError(request.__('ERROR_SESSION_NOT_FOUND'), StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.SESSION_NOT_FOUND});
     }
 
     response.status(StatusCodes.OK).json({
@@ -609,7 +612,7 @@ export const refreshToken = catchAsync(async (request, response) => {
             correlationId: request.id,
             metadata: {reason: AUTH_AUDIT_REASONS.INVALID_REFRESH_TOKEN},
         });
-        throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST);
+        throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST, null, {code: ERROR_CODES.REFRESH_TOKEN_MISSING});
     }
 
     let tokens;

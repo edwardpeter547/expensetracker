@@ -7,6 +7,7 @@ import Config from '../configurations/env.config.js';
 import logger from '../configurations/logger.config.js';
 import prisma from '../configurations/prisma.connect.js';
 import { getStorageAdapter } from '../configurations/storage.config.js';
+import { ERROR_CODES } from '../constants/error-codes.js';
 import {
     AVATAR_MAX_DIMENSION,
     AVATAR_MAX_INPUT_PIXELS,
@@ -116,22 +117,22 @@ export const normalizeAvatarImage = async (inputBuffer, options = {}) => {
     } = options;
 
     if (!Buffer.isBuffer(inputBuffer) || inputBuffer.length === 0) {
-        throw new AppError('Avatar image is required', StatusCodes.BAD_REQUEST);
+        throw new AppError('Avatar image is required', StatusCodes.BAD_REQUEST, null, {code: ERROR_CODES.AVATAR_REQUIRED});
     }
 
     let metadata;
     try {
         metadata = await sharp(inputBuffer, { limitInputPixels: maxInputPixels, failOn: 'error' }).metadata();
     } catch {
-        throw new AppError('Unsupported or corrupt image', StatusCodes.UNSUPPORTED_MEDIA_TYPE);
+        throw new AppError('Unsupported or corrupt image', StatusCodes.UNSUPPORTED_MEDIA_TYPE, null, {code: ERROR_CODES.AVATAR_INVALID});
     }
 
     if (!metadata.format || !SUPPORTED_AVATAR_FORMATS.has(metadata.format)) {
-        throw new AppError('Unsupported image format', StatusCodes.UNSUPPORTED_MEDIA_TYPE);
+        throw new AppError('Unsupported image format', StatusCodes.UNSUPPORTED_MEDIA_TYPE, null, {code: ERROR_CODES.AVATAR_INVALID});
     }
 
     if ((metadata.width ?? 0) > maxDimension || (metadata.height ?? 0) > maxDimension) {
-        throw new AppError('Image dimensions are too large', 413);
+        throw new AppError('Image dimensions are too large', 413, null, {code: ERROR_CODES.AVATAR_TOO_LARGE});
     }
 
     let buffer;
@@ -142,7 +143,7 @@ export const normalizeAvatarImage = async (inputBuffer, options = {}) => {
             .webp({ quality: 85 })
             .toBuffer();
     } catch {
-        throw new AppError('Unable to process image', StatusCodes.UNSUPPORTED_MEDIA_TYPE);
+        throw new AppError('Unable to process image', StatusCodes.UNSUPPORTED_MEDIA_TYPE, null, {code: ERROR_CODES.AVATAR_INVALID});
     }
 
     return { buffer, contentType: AVATAR_OUTPUT_CONTENT_TYPE, extension: 'webp' };
@@ -156,7 +157,7 @@ export const normalizeAvatarImage = async (inputBuffer, options = {}) => {
  */
 export const assertStorageAvailable = () => {
     if (!getStorageAdapter()) {
-        throw new AppError('Avatar storage is not configured', StatusCodes.SERVICE_UNAVAILABLE);
+        throw new AppError('Avatar storage is not configured', StatusCodes.SERVICE_UNAVAILABLE, null, {code: ERROR_CODES.AVATAR_STORAGE_UNAVAILABLE});
     }
 };
 
@@ -189,7 +190,7 @@ const swapAvatarKey = async (userId, nextKey) => {
         const rows = await tx.$queryRaw`SELECT "avatar" FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
         const row = rows[0];
         if (!row) {
-            throw new AppError('User not found', StatusCodes.NOT_FOUND);
+            throw new AppError('User not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.RESOURCE_NOT_FOUND});
         }
         const previousKey = row.avatar ?? null;
         await tx.user.update({
@@ -241,7 +242,7 @@ export const replaceAvatar = async ({ userId, inputBuffer }) => {
     try {
         await storage.put({ key: newKey, buffer: image.buffer, contentType: image.contentType });
     } catch {
-        throw new AppError('Unable to store avatar', StatusCodes.SERVICE_UNAVAILABLE);
+        throw new AppError('Unable to store avatar', StatusCodes.SERVICE_UNAVAILABLE, null, {code: ERROR_CODES.AVATAR_STORAGE_UNAVAILABLE});
     }
 
     let previousKey;
@@ -307,6 +308,6 @@ export const getAvatar = async ({ userId }) => {
         if (error instanceof StorageError && error.statusCode === 404) {
             return getDefaultAvatar();
         }
-        throw new AppError('Unable to retrieve avatar', StatusCodes.SERVICE_UNAVAILABLE);
+        throw new AppError('Unable to retrieve avatar', StatusCodes.SERVICE_UNAVAILABLE, null, {code: ERROR_CODES.AVATAR_STORAGE_UNAVAILABLE});
     }
 };

@@ -1,6 +1,7 @@
 import prisma from "../configurations/prisma.connect.js"
 import { StatusCodes } from "http-status-codes";
 import AppError from "../utils/appError.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 /**
  * List system categories plus the user's own categories.
@@ -130,7 +131,7 @@ export const updateCategoryRecord = async (categoryData, categoryId, userId) => 
     });
 
     if(count === 0){
-        throw new AppError('Category not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Category not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
     }
 
     return prisma.category.findFirst({
@@ -188,7 +189,7 @@ export const deleteCategoryRecord = async (categoryId, userId) => {
     });
 
     if(count === 0){
-        throw new AppError('Category not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Category not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
     }
 }
 

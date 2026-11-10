@@ -210,7 +210,7 @@ describe('Error Handler Middleware Test - errorHandler', () => {
             expect.objectContaining({
                 status: 401,
                 success: false,
-                message: 'Invalid Token'
+                message: 'Invalid or expired token'
             })
         );
     });
@@ -230,7 +230,7 @@ describe('Error Handler Middleware Test - errorHandler', () => {
             expect.objectContaining({
                 status: 401,
                 success: false,
-                message: 'Token Expired'
+                message: 'Token expired'
             })
         );
     });
@@ -319,10 +319,85 @@ describe('Error Handler Middleware Test - errorHandler', () => {
                     {
                         field: 'email',
                         code: 'VALIDATION_INVALID_FORMAT',
-                        message: 'invalid email',
+                        message: 'Invalid format',
                         params: null,
                     },
                 ],
+            })
+        );
+    });
+
+    /**
+     * A coded AppError must have its message localised using the negotiated
+     * request locale, while the stable code and params remain unchanged.
+     */
+    test('localizes a coded AppError for the negotiated locale', () => {
+        mockRequest.headers = {'accept-language': 'fr'};
+
+        errorHandler(
+            new AppError('Transaction not found', 404, null, {code: 'TRANSACTION_NOT_FOUND'}),
+            mockRequest,
+            mockResponse,
+            mockNext,
+        );
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'TRANSACTION_NOT_FOUND',
+                message: 'Transaction introuvable',
+            })
+        );
+    });
+
+    /**
+     * Field-level validation errors must localise independently, applying the
+     * field's safe interpolation params in the negotiated locale.
+     */
+    test('localizes field-level validation errors for the negotiated locale', () => {
+        mockRequest.headers = {'accept-language': 'fr'};
+
+        errorHandler(
+            new AppError(
+                'Validation failed',
+                400,
+                [{field: 'name', code: 'VALIDATION_TOO_SHORT', message: 'too short', params: {limit: 3}}],
+                {code: 'VALIDATION_ERROR'},
+            ),
+            mockRequest,
+            mockResponse,
+            mockNext,
+        );
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                errors: [
+                    {
+                        field: 'name',
+                        code: 'VALIDATION_TOO_SHORT',
+                        message: 'Doit contenir au moins 3 caractères',
+                        params: {limit: 3},
+                    },
+                ],
+            })
+        );
+    });
+
+    /**
+     * An unknown code has no catalogue entry, so the thrown message remains
+     * the user-facing text rather than being replaced with the code string.
+     */
+    test('keeps the thrown message for an unknown code', () => {
+        errorHandler(
+            new AppError('Something custom', 409, null, {code: 'FUTURE_CODE'}),
+            mockRequest,
+            mockResponse,
+            mockNext,
+        );
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'FUTURE_CODE',
+                message: 'Something custom',
             })
         );
     });

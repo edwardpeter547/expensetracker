@@ -3,6 +3,7 @@ import Config from '../configurations/env.config.js';
 import AppError from '../utils/appError.js';
 import { ALLOWED_AVATAR_MIME_TYPES } from '../constants/avatar.constants.js';
 import { StatusCodes } from 'http-status-codes';
+import { ERROR_CODES } from '../constants/error-codes.js';
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -14,7 +15,7 @@ const upload = multer({
     fileFilter: (request, file, callback) => {
         // First-pass rejection only; the service re-inspects decoded content.
         if (!ALLOWED_AVATAR_MIME_TYPES.includes(file.mimetype)) {
-            return callback(new AppError('Unsupported media type', StatusCodes.UNSUPPORTED_MEDIA_TYPE));
+            return callback(new AppError('Unsupported media type', StatusCodes.UNSUPPORTED_MEDIA_TYPE, null, {code: ERROR_CODES.UNSUPPORTED_MEDIA_TYPE}));
         }
         callback(null, true);
     },
@@ -37,7 +38,10 @@ export const avatarUpload = (request, response, next) => {
 
         if (error instanceof multer.MulterError) {
             const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : StatusCodes.BAD_REQUEST;
-            return next(new AppError(error.message, status));
+            const code = error.code === 'LIMIT_FILE_SIZE'
+                ? ERROR_CODES.AVATAR_TOO_LARGE
+                : ERROR_CODES.BAD_REQUEST;
+            return next(new AppError(error.message, status, null, {code}));
         }
 
         return next(error);

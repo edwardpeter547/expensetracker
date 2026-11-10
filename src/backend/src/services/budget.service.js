@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { Prisma } from "../generated/client.js";
 import AppError from "../utils/appError.js";
 import { getPeriodBounds } from "../utils/financial-period.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 /**
  * List active budgets for a user, including their category.
@@ -159,7 +160,7 @@ export const updateBudgetRecord = async (budgetId, userId, budgetData) => {
     });
 
     if(count === 0){
-        throw new AppError('Budget not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Budget not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.BUDGET_NOT_FOUND});
     }
 
     return prisma.budget.findFirst({
@@ -184,6 +185,6 @@ export const deleteBudgetRecord = async (budgetId, userId) => {
     });
 
     if(count === 0){
-        throw new AppError('Budget not found', StatusCodes.NOT_FOUND);
+        throw new AppError('Budget not found', StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.BUDGET_NOT_FOUND});
     }
 }

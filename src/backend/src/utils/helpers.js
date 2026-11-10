@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import Config from '../configurations/env.config.js';
 import AppError from './appError.js';
 import { resolveRequestLocale } from './locale.js';
+import { ERROR_CODES } from '../constants/error-codes.js';
 
 /**
  * Generate an access/refresh token pair for an authenticated user.
@@ -119,7 +120,7 @@ export const parseDate = (dateString) => {
     const date = new Date(dateString);
 
     if(isNaN(date.getTime())){
-        throw new AppError('Invalid date format', StatusCodes.BAD_REQUEST);
+        throw new AppError('Invalid date format', StatusCodes.BAD_REQUEST, null, {code: ERROR_CODES.INVALID_DATE});
     }
 
     return date;

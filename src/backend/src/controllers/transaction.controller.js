@@ -10,6 +10,7 @@ import { getCategoryRecord } from "../services/category.service.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { parseDate } from "../utils/helpers.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 
 /**
@@ -45,7 +46,7 @@ export const getTransaction = catchAsync(async (request, response) => {
 
     const transaction = await getTransactionById(id, userId);
     if(!transaction){
-        throw new AppError("Transaction not found", StatusCodes.NOT_FOUND);
+        throw new AppError("Transaction not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.TRANSACTION_NOT_FOUND});
     }
     response.status(StatusCodes.OK).json({
         success: true,
@@ -75,7 +76,7 @@ export const createTransaction = catchAsync(async (request, response) => {
     if(categoryId){
         const categoryRecord = await getCategoryRecord(categoryId, userId);
         if(!categoryRecord){
-            throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+            throw new AppError("Category not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
         }
         resolvedCategoryId = categoryRecord.id;
         resolvedCategoryName = categoryRecord.name;
@@ -144,7 +145,7 @@ export const updateTransaction = catchAsync(async (request, response) => {
     if(categoryId){
         const categoryRecord = await getCategoryRecord(categoryId, userId);
         if(!categoryRecord){
-            throw new AppError("Category not found", StatusCodes.NOT_FOUND);
+            throw new AppError("Category not found", StatusCodes.NOT_FOUND, null, {code: ERROR_CODES.CATEGORY_NOT_FOUND});
         }
         resolvedCategory = {
             category: categoryRecord.name,

@@ -6,6 +6,7 @@ import AppError from '../utils/appError.js';
 import { getAppLocale } from '../utils/helpers.js';
 import { recordAuthAuditEvent } from '../services/auth-audit.service.js';
 import { AUTH_AUDIT_EVENT_TYPES, AUTH_AUDIT_OUTCOMES, AUTH_AUDIT_REASONS } from '../constants/auth-audit.constants.js';
+import { ERROR_CODES } from '../constants/error-codes.js';
 
 const MISSING_TOKEN_MESSAGE = 'Access denied. No token provided.';
 const INSUFFICIENT_PERMISSION_MESSAGE = 'Access denied. Insufficient permissions.';
@@ -99,7 +100,7 @@ export const authenticate = async (request, response, next) => {
 
         const authHeader = request.headers.authorization;
         if(!authHeader || !authHeader.startsWith('Bearer')){
-            throw new AppError('Access denied. No token provided.', StatusCodes.UNAUTHORIZED);
+            throw new AppError('Access denied. No token provided.', StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.TOKEN_MISSING});
         }
 
         const token = authHeader.split(' ')[1];
@@ -115,7 +116,7 @@ export const authenticate = async (request, response, next) => {
         const user = await userProfile({userId: decoded.userId});
 
         if(!user || !user.isActive || user.tokenVersion !== decoded.tokenVersion){
-            throw new AppError('User not found or account deactivated', StatusCodes.UNAUTHORIZED)
+            throw new AppError('User not found or account deactivated', StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.TOKEN_INVALID})
         }
 
         request.user = user;
@@ -126,7 +127,7 @@ export const authenticate = async (request, response, next) => {
         await recordAuthorizationDenied(request, decodedUserId);
 
         if(error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError'){
-            return next(new AppError('Invalid or expired token', StatusCodes.UNAUTHORIZED));
+            return next(new AppError('Invalid or expired token', StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.TOKEN_INVALID}));
         }
         next(error);
     }
@@ -154,7 +155,7 @@ export const authorize = (...roles) => {
     return async (request, response, next) => {
         if (!request.user) {
             await recordAuthorizationDenied(request, null);
-            return next(new AppError(MISSING_TOKEN_MESSAGE, StatusCodes.UNAUTHORIZED));
+            return next(new AppError(MISSING_TOKEN_MESSAGE, StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.TOKEN_MISSING}));
         }
 
         if (requiredRoles.length === 0) {
@@ -166,7 +167,7 @@ export const authorize = (...roles) => {
 
         if (!isGranted) {
             await recordAuthorizationDenied(request, request.user?.id);
-            return next(new AppError(INSUFFICIENT_PERMISSION_MESSAGE, StatusCodes.FORBIDDEN));
+            return next(new AppError(INSUFFICIENT_PERMISSION_MESSAGE, StatusCodes.FORBIDDEN, null, {code: ERROR_CODES.FORBIDDEN}));
         }
 
         return next();

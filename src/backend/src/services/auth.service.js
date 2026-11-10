@@ -10,6 +10,7 @@ import { generateTokens, normalizeUsername } from "../utils/helpers.js";
 import { REFRESH_TOKEN_TTL_MS, REFRESH_TOKEN_PATTERN, REUSE_DETECTED } from "../constants/app.constants.js";
 import { AUTH_AUDIT_EVENT_TYPES, AUTH_AUDIT_OUTCOMES } from "../constants/auth-audit.constants.js";
 import { recordAuthAuditEvent } from "./auth-audit.service.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
 
 /**
  * Find an existing user by email or username.
@@ -46,7 +47,7 @@ export const createUser = async (email, username, password, firstname, lastname,
     const isExistingUser = await checkExistingUser(email, normalizedUsername);
     if(isExistingUser){
         logger.warn(`User :${username} Already exist`);
-        throw new AppError("User with this email or username already exist", 409);
+        throw new AppError("User with this email or username already exist", 409, null, {code: ERROR_CODES.ACCOUNT_ALREADY_EXISTS});
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -261,7 +262,7 @@ export const revokeUserSession = async (userId, sessionId) => {
  */
 export const rotateRefreshToken = async (presentedToken) => {
     if (typeof presentedToken !== 'string' || !REFRESH_TOKEN_PATTERN.test(presentedToken)) {
-        throw new AppError('Invalid Refresh Token', 401);
+        throw new AppError('Invalid Refresh Token', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_INVALID});
     }
 
     const tokenHash = hashToken(presentedToken);
@@ -271,21 +272,21 @@ export const rotateRefreshToken = async (presentedToken) => {
     });
 
     if (!stored) {
-        throw new AppError('Invalid Refresh Token', 401);
+        throw new AppError('Invalid Refresh Token', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_INVALID});
     }
 
     if (stored.isRevoked) {
         await revokeTokenFamily(stored.familyId);
-        throw new AppError('Invalid Refresh Token', 401);
+        throw new AppError('Invalid Refresh Token', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_INVALID});
     }
 
     if (stored.expiresAt < new Date()) {
-        throw new AppError('Refresh Token Expired', 401);
+        throw new AppError('Refresh Token Expired', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_EXPIRED});
     }
 
     if (!stored.user || !stored.user.isActive) {
         await revokeTokenFamily(stored.familyId);
-        throw new AppError('Account deactivated', 401);
+        throw new AppError('Account deactivated', 401, null, {code: ERROR_CODES.AUTH_ACCOUNT_DEACTIVATED});
     }
 
     const tokens = generateTokens(stored.user.id, stored.user.email, stored.user.tokenVersion);
@@ -310,7 +311,7 @@ export const rotateRefreshToken = async (presentedToken) => {
                 !lockedUser.isActive ||
                 Number(lockedUser.tokenVersion) !== stored.user.tokenVersion
             ) {
-                throw new AppError('Invalid Refresh Token', 401);
+                throw new AppError('Invalid Refresh Token', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_INVALID});
             }
 
             const consumed = await tx.refreshToken.updateMany({
@@ -339,7 +340,7 @@ export const rotateRefreshToken = async (presentedToken) => {
     } catch (error) {
         if (error.code === REUSE_DETECTED) {
             await revokeTokenFamily(stored.familyId);
-            throw new AppError('Invalid Refresh Token', 401);
+            throw new AppError('Invalid Refresh Token', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_INVALID});
         }
         throw error;
     }
@@ -830,16 +831,16 @@ export const changeUserPassword = async (userId, currentPassword, newPassword, a
         const lockedUser = lockedRows[0];
 
         if (!lockedUser) {
-            throw new AppError('User not found', 401);
+            throw new AppError('User not found', 401, null, {code: ERROR_CODES.RESOURCE_NOT_FOUND});
         }
 
         const currentPasswordValid = await bcrypt.compare(currentPassword, lockedUser.password);
         if (!currentPasswordValid) {
-            throw new AppError('Current password is incorrect', 401);
+            throw new AppError('Current password is incorrect', 401, null, {code: ERROR_CODES.PASSWORD_INCORRECT});
         }
 
         if (await bcrypt.compare(newPassword, lockedUser.password)) {
-            throw new AppError('New password must be different from the current password', 409);
+            throw new AppError('New password must be different from the current password', 409, null, {code: ERROR_CODES.PASSWORD_SAME_AS_CURRENT});
         }
 
         const history = await tx.passwordHistory.findMany({
@@ -848,7 +849,7 @@ export const changeUserPassword = async (userId, currentPassword, newPassword, a
         });
         for (const entry of history) {
             if (await bcrypt.compare(newPassword, entry.password)) {
-                throw new AppError('New password was used previously', 409);
+                throw new AppError('New password was used previously', 409, null, {code: ERROR_CODES.PASSWORD_PREVIOUSLY_USED});
             }
         }
 
