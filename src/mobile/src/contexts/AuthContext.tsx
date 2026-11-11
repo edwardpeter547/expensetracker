@@ -33,6 +33,7 @@ import {
     type BiometricLoginMarker,
 } from '@/security/biometricLoginStorage';
 import type { UserProfile } from '@/types/profile';
+import { AppState } from 'react-native';
 import {
     createContext,
     ReactNode,
@@ -77,7 +78,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [biometricLogin, setBiometricLogin] = useState<BiometricLoginMarker | null>(null);
     const biometricLoginInFlight = useRef(false);
-    const { language, currency, applyRemotePreferences } = useLocale();
+    const {
+        language,
+        currency,
+        isLanguageOverridden,
+        applyRemotePreferences,
+        clearRemotePreferences,
+    } = useLocale();
+
+    /**
+     * Persist an explicit language choice to the authenticated profile.
+     *
+     * The explicit choice always wins locally; this keeps the account in step
+     * so another device adopts the same preference. Failures are swallowed
+     * because the local choice remains authoritative and is retried on the
+     * next foreground or hydration.
+     */
+    const syncLanguageToProfile = useCallback(async () => {
+        if (!user || !isLanguageOverridden || user.language === language) return;
+
+        try {
+            const response = await apiClient.put('/user/profile', { language });
+            setUser(response.data.data.profile);
+        } catch {
+            // Retried by the foreground listener and the next hydration pass.
+        }
+    }, [user, isLanguageOverridden, language]);
+
+    useEffect(() => {
+        void syncLanguageToProfile();
+    }, [syncLanguageToProfile]);
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') void syncLanguageToProfile();
+        });
+        return () => subscription.remove();
+    }, [syncLanguageToProfile]);
 
     useEffect(() => {
         const loadTokens = async () => {
@@ -152,6 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         setBiometricLogin(null);
         setUser(null);
+        clearRemotePreferences();
     };
 
     /**

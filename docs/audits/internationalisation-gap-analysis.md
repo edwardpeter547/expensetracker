@@ -45,9 +45,9 @@ implemented, or unable to verify.
 | BK-12 | Backend | Implemented | Dashboard and budget month/week/year boundaries derive from `User.timezone` via `src/backend/src/utils/financial-period.js`, with cross-zone regression coverage | High | Derive periods in the user's timezone | None |
 | BK-13 | API | Partially implemented | Error envelope documented with `code`/`params` in OpenAPI; the success/error `status` difference is retained as a documented compatibility choice | Medium | Decide and document one envelope; add `code` | BK-04 |
 | MB-01 | Mobile | Not implemented | No UI translation catalogue; screens/tabs hardcoded English — `src/mobile/app/welcome.tsx`, `src/mobile/app/(tabs)/_layout.tsx` | Critical | Add `i18next`/`react-i18next` catalogues and `t()` | MB-06 |
-| MB-02 | Mobile | Partially implemented | Explicit language change persists only locally — `src/mobile/src/contexts/LocaleContext.tsx` | High | Call `PUT /user/profile` when authenticated | MB-04 |
-| MB-03 | Shared | Not implemented | API client sends no `Accept-Language` — `src/mobile/src/api/client.ts` | High | Add request interceptor | MB-01 |
-| MB-04 | Mobile | Not implemented | No language selection UI in Profile/Settings | Medium | Add selector: Follow device / English / Français | MB-02 |
+| MB-02 | Mobile | Implemented | Explicit language choice syncs to the authenticated profile, with foreground retry and remote-preference clearing on logout | High | Call `PUT /user/profile` when authenticated | MB-04 |
+| MB-03 | Shared | Implemented | API client attaches the effective `Accept-Language` through a request interceptor | High | Add request interceptor | MB-01 |
+| MB-04 | Mobile | Implemented | Profile/Settings language selector offers Follow device / English / Français and persists explicit choices | Medium | Add selector: Follow device / English / Français | MB-02 |
 | MB-05 | Mobile | Not implemented | `Today`/`Yesterday` and `formatDate` hardcode English — `src/mobile/src/utils/transactions.ts`, `src/mobile/utils/utils.ts` | Medium | Move to catalogue/`Intl` | MB-01 |
 | MB-06 | Mobile | Needs improvement | Supported-language list duplicated — `src/mobile/src/localization/registry.ts` vs `detect.ts` | Medium | Single source of truth | None |
 | MB-07 | Mobile | Partially implemented | Client code-to-key mapping and fallback implemented in `src/mobile/src/api/errors.ts`; `i18next` error resources remain pending (#188) | Medium | Localise by `ApiErrorKind` and server `code` | MB-01, BK-04 |
