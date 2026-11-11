@@ -114,7 +114,7 @@ describe('translateApiError', () => {
             response: {status: 409, data: {}},
         });
 
-        assert.equal(translateApiError(error, makeTranslator('en')).message, 'Something went wrong. Please try again.');
+        assert.equal(translateApiError(error, missingTranslator).message, 'Something went wrong. Please try again.');
     });
 
     test('translates field-level validation errors independently', () => {
@@ -140,7 +140,7 @@ describe('translateApiError', () => {
     test('keeps network-error messages safe without a server code', () => {
         const error = normalizeApiError({isAxiosError: true, message: 'Network Error'});
 
-        const result = translateApiError(error, makeTranslator('en'));
+        const result = translateApiError(error, missingTranslator);
         assert.match(result.message, /Could not reach the server/);
     });
 });

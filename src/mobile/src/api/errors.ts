@@ -57,6 +57,8 @@ export interface NormalizedApiError {
     params?: Record<string, ErrorParam> | null;
     fieldErrors?: FieldError[];
     translationKey?: string | null;
+    serverMessage?: string;
+    kindTranslationKey?: string;
     cause?: unknown;
 }
 
@@ -185,6 +187,29 @@ export const apiErrorTranslationKey = (code: string | null | undefined): string 
 };
 
 /**
+ * Translation keys for client-generated error kinds that carry no server code.
+ */
+const API_ERROR_KIND_TRANSLATION_KEYS: Record<ApiErrorKind, string> = {
+    network: 'network',
+    timeout: 'timeout',
+    unauthorized: 'sessionExpired',
+    forbidden: 'forbidden',
+    validation: 'validationError',
+    server: 'internalServerError',
+    unknown: 'generic',
+};
+
+/**
+ * Resolve the translation key for a client-generated error kind.
+ *
+ * @param {ApiErrorKind} kind The normalized error kind.
+ * @returns {string} The `errors`-namespace key for that kind.
+ */
+export const apiErrorKindTranslationKey = (kind: ApiErrorKind): string => {
+    return API_ERROR_KIND_TRANSLATION_KEYS[kind];
+};
+
+/**
  * Best-effort extraction of a server-provided message from an error payload.
  *
  * @param {unknown} data The error response body.
@@ -307,6 +332,7 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
         return {
             kind: 'timeout',
             message: 'The server took too long to respond. Please try again.',
+            kindTranslationKey: apiErrorKindTranslationKey('timeout'),
             cause: error,
         };
     }
@@ -315,6 +341,7 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
         return {
             kind: 'network',
             message: 'Could not reach the server. Check your connection and try again.',
+            kindTranslationKey: apiErrorKindTranslationKey('network'),
             cause: error,
         };
     }
@@ -326,16 +353,19 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     const params = sanitizeErrorParams((data as { params?: unknown } | undefined)?.params);
     const fieldErrors = normalizeFieldErrors(data);
     const translationKey = apiErrorTranslationKey(code);
+    const serverMessage = readServerMessage(data);
 
     if (status === 401) {
         return {
             kind: 'unauthorized',
-            message: readServerMessage(data) || 'Your session has expired. Please sign in again.',
+            message: serverMessage || 'Your session has expired. Please sign in again.',
             status,
             code,
             params,
             fieldErrors,
             translationKey,
+            serverMessage,
+            kindTranslationKey: apiErrorKindTranslationKey('unauthorized'),
             cause: error,
         };
     }
@@ -343,12 +373,14 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     if (status === 403) {
         return {
             kind: 'forbidden',
-            message: readServerMessage(data) || 'You do not have permission to do that.',
+            message: serverMessage || 'You do not have permission to do that.',
             status,
             code,
             params,
             fieldErrors,
             translationKey,
+            serverMessage,
+            kindTranslationKey: apiErrorKindTranslationKey('forbidden'),
             cause: error,
         };
     }
@@ -356,12 +388,14 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     if (status === StatusCodes.BAD_REQUEST || status === StatusCodes.UNPROCESSABLE_ENTITY) {
         return {
             kind: 'validation',
-            message: readServerMessage(data) || 'Please check your input and try again.',
+            message: serverMessage || 'Please check your input and try again.',
             status,
             code,
             params,
             fieldErrors,
             translationKey,
+            serverMessage,
+            kindTranslationKey: apiErrorKindTranslationKey('validation'),
             cause: error,
         };
     }
@@ -375,6 +409,7 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
             params,
             fieldErrors,
             translationKey,
+            kindTranslationKey: apiErrorKindTranslationKey('server'),
             cause: error,
         };
     }
@@ -382,12 +417,14 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     if (status) {
         return {
             kind: 'unknown',
-            message: readServerMessage(data) || 'Something went wrong. Please try again.',
+            message: serverMessage || 'Something went wrong. Please try again.',
             status,
             code,
             params,
             fieldErrors,
             translationKey,
+            serverMessage,
+            kindTranslationKey: apiErrorKindTranslationKey('unknown'),
             cause: error,
         };
     }
@@ -395,6 +432,7 @@ export const normalizeApiError = (error: unknown): NormalizedApiError => {
     return {
         kind: 'unknown',
         message: candidate?.message || GENERIC_ERROR_MESSAGE,
+        kindTranslationKey: apiErrorKindTranslationKey('unknown'),
         cause: error,
     };
 };
@@ -475,6 +513,15 @@ export const translateApiError = (
             ...(error.params ?? {}),
         });
         message = nonEmptyFallback(translated) ?? resolveGenericMessage(translator);
+    } else if (error.serverMessage) {
+        message = nonEmptyFallback(error.serverMessage) ?? resolveGenericMessage(translator);
+    } else if (error.kindTranslationKey) {
+        const translated = translator(error.kindTranslationKey, {
+            defaultValue: error.message,
+        });
+        message = nonEmptyFallback(translated)
+            ?? nonEmptyFallback(error.message)
+            ?? resolveGenericMessage(translator);
     } else {
         message = nonEmptyFallback(error.message) ?? resolveGenericMessage(translator);
     }
