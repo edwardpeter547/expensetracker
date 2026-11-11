@@ -8,6 +8,7 @@ import {
     transactionTypography,
 } from '@/constants/transactionsTheme';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -23,10 +24,13 @@ export interface RecurringShortcutProps {
  * @param {RecurringShortcutProps} props Component props.
  * @returns {JSX.Element} The shortcut card.
  */
-const RecurringShortcut = ({ onPress }: RecurringShortcutProps) => (
+const RecurringShortcut = ({ onPress }: RecurringShortcutProps) => {
+    const { t } = useTranslation('transactions');
+
+    return (
     <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Recurring Transactions"
+        accessibilityLabel={t('Recurring Transactions')}
         onPress={onPress}
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
@@ -34,12 +38,13 @@ const RecurringShortcut = ({ onPress }: RecurringShortcutProps) => (
             <Ionicons name="repeat-outline" size={22} color={C.green} />
         </View>
         <View style={styles.copy}>
-            <Text style={styles.title}>Recurring Transactions</Text>
-            <Text style={styles.subtitle}>Manage salary, rent and subscriptions</Text>
+            <Text style={styles.title}>{t('Recurring Transactions')}</Text>
+            <Text style={styles.subtitle}>{t('Manage salary, rent and subscriptions')}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={C.muted} />
     </Pressable>
-);
+    );
+};
 
 /** Shortcut styles. */
 const styles = StyleSheet.create({

@@ -1,4 +1,5 @@
 import { Image, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Shared navy brand header for the unauthenticated screens.
@@ -6,23 +7,27 @@ import { Image, StyleSheet, View } from 'react-native';
  * Renders the A2 monogram beside the AuditWallet wordmark inside a rounded
  * navy card so every pre-login screen carries the same brand treatment.
  */
-const AuthBrandHeader = () => (
-  <View style={styles.card}>
-    <View style={styles.icon}>
+const AuthBrandHeader = () => {
+  const { t } = useTranslation('auth');
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.icon}>
+        <Image
+          source={require('../../../assets/images/favicon.png')}
+          resizeMode="contain"
+          style={{ width: 26, height: 26 }}
+        />
+      </View>
       <Image
-        source={require('../../../assets/images/favicon.png')}
+        source={require('../../../assets/images/AuditWallet_wordmark_split_dark.png')}
+        accessibilityLabel={t('AuditWallet')}
         resizeMode="contain"
-        style={{ width: 26, height: 26 }}
+        style={styles.wordmark}
       />
     </View>
-    <Image
-      source={require('../../../assets/images/AuditWallet_wordmark_split_dark.png')}
-      accessibilityLabel="AuditWallet"
-      resizeMode="contain"
-      style={styles.wordmark}
-    />
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   card: {

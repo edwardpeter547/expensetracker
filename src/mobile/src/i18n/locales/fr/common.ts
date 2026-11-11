@@ -9,6 +9,11 @@ export default {
     today: 'Aujourd\'hui',
     yesterday: 'Hier',
     other: 'Autre',
+    tabHome: 'Accueil',
+    tabTransactions: 'Transactions',
+    tabPlanning: 'Planification',
+    tabTeams: 'Équipes',
+    tabProfile: 'Profil',
     items_one: '{{count}} élément',
     items_other: '{{count}} éléments',
 } as const;

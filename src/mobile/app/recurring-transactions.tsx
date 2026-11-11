@@ -18,6 +18,7 @@ import {
 import { useLocale } from '@/contexts/LocaleContext';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Pressable,
     ScrollView,
@@ -37,6 +38,7 @@ const C = transactionColors;
 const RecurringTransactionsRoute = () => {
     const insets = useSafeAreaInsets();
     const { language, currency } = useLocale();
+    const { t } = useTranslation('transactions');
     const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
     const [schedules, setSchedules] = useState<RecurringSchedule[]>([]);
 
@@ -74,19 +76,19 @@ const RecurringTransactionsRoute = () => {
     return (
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
             <RecurringScreenHeader
-                title="Recurring Transactions"
+                title={t('Recurring Transactions')}
                 onBack={goBack}
                 rightIcon="add"
-                rightAccessibilityLabel="Add Recurring Transaction"
+                rightAccessibilityLabel={t('Add Recurring Transaction')}
                 onRightPress={openForm}
             />
 
             <View style={styles.filterWrap}>
                 <Segmented
                     options={[
-                        { label: 'All', value: 'all' },
-                        { label: 'Income', value: 'income' },
-                        { label: 'Expenses', value: 'expense' },
+                        { label: t('All'), value: 'all' },
+                        { label: t('Income'), value: 'income' },
+                        { label: t('Expenses'), value: 'expense' },
                     ]}
                     value={filter}
                     onChange={setFilter}
@@ -99,23 +101,23 @@ const RecurringTransactionsRoute = () => {
             >
                 {!isDemoMode ? (
                     <RecurringEmptyState
-                        title="Recurring transactions unavailable"
-                        message="Recurring transaction data will appear here once the backend is available."
+                        title={t('Recurring transactions unavailable')}
+                        message={t('Recurring transaction data will appear here once the backend is available.')}
                     />
                 ) : visibleSchedules.length === 0 ? (
                     <RecurringEmptyState
                         message={
                             filter === 'income'
-                                ? 'No recurring income yet.'
+                                ? t('No recurring income yet.')
                                 : filter === 'expense'
-                                    ? 'No recurring expenses yet.'
-                                    : 'Set up regular income, bills and subscriptions to keep track of what\u2019s coming up.'
+                                    ? t('No recurring expenses yet.')
+                                    : t("Set up regular income, bills and subscriptions to keep track of what's coming up.")
                         }
                         onAction={openForm}
                     />
                 ) : (
                     <>
-                        <Text style={styles.sectionTitle}>Upcoming</Text>
+                        <Text style={styles.sectionTitle}>{t('Upcoming')}</Text>
                         {visibleSchedules.map((schedule) => (
                             <RecurringScheduleListItem
                                 key={schedule.id}
@@ -127,11 +129,11 @@ const RecurringTransactionsRoute = () => {
                         ))}
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Add Recurring Transaction"
+                            accessibilityLabel={t('Add Recurring Transaction')}
                             onPress={openForm}
                             style={styles.addButton}
                         >
-                            <Text style={styles.addButtonText}>+ Add Recurring Transaction</Text>
+                            <Text style={styles.addButtonText}>{t('+ Add Recurring Transaction')}</Text>
                         </Pressable>
                     </>
                 )}

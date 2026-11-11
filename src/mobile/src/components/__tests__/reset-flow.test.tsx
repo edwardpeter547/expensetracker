@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import ForgotPasswordScreen from '../../../app/(auth)/forgot-password';
 import ResetCodeScreen from '../../../app/(auth)/reset-code';
 import ResetPasswordScreen from '../../../app/(auth)/reset-password';
+import '@/i18n';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },

@@ -31,6 +31,7 @@ import type {
 import { currencySymbol } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -135,6 +136,7 @@ const scheduleToDraft = (schedule: RecurringSchedule): RecurringDraft => ({
 const AddRecurringTransactionRoute = () => {
     const insets = useSafeAreaInsets();
     const { language, currency } = useLocale();
+    const { t } = useTranslation('transactions');
     const params = useLocalSearchParams<{ id?: string }>();
     const editId = params.id;
     const isEdit = Boolean(editId);
@@ -190,9 +192,18 @@ const AddRecurringTransactionRoute = () => {
             active = false;
         };
     }, []);
-    const frequencyOptions = FREQUENCY_OPTIONS;
-    const endOptions = END_OPTIONS;
-    const repeatOptions = repeatDayOptions(draft.frequency);
+    const frequencyOptions = FREQUENCY_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.label),
+    }));
+    const endOptions = END_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.label),
+    }));
+    const repeatOptions = repeatDayOptions(draft.frequency).map((option) => ({
+        ...option,
+        label: t(option.label),
+    }));
 
     const setField = <K extends keyof RecurringDraft>(key: K, value: RecurringDraft[K]) => {
         setDraft((current) => ({ ...current, [key]: value }));
@@ -201,8 +212,8 @@ const AddRecurringTransactionRoute = () => {
     const save = () => {
         setPreviewMessage(
             isDemoMode
-                ? 'UI preview only — this recurring schedule was not saved.'
-                : 'Recurring scheduling is not available yet.',
+                ? t('UI preview only — this recurring schedule was not saved.')
+                : t('Recurring scheduling is not available yet.'),
         );
     };
 
@@ -214,7 +225,7 @@ const AddRecurringTransactionRoute = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <RecurringScreenHeader
-                title={isEdit ? 'Edit Recurring Transaction' : 'Add Recurring Transaction'}
+                title={isEdit ? t('Edit Recurring Transaction') : t('Add Recurring Transaction')}
                 onBack={goBack}
             />
 
@@ -226,8 +237,8 @@ const AddRecurringTransactionRoute = () => {
                 <View style={styles.segmentWrap}>
                     <Segmented
                         options={[
-                            { label: 'Expense', value: 'EXPENSE' },
-                            { label: 'Income', value: 'INCOME' },
+                            { label: t('Expense'), value: 'EXPENSE' },
+                            { label: t('Income'), value: 'INCOME' },
                         ]}
                         value={draft.type}
                         onChange={(value) => {
@@ -242,20 +253,20 @@ const AddRecurringTransactionRoute = () => {
                 </View>
 
                 <View style={styles.form}>
-                    <Text style={styles.label}>Name</Text>
+                    <Text style={styles.label}>{t('Name')}</Text>
                     <TextInput
                         value={draft.name}
                         onChangeText={(value) => setField('name', value)}
-                        placeholder="Monthly Rent"
+                        placeholder={t('Monthly Rent')}
                         placeholderTextColor={C.muted}
                         style={styles.input}
                     />
 
-                    <Text style={styles.label}>Amount</Text>
+                    <Text style={styles.label}>{t('Amount')}</Text>
                     <View style={styles.amountMode}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Fixed amount"
+                            accessibilityLabel={t('Fixed amount')}
                             onPress={() => setField('amountMode', 'FIXED')}
                             style={[
                                 styles.amountModeButton,
@@ -268,12 +279,12 @@ const AddRecurringTransactionRoute = () => {
                                     draft.amountMode === 'FIXED' && styles.amountModeTextActive,
                                 ]}
                             >
-                                Fixed amount
+                                {t('Fixed amount')}
                             </Text>
                         </Pressable>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Variable amount"
+                            accessibilityLabel={t('Variable amount')}
                             onPress={() => setField('amountMode', 'VARIABLE')}
                             style={[
                                 styles.amountModeButton,
@@ -286,7 +297,7 @@ const AddRecurringTransactionRoute = () => {
                                     draft.amountMode === 'VARIABLE' && styles.amountModeTextActive,
                                 ]}
                             >
-                                Variable amount
+                                {t('Variable amount')}
                             </Text>
                         </Pressable>
                     </View>
@@ -296,89 +307,89 @@ const AddRecurringTransactionRoute = () => {
                             keyboardType="decimal-pad"
                             value={draft.amount}
                             onChangeText={(value) => setField('amount', value)}
-                            placeholder={draft.amountMode === 'VARIABLE' ? 'Estimated amount' : '0.00'}
+                            placeholder={draft.amountMode === 'VARIABLE' ? t('Estimated amount') : '0.00'}
                             placeholderTextColor={C.muted}
                             style={styles.amountInput}
                         />
                     </View>
                     {draft.amountMode === 'VARIABLE' ? (
                         <Text style={styles.hint}>
-                            Variable amounts show “Variable amount” on the schedule until confirmed.
+                            {t('Variable amounts show "Variable amount" on the schedule until confirmed.')}
                         </Text>
                     ) : null}
 
-                    <Text style={styles.label}>Category</Text>
+                    <Text style={styles.label}>{t('Category')}</Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Select category"
+                        accessibilityLabel={t('Select category')}
                         onPress={() => setSelector('category')}
                         style={styles.selectField}
                     >
                         <Text style={styles.selectText}>
                             {categoryOptions.find((item) => item.id === draft.categoryId)?.label
-                                ?? 'Select category'}
+                                ?? t('Select category')}
                         </Text>
                         <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                     </Pressable>
 
-                    <Text style={styles.label}>Repeat</Text>
+                    <Text style={styles.label}>{t('Repeat')}</Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Select frequency"
+                        accessibilityLabel={t('Select frequency')}
                         onPress={() => setSelector('frequency')}
                         style={styles.selectField}
                     >
                         <Text style={styles.selectText}>
                             {frequencyOptions.find((item) => item.id === draft.frequency)?.label
-                                ?? 'Monthly'}
+                                ?? t('Monthly')}
                         </Text>
                         <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                     </Pressable>
 
-                    <Text style={styles.label}>Start Date</Text>
+                    <Text style={styles.label}>{t('Start Date')}</Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Select start date"
+                        accessibilityLabel={t('Select start date')}
                         onPress={() => setDateField('start')}
                         style={styles.selectField}
                     >
                         <Ionicons name="calendar-outline" size={20} color={C.green} />
-                        <Text style={styles.selectText}>{draft.startDate || 'Select date'}</Text>
+                        <Text style={styles.selectText}>{draft.startDate || t('Select date')}</Text>
                         <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                     </Pressable>
 
-                    <Text style={styles.label}>Repeat on</Text>
+                    <Text style={styles.label}>{t('Repeat on')}</Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Select repeat day"
+                        accessibilityLabel={t('Select repeat day')}
                         onPress={() => setSelector('repeatDay')}
                         style={styles.selectField}
                     >
-                        <Text style={styles.selectText}>{draft.repeatDay || 'Select repeat day'}</Text>
+                        <Text style={styles.selectText}>{draft.repeatDay || t('Select repeat day')}</Text>
                         <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                     </Pressable>
 
-                    <Text style={styles.label}>Ends</Text>
+                    <Text style={styles.label}>{t('Ends')}</Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Select end condition"
+                        accessibilityLabel={t('Select end condition')}
                         onPress={() => setSelector('end')}
                         style={styles.selectField}
                     >
                         <Text style={styles.selectText}>
                             {endOptions.find((item) => item.id === draft.endCondition)?.label
-                                ?? 'Until canceled'}
+                                ?? t('Until canceled')}
                         </Text>
                         <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                     </Pressable>
                     {draft.endCondition === 'ON_DATE' ? (
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Select end date"
+                            accessibilityLabel={t('Select end date')}
                             onPress={() => setDateField('end')}
                             style={styles.selectField}
                         >
-                            <Text style={styles.selectText}>{draft.endDate || 'Select end date'}</Text>
+                            <Text style={styles.selectText}>{draft.endDate || t('Select end date')}</Text>
                             <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                         </Pressable>
                     ) : null}
@@ -387,13 +398,13 @@ const AddRecurringTransactionRoute = () => {
                             keyboardType="number-pad"
                             value={draft.endOccurrences}
                             onChangeText={(value) => setField('endOccurrences', value)}
-                            placeholder="Number of occurrences"
+                            placeholder={t('Number of occurrences')}
                             placeholderTextColor={C.muted}
                             style={styles.input}
                         />
                     ) : null}
 
-                    <Text style={styles.label}>When the scheduled date arrives</Text>
+                    <Text style={styles.label}>{t('When the scheduled date arrives')}</Text>
                     {([
                         {
                             value: 'REQUIRE_CONFIRMATION' as RecurringRecordingPreference,
@@ -411,7 +422,7 @@ const AddRecurringTransactionRoute = () => {
                         <Pressable
                             key={option.value}
                             accessibilityRole="button"
-                            accessibilityLabel={option.title}
+                            accessibilityLabel={t(option.title)}
                             onPress={() => setField('recordingPreference', option.value)}
                             style={[
                                 styles.preference,
@@ -429,41 +440,40 @@ const AddRecurringTransactionRoute = () => {
                                 ) : null}
                             </View>
                             <View style={styles.preferenceCopy}>
-                                <Text style={styles.preferenceTitle}>{option.title}</Text>
-                                <Text style={styles.preferenceSupport}>{option.support}</Text>
+                                <Text style={styles.preferenceTitle}>{t(option.title)}</Text>
+                                <Text style={styles.preferenceSupport}>{t(option.support)}</Text>
                             </View>
                         </Pressable>
                     ))}
                     <Text style={styles.explanatory}>
-                        Scheduled income and expenses are not counted as completed transactions
-                        until they are recorded.
+                        {t('Scheduled income and expenses are not counted as completed transactions until they are recorded.')}
                     </Text>
 
                     {draft.type === 'EXPENSE' ? (
                         <>
-                            <Text style={styles.label}>Add to Budget (Optional)</Text>
+                            <Text style={styles.label}>{t('Add to Budget (Optional)')}</Text>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Select budget"
+                                accessibilityLabel={t('Select budget')}
                                 onPress={() => setSelector('budget')}
                                 style={styles.selectField}
                             >
                                 <Text style={styles.selectText}>
                                     {budgetOptions.find((item) => item.id === draft.budgetId)?.label
-                                        ?? 'Select a budget'}
+                                        ?? t('Select a budget')}
                                 </Text>
                                 <Ionicons name="chevron-forward" size={18} color={C.chevron} />
                             </Pressable>
                         </>
                     ) : null}
 
-                    <Text style={styles.label}>Description (Optional)</Text>
+                    <Text style={styles.label}>{t('Description (Optional)')}</Text>
                     <TextInput
                         multiline
                         textAlignVertical="top"
                         value={draft.description}
                         onChangeText={(value) => setField('description', value)}
-                        placeholder="Add notes about this recurring transaction"
+                        placeholder={t('Add notes about this recurring transaction')}
                         placeholderTextColor={C.muted}
                         style={styles.textarea}
                     />
@@ -474,19 +484,19 @@ const AddRecurringTransactionRoute = () => {
                 {previewMessage ? <Text style={styles.previewMessage}>{previewMessage}</Text> : null}
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={isEdit ? 'Save Changes' : 'Save Recurring Transaction'}
+                    accessibilityLabel={isEdit ? t('Save Changes') : t('Save Recurring Transaction')}
                     onPress={save}
                     style={styles.save}
                 >
                     <Text style={styles.saveText}>
-                        {isEdit ? 'Save Changes' : 'Save Recurring Transaction'}
+                        {isEdit ? t('Save Changes') : t('Save Recurring Transaction')}
                     </Text>
                 </Pressable>
             </View>
 
             <OptionSelectorModal
                 visible={selector === 'category'}
-                title="Select category"
+                title={t('Select category')}
                 options={categoryOptions}
                 selectedId={draft.categoryId}
                 onClose={() => setSelector(null)}
@@ -497,7 +507,7 @@ const AddRecurringTransactionRoute = () => {
             />
             <OptionSelectorModal
                 visible={selector === 'frequency'}
-                title="Repeat"
+                title={t('Repeat')}
                 options={frequencyOptions}
                 selectedId={draft.frequency}
                 onClose={() => setSelector(null)}
@@ -508,7 +518,7 @@ const AddRecurringTransactionRoute = () => {
             />
             <OptionSelectorModal
                 visible={selector === 'repeatDay'}
-                title="Repeat on"
+                title={t('Repeat on')}
                 options={repeatOptions}
                 selectedId={draft.repeatDay}
                 onClose={() => setSelector(null)}
@@ -519,7 +529,7 @@ const AddRecurringTransactionRoute = () => {
             />
             <OptionSelectorModal
                 visible={selector === 'end'}
-                title="Ends"
+                title={t('Ends')}
                 options={endOptions}
                 selectedId={draft.endCondition}
                 onClose={() => setSelector(null)}
@@ -530,7 +540,7 @@ const AddRecurringTransactionRoute = () => {
             />
             <OptionSelectorModal
                 visible={selector === 'budget'}
-                title="Add to Budget"
+                title={t('Add to Budget')}
                 options={budgetOptions}
                 selectedId={draft.budgetId}
                 onClose={() => setSelector(null)}

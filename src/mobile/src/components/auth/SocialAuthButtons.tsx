@@ -1,6 +1,7 @@
 import useStyles from '@/hooks/useStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import GoogleIcon from './GoogleIcon';
 
 /**
@@ -11,16 +12,17 @@ import GoogleIcon from './GoogleIcon';
  */
 const SocialAuthButtons = () => {
   const styles = useStyles('authForm');
+  const { t } = useTranslation('auth');
 
   return (
     <View style={styles.socialSection}>
-      <Text style={styles.dividerText}>Or continue with</Text>
+      <Text style={styles.dividerText}>{t('Or continue with')}</Text>
       <View style={styles.socialRow}>
         <Pressable
           disabled
           accessibilityRole="button"
-          accessibilityLabel="Google sign-in coming soon"
-          accessibilityHint="Google sign-in is not available yet"
+          accessibilityLabel={t('Google sign-in coming soon')}
+          accessibilityHint={t('Google sign-in is not available yet')}
           accessibilityState={{ disabled: true }}
           style={styles.socialButton}
         >
@@ -29,8 +31,8 @@ const SocialAuthButtons = () => {
         <Pressable
           disabled
           accessibilityRole="button"
-          accessibilityLabel="Apple sign-in coming soon"
-          accessibilityHint="Apple sign-in is not available yet"
+          accessibilityLabel={t('Apple sign-in coming soon')}
+          accessibilityHint={t('Apple sign-in is not available yet')}
           accessibilityState={{ disabled: true }}
           style={styles.socialButton}
         >

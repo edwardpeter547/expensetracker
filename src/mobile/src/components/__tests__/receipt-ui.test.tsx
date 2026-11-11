@@ -6,6 +6,7 @@
  */
 
 import { act, create } from 'react-test-renderer';
+import i18n from '@/i18n';
 import { Text } from 'react-native';
 import type { ReactElement } from 'react';
 import ReceiptActionButtons from '@/components/receipts/ReceiptActionButtons';
@@ -75,6 +76,10 @@ const render = (element: ReactElement): ReturnType<typeof create> => {
 };
 
 describe('ReceiptActionButtons', () => {
+    afterEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
     it('renders both actions and emits press callbacks', () => {
         const onScan = jest.fn();
         const onUpload = jest.fn();
@@ -90,6 +95,16 @@ describe('ReceiptActionButtons', () => {
 
         expect(onScan).toHaveBeenCalled();
         expect(onUpload).toHaveBeenCalled();
+    });
+
+    it('renders French receipt actions after switching language', async () => {
+        await i18n.changeLanguage('fr');
+        const tree = render(
+            <ReceiptActionButtons onScan={jest.fn()} onUpload={jest.fn()} />,
+        );
+
+        expect(allText(tree)).toContain('Numériser un reçu');
+        expect(allText(tree)).toContain('Importer un reçu');
     });
 });
 

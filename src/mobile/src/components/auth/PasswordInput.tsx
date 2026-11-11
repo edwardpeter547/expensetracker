@@ -1,6 +1,7 @@
 import { brandColors } from '@/constants/designTokens';
 import useStyles from '@/hooks/useStyles';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { forwardRef, useState } from 'react';
 import {
   Text,
@@ -21,6 +22,7 @@ interface PasswordInputProps extends TextInputProps {
 const PasswordInput = forwardRef<TextInput, PasswordInputProps>(
   ({ label, error, onFocus, onBlur, ...props }, ref) => {
     const styles = useStyles('authForm');
+    const { t } = useTranslation('auth');
     const [focused, setFocused] = useState(false);
     const [visible, setVisible] = useState(false);
 
@@ -55,7 +57,7 @@ const PasswordInput = forwardRef<TextInput, PasswordInputProps>(
             style={styles.eyeButton}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+            accessibilityLabel={visible ? t('Hide password') : t('Show password')}
           >
             <Ionicons
               name={visible ? 'eye-off-outline' : 'eye-outline'}

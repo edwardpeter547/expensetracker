@@ -9,6 +9,7 @@ import { planningDataSource } from '@/contracts';
 import type { PlannedExpense, PlannedExpenseStatus } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningButton,
     PlanningCard,
@@ -42,6 +43,7 @@ const PlannedExpensesScreen = ({
     language: string;
     onBack: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [items, setItems] = useState<PlannedExpense[]>([]);
     const [filter, setFilter] = useState<ExpenseFilter>('All');
     const [show, setShow] = useState(false);
@@ -74,8 +76,8 @@ const PlannedExpensesScreen = ({
     return (
         <View style={{ flex: 1 }}>
             <PlanningScreen
-                title="Planned Expenses"
-                subtitle="Prepare for upcoming costs"
+                title={t('Planned Expenses')}
+                subtitle={t('Prepare for upcoming costs')}
                 onBack={onBack}
                 onAction={() => setShow(true)}
             >
@@ -87,13 +89,13 @@ const PlannedExpensesScreen = ({
                             bg={planningColors.orangeLight}
                         />
                         <View>
-                            <Text style={planningStyles.muted}>Total Planned Expenses</Text>
+                            <Text style={planningStyles.muted}>{t('Total Planned Expenses')}</Text>
                             <Text style={planningStyles.large}>
                                 {formatPlanningMoney(total, language, currency)}
                             </Text>
                         </View>
                     </View>
-                    <Text style={planningStyles.muted}>{items.length} upcoming items</Text>
+                    <Text style={planningStyles.muted}>{t('upcomingItems', {count: items.length})}</Text>
                 </PlanningCard>
 
                 <View style={{ flexDirection: 'row', gap: 9 }}>
@@ -104,7 +106,7 @@ const PlannedExpensesScreen = ({
                                 key={option}
                                 onPress={() => setFilter(option)}
                                 accessibilityRole="button"
-                                accessibilityLabel={option}
+                                accessibilityLabel={t(option)}
                                 style={{
                                     flex: 1,
                                     paddingVertical: 12,
@@ -122,17 +124,17 @@ const PlannedExpensesScreen = ({
                                         fontSize: 14,
                                     }}
                                 >
-                                    {option}
+                                    {t(option)}
                                 </Text>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
 
-                <Text style={planningStyles.heading}>Future Expenses</Text>
+                <Text style={planningStyles.heading}>{t('Future Expenses')}</Text>
                 {visibleItems.length === 0 ? (
                     <PlanningCard>
-                        <Text style={planningStyles.body}>No matching planned expenses.</Text>
+                        <Text style={planningStyles.body}>{t('No matching planned expenses.')}</Text>
                     </PlanningCard>
                 ) : (
                     visibleItems.map((item) => (
@@ -141,7 +143,7 @@ const PlannedExpensesScreen = ({
                                 <PlanningIconTile icon={item.icon} color={item.color} bg={item.bg} />
                                 <View style={{ flex: 1, gap: 5 }}>
                                     <Text style={planningStyles.body}>{item.name}</Text>
-                                    <Text style={planningStyles.muted}>Target date: {item.date}</Text>
+                                    <Text style={planningStyles.muted}>{t('Target date: {{date}}', {date: item.date})}</Text>
                                 </View>
                             </View>
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
@@ -158,33 +160,33 @@ const PlannedExpensesScreen = ({
                                         fontWeight: '700',
                                     }}
                                 >
-                                    {item.status}
+                                    {t(item.status)}
                                 </Text>
                             </View>
                         </PlanningCard>
                     ))
                 )}
 
-                <PlanningButton label="＋ Add Planned Expense" outline onPress={() => setShow(true)} />
+                <PlanningButton label={t('＋ Add Planned Expense')} outline onPress={() => setShow(true)} />
                 <PlanningPreviewNote />
             </PlanningScreen>
 
             {show ? (
-                <PlanningModalPanel title="Add Planned Expense" onClose={() => setShow(false)}>
+                <PlanningModalPanel title={t('Add Planned Expense')} onClose={() => setShow(false)}>
                     <PlanningField
-                        label="Expense name"
+                        label={t('Expense name')}
                         value={name}
                         onChange={setName}
-                        placeholder="e.g. Annual Insurance"
+                        placeholder={t('e.g. Annual Insurance')}
                     />
                     <PlanningField
-                        label="Estimated amount"
+                        label={t('Estimated amount')}
                         value={amount}
                         onChange={setAmount}
                         keyboardType="numeric"
                     />
                     <PlanningPreviewNote />
-                    <PlanningButton label="Save" onPress={submit} />
+                    <PlanningButton label={t('Save')} onPress={submit} />
                 </PlanningModalPanel>
             ) : null}
         </View>

@@ -8,6 +8,7 @@
 import type { PlanningBudget } from '@/types/planning';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningButton,
     PlanningCard,
@@ -51,6 +52,7 @@ const BudgetsScreen = ({
     onSelectBudget: (id: string) => void;
     onCreate: (name: string, limit: number) => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [showCreate, setShowCreate] = useState(false);
     const [name, setName] = useState('');
     const [limit, setLimit] = useState('');
@@ -71,8 +73,8 @@ const BudgetsScreen = ({
     return (
         <View style={{ flex: 1 }}>
             <PlanningScreen
-                title="Budgets"
-                subtitle="Manage your spending limits"
+                title={t('Budgets')}
+                subtitle={t('Manage your spending limits')}
                 onBack={onBack}
                 onAction={() => setShowCreate(true)}
             >
@@ -83,7 +85,7 @@ const BudgetsScreen = ({
                 ) : error ? (
                     <PlanningCard>
                         <Text style={planningStyles.body}>{error}</Text>
-                        <PlanningButton label="Try Again" onPress={onRetry} />
+                        <PlanningButton label={t('Try Again')} onPress={onRetry} />
                     </PlanningCard>
                 ) : (
                     <>
@@ -95,35 +97,35 @@ const BudgetsScreen = ({
                                     bg={planningColors.emeraldLight}
                                 />
                                 <Text style={{ color: planningColors.emerald, fontWeight: '700', fontSize: 12 }}>
-                                    On Track
+                                    {t('On Track')}
                                 </Text>
                             </View>
-                            <Text style={planningStyles.muted}>Total Monthly Budget</Text>
+                            <Text style={planningStyles.muted}>{t('Total Monthly Budget')}</Text>
                             <Text style={planningStyles.large}>
                                 {formatPlanningMoney(total, language, currency)}
                             </Text>
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                                <PlanningStat label="Spent so far" value={formatPlanningMoney(spent, language, currency)} />
+                                <PlanningStat label={t('Spent so far')} value={formatPlanningMoney(spent, language, currency)} />
                                 <PlanningStat
-                                    label="Remaining"
+                                    label={t('Remaining')}
                                     value={formatPlanningMoney(total - spent, language, currency)}
                                     color={planningColors.emerald}
                                 />
                             </View>
                             <PlanningProgress value={usedPercent} />
-                            <Text style={planningStyles.muted}>{usedPercent}% of budget used</Text>
+                            <Text style={planningStyles.muted}>{t('{{percent}}% of budget used', {percent: usedPercent})}</Text>
                         </PlanningCard>
 
                         <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                            <Text style={planningStyles.heading}>Budget Categories</Text>
-                            <Text style={planningStyles.muted}>{budgets.length} active</Text>
+                            <Text style={planningStyles.heading}>{t('Budget Categories')}</Text>
+                            <Text style={planningStyles.muted}>{t('activeBudgets', {count: budgets.length})}</Text>
                         </View>
 
                         {budgets.length === 0 ? (
                             <PlanningCard>
-                                <Text style={planningStyles.body}>No budgets yet.</Text>
+                                <Text style={planningStyles.body}>{t('No budgets yet.')}</Text>
                                 <Text style={planningStyles.muted}>
-                                    Create your first budget to start tracking a category.
+                                    {t('Create your first budget to start tracking a category.')}
                                 </Text>
                             </PlanningCard>
                         ) : (
@@ -144,17 +146,19 @@ const BudgetsScreen = ({
                                                 <View style={{ flex: 1, gap: 5 }}>
                                                     <Text style={planningStyles.body}>{item.name}</Text>
                                                     <Text style={planningStyles.muted}>
-                                                        {formatPlanningMoney(item.spent, language, currency)} spent of{' '}
-                                                        {formatPlanningMoney(item.limit, language, currency)}
+                                                        {t('{{spent}} spent of {{limit}}', {
+                                                            spent: formatPlanningMoney(item.spent, language, currency),
+                                                            limit: formatPlanningMoney(item.limit, language, currency),
+                                                        })}
                                                     </Text>
                                                 </View>
                                                 <PlanningIcon name="chevron-right" color="#A1ADBD" />
                                             </View>
                                             <PlanningProgress value={itemPercent} color={item.color} />
                                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                                                <Text style={planningStyles.muted}>{itemPercent}% used</Text>
+                                                <Text style={planningStyles.muted}>{t('{{percent}}% used', {percent: itemPercent})}</Text>
                                                 <Text style={planningStyles.muted}>
-                                                    {formatPlanningMoney(item.limit - item.spent, language, currency)} left
+                                                    {t('{{amount}} left', {amount: formatPlanningMoney(item.limit - item.spent, language, currency)})}
                                                 </Text>
                                             </View>
                                         </PlanningCard>
@@ -163,28 +167,28 @@ const BudgetsScreen = ({
                             })
                         )}
 
-                        <PlanningButton label="＋ Create New Budget" outline onPress={() => setShowCreate(true)} />
+                        <PlanningButton label={t('＋ Create New Budget')} outline onPress={() => setShowCreate(true)} />
                     </>
                 )}
             </PlanningScreen>
 
             {showCreate ? (
-                <PlanningModalPanel title="Create New Budget" onClose={() => setShowCreate(false)}>
+                <PlanningModalPanel title={t('Create New Budget')} onClose={() => setShowCreate(false)}>
                     <PlanningField
-                        label="Budget category"
+                        label={t('Budget category')}
                         value={name}
                         onChange={setName}
-                        placeholder="e.g. Health & Fitness"
+                        placeholder={t('e.g. Health & Fitness')}
                     />
                     <PlanningField
-                        label="Monthly limit"
+                        label={t('Monthly limit')}
                         value={limit}
                         onChange={setLimit}
                         keyboardType="numeric"
                         placeholder="250"
                     />
                     {notice ? <Text style={styles.modalNotice}>{notice}</Text> : null}
-                    <PlanningButton label="Create Budget" onPress={submitCreate} />
+                    <PlanningButton label={t('Create Budget')} onPress={submitCreate} />
                 </PlanningModalPanel>
             ) : null}
         </View>

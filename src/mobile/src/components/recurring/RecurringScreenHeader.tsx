@@ -8,6 +8,7 @@ import {
     transactionTypography,
 } from '@/constants/transactionsTheme';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -33,11 +34,14 @@ const RecurringScreenHeader = ({
     rightIcon,
     onRightPress,
     rightAccessibilityLabel,
-}: RecurringScreenHeaderProps) => (
+}: RecurringScreenHeaderProps) => {
+    const { t } = useTranslation('transactions');
+
+    return (
     <View style={styles.header}>
         <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('Back')}
             onPress={onBack}
             style={styles.side}
         >
@@ -50,7 +54,7 @@ const RecurringScreenHeader = ({
             {rightIcon && onRightPress ? (
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={rightAccessibilityLabel || 'Add'}
+                    accessibilityLabel={rightAccessibilityLabel || t('Add')}
                     onPress={onRightPress}
                     style={styles.rightButton}
                 >
@@ -59,7 +63,8 @@ const RecurringScreenHeader = ({
             ) : null}
         </View>
     </View>
-);
+    );
+};
 
 /** Header styles. */
 const styles = StyleSheet.create({

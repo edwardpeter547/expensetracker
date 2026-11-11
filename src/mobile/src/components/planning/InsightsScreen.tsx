@@ -9,6 +9,7 @@ import { planningDataSource } from '@/contracts';
 import type { PlanningInsightCategory } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningCard,
     PlanningIconTile,
@@ -49,6 +50,7 @@ const InsightsScreen = ({
     language: string;
     onBack: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [period, setPeriod] = useState<InsightPeriod>('Monthly');
     const [categories, setCategories] = useState<PlanningInsightCategory[]>([]);
 
@@ -64,20 +66,20 @@ const InsightsScreen = ({
 
     return (
         <PlanningScreen
-            title="Insights"
-            subtitle="Understand where your money goes"
+            title={t('Insights')}
+            subtitle={t('Understand where your money goes')}
             onBack={onBack}
         >
             <PlanningCard>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>Spending Analysis</Text>
+                    <Text style={planningStyles.muted}>{t('Spending Analysis')}</Text>
                     <View style={[planningStyles.row, { gap: 6 }]}>
                         {(['Monthly', 'Quarterly', 'Yearly'] as const).map((option) => (
                             <TouchableOpacity
                                 key={option}
                                 onPress={() => setPeriod(option)}
                                 accessibilityRole="button"
-                                accessibilityLabel={option}
+                                accessibilityLabel={t(option)}
                                 style={{
                                     backgroundColor: option === period ? planningColors.emeraldLight : '#F5F7FA',
                                     padding: 6,
@@ -91,7 +93,7 @@ const InsightsScreen = ({
                                         fontWeight: option === period ? '700' : '600',
                                     }}
                                 >
-                                    {option}
+                                    {t(option)}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -100,7 +102,7 @@ const InsightsScreen = ({
                 <Text style={planningStyles.large}>
                     {formatPlanningMoney(PERIOD_TOTALS[period], language, currency)}
                 </Text>
-                <Text style={{ color: '#D47C45', fontSize: 12 }}>↗ 12% more than previous period</Text>
+                <Text style={{ color: '#D47C45', fontSize: 12 }}>{t('↗ {{percent}}% more than previous period', {percent: 12})}</Text>
                 <PlanningLineChart values={TREND_VALUES} labels={TREND_LABELS} />
             </PlanningCard>
 
@@ -112,8 +114,8 @@ const InsightsScreen = ({
                         bg={planningColors.orangeLight}
                         size={38}
                     />
-                    <Text style={planningStyles.muted}>Highest Category</Text>
-                    <Text style={planningStyles.body}>Food & Drinks</Text>
+                    <Text style={planningStyles.muted}>{t('Highest Category')}</Text>
+                    <Text style={planningStyles.body}>{t('Food & Drinks')}</Text>
                     <Text style={{ color: planningColors.orange, fontWeight: '700' }}>
                         {formatPlanningMoney(450, language, currency)}
                     </Text>
@@ -125,14 +127,14 @@ const InsightsScreen = ({
                         bg={planningColors.emeraldLight}
                         size={38}
                     />
-                    <Text style={planningStyles.muted}>Biggest Reduction</Text>
-                    <Text style={planningStyles.body}>Transport</Text>
+                    <Text style={planningStyles.muted}>{t('Biggest Reduction')}</Text>
+                    <Text style={planningStyles.body}>{t('Transport')}</Text>
                     <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>−8%</Text>
                 </PlanningCard>
             </View>
 
             <PlanningCard>
-                <Text style={planningStyles.heading}>Spending by Category</Text>
+                <Text style={planningStyles.heading}>{t('Spending by Category')}</Text>
                 {categories.map((category) => (
                     <View key={category.name} style={{ gap: 8 }}>
                         <View style={[planningStyles.row, { gap: 10 }]}>

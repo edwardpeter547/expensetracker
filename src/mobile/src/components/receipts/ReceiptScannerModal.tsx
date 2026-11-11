@@ -21,6 +21,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -58,6 +59,7 @@ const ReceiptScannerModal = ({
     onCancel,
 }: ReceiptScannerModalProps) => {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('transactions');
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
@@ -65,44 +67,44 @@ const ReceiptScannerModal = ({
                 <View style={styles.header}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Cancel scan"
+                        accessibilityLabel={t('Cancel scan')}
                         onPress={onCancel}
                         style={styles.headerButton}
                     >
                         <Ionicons name="close" size={24} color="#FFFFFF" />
                     </Pressable>
-                    <Text style={styles.headerTitle}>Scan Receipt</Text>
+                    <Text style={styles.headerTitle}>{t('Scan Receipt')}</Text>
                     <View style={styles.headerButton} />
                 </View>
 
                 <View style={styles.modeRow}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Automatic capture"
+                        accessibilityLabel={t('Automatic capture')}
                         onPress={() => onModeChange?.('auto')}
                         style={[styles.modeButton, mode === 'auto' && styles.modeButtonActive]}
                     >
                         <Text style={[styles.modeText, mode === 'auto' && styles.modeTextActive]}>
-                            Auto
+                            {t('Auto')}
                         </Text>
                     </Pressable>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Manual capture"
+                        accessibilityLabel={t('Manual capture')}
                         onPress={() => onModeChange?.('manual')}
                         style={[styles.modeButton, mode === 'manual' && styles.modeButtonActive]}
                     >
                         <Text style={[styles.modeText, mode === 'manual' && styles.modeTextActive]}>
-                            Manual
+                            {t('Manual')}
                         </Text>
                     </Pressable>
                 </View>
 
                 <View style={styles.viewfinder}>
                     <Ionicons name="receipt-outline" size={58} color="#8EA6C4" />
-                    <Text style={styles.viewfinderText}>Camera preview placeholder</Text>
+                    <Text style={styles.viewfinderText}>{t('Camera preview placeholder')}</Text>
                     <Text style={styles.viewfinderHint}>
-                        The native document scanner will provide the live camera view.
+                        {t('The native document scanner will provide the live camera view.')}
                     </Text>
 
                     <Corner style={styles.cornerTopLeft} />
@@ -114,13 +116,13 @@ const ReceiptScannerModal = ({
                 {processing ? (
                     <View style={styles.processing}>
                         <ActivityIndicator color="#FFFFFF" />
-                        <Text style={styles.processingText}>Preparing scan…</Text>
+                        <Text style={styles.processingText}>{t('Preparing scan…')}</Text>
                     </View>
                 ) : (
                     <View style={styles.controls}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Capture receipt"
+                            accessibilityLabel={t('Capture receipt')}
                             onPress={onCapture}
                             style={styles.captureButton}
                         >
@@ -131,7 +133,7 @@ const ReceiptScannerModal = ({
 
                 <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
                     <Text style={styles.footerText}>
-                        Position the receipt inside the outline.
+                        {t('Position the receipt inside the outline.')}
                     </Text>
                 </View>
             </View>

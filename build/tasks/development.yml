@@ -27,6 +27,11 @@ tasks:
     cmds:
       - cd "{{.ROOT_DIR}}/src/mobile" && npm run start:web
 
+  mobile:translate:
+    desc: Generate mobile translation catalogues from locale source files
+    cmds:
+      - cd "{{.ROOT_DIR}}/src/mobile" && node scripts/build-message-catalogues.mjs
+
   backend:docs:
     desc: Start the backend with Swagger enabled
     interactive: true

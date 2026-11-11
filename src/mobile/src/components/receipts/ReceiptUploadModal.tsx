@@ -14,6 +14,7 @@ import {
 import type { ReceiptFileInfo, ReceiptUploadErrorKind } from '@/types/receipt';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -66,16 +67,17 @@ const ReceiptUploadModal = ({
     onRemove,
 }: ReceiptUploadModalProps) => {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('transactions');
 
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.overlay}>
                 <View style={[styles.sheet, { paddingBottom: insets.bottom + 22 }]}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Upload Receipt</Text>
+                        <Text style={styles.title}>{t('Upload Receipt')}</Text>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Close upload"
+                            accessibilityLabel={t('Close upload')}
                             onPress={onClose}
                             hitSlop={8}
                         >
@@ -86,7 +88,7 @@ const ReceiptUploadModal = ({
                     <View style={styles.supported}>
                         <Ionicons name="document-outline" size={16} color={C.muted} />
                         <Text style={styles.supportedText}>
-                            JPG, PNG, HEIC, or PDF · up to 10 MB
+                            {t('JPG, PNG, HEIC, or PDF · {{size}}', {size: t('up to 10 MB')})}
                         </Text>
                     </View>
 
@@ -105,20 +107,20 @@ const ReceiptUploadModal = ({
                             <View style={styles.dropIcon}>
                                 <Ionicons name="cloud-upload-outline" size={28} color={C.green} />
                             </View>
-                            <Text style={styles.dropTitle}>Choose an existing receipt</Text>
+                            <Text style={styles.dropTitle}>{t('Choose an existing receipt')}</Text>
                             <Text style={styles.dropHint}>
-                                The system file picker will be wired here in a future task.
+                                {t('The system file picker will be wired here in a future task.')}
                             </Text>
                         </View>
                     )}
 
                     {demoMode && !selectedFile ? (
                         <View style={styles.samples}>
-                            <Text style={styles.samplesLabel}>UI preview samples</Text>
+                            <Text style={styles.samplesLabel}>{t('UI preview samples')}</Text>
                             <View style={styles.sampleRow}>
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="Preview image receipt"
+                                    accessibilityLabel={t('Image receipt')}
                                     onPress={() =>
                                         onSelectSample({
                                             id: 'preview-image-receipt',
@@ -132,11 +134,11 @@ const ReceiptUploadModal = ({
                                     style={styles.sample}
                                 >
                                     <Ionicons name="image-outline" size={18} color={C.green} />
-                                    <Text style={styles.sampleText}>Image receipt</Text>
+                                    <Text style={styles.sampleText}>{t('Image receipt')}</Text>
                                 </Pressable>
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="Preview PDF receipt"
+                                    accessibilityLabel={t('PDF receipt')}
                                     onPress={() =>
                                         onSelectSample({
                                             id: 'preview-pdf-receipt',
@@ -150,7 +152,7 @@ const ReceiptUploadModal = ({
                                     style={styles.sample}
                                 >
                                     <Ionicons name="document-text-outline" size={18} color={C.green} />
-                                    <Text style={styles.sampleText}>PDF receipt</Text>
+                                    <Text style={styles.sampleText}>{t('PDF receipt')}</Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -159,7 +161,7 @@ const ReceiptUploadModal = ({
                     {errorKind !== 'none' ? (
                         <View style={styles.error}>
                             <Ionicons name="alert-circle-outline" size={18} color={C.error} />
-                            <Text style={styles.errorText}>{errorMessage(errorKind)}</Text>
+                            <Text style={styles.errorText}>{t(errorMessage(errorKind))}</Text>
                         </View>
                     ) : null}
                 </View>

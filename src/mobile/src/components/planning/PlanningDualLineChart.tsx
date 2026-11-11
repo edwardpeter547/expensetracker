@@ -8,6 +8,7 @@
  */
 
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, {
     Circle,
     Defs,
@@ -124,6 +125,7 @@ const PlanningDualLineChart = ({
     incomeColor?: string;
     expenseColor?: string;
 }) => {
+    const { t } = useTranslation('planning');
     const chartWidth = VIEW_WIDTH - PAD_X * 2;
     const chartHeight = VIEW_HEIGHT - PAD_TOP - PAD_BOTTOM;
     const floorY = PAD_TOP + chartHeight;
@@ -224,11 +226,11 @@ const PlanningDualLineChart = ({
             <View style={[planningStyles.row, { gap: 18 }]}>
                 <View style={[planningStyles.row, { gap: 7 }]}>
                     <View style={[styles.legendDot, { backgroundColor: incomeColor }]} />
-                    <Text style={planningStyles.muted}>Income</Text>
+                    <Text style={planningStyles.muted}>{t('Income')}</Text>
                 </View>
                 <View style={[planningStyles.row, { gap: 7 }]}>
                     <View style={[styles.legendDot, { backgroundColor: expenseColor }]} />
-                    <Text style={planningStyles.muted}>Expenses</Text>
+                    <Text style={planningStyles.muted}>{t('Expenses')}</Text>
                 </View>
             </View>
         </View>

@@ -11,6 +11,7 @@ import {
 import type { RecurringSchedule } from '@/types/recurring';
 import { formatSignedAmount } from '@/utils/transactions';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -35,12 +36,13 @@ const RecurringScheduleListItem = ({
     currency,
     onPress,
 }: RecurringScheduleListItemProps) => {
+    const { t } = useTranslation('transactions');
     const amount = schedule.amount
         ? formatSignedAmount(schedule.amount, schedule.type, language, currency)
         : schedule.type === 'INCOME'
-            ? 'Variable income'
-            : 'Variable amount';
-    const frequency = schedule.frequency === 'BIWEEKLY' ? 'Every two weeks' : schedule.repeatDay;
+            ? t('Variable income')
+            : t('Variable amount');
+    const frequency = schedule.frequency === 'BIWEEKLY' ? t('Every two weeks') : t(schedule.repeatDay);
 
     return (
         <Pressable
@@ -76,7 +78,7 @@ const RecurringScheduleListItem = ({
                     {schedule.categoryName} · {frequency}
                 </Text>
                 <View style={styles.footerRow}>
-                    <Text style={styles.next}>Next: {schedule.nextDate}</Text>
+                    <Text style={styles.next}>{t('Next: {{date}}', {date: schedule.nextDate})}</Text>
                     <RecurringStatusBadge status={schedule.status} />
                 </View>
             </View>

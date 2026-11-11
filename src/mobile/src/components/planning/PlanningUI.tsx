@@ -8,6 +8,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import {
     ScrollView,
     StatusBar,
@@ -177,7 +178,10 @@ export const PlanningScreen = ({
     onBack?: () => void;
     onAction?: () => void;
     children: React.ReactNode;
-}) => (
+}) => {
+    const { t } = useTranslation('planning');
+
+    return (
     <View style={styles.page}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.header}>
@@ -187,7 +191,7 @@ export const PlanningScreen = ({
                         <TouchableOpacity
                             onPress={onBack}
                             accessibilityRole="button"
-                            accessibilityLabel="Back"
+                            accessibilityLabel={t('Back')}
                             style={styles.backButton}
                         >
                             <PlanningIcon name="chevron-back" size={23} color={planningColors.text} />
@@ -205,7 +209,7 @@ export const PlanningScreen = ({
                         <TouchableOpacity
                             onPress={onAction}
                             accessibilityRole="button"
-                            accessibilityLabel="Add"
+                            accessibilityLabel={t('Add')}
                             style={styles.actionButton}
                         >
                             <PlanningIcon name="plus" color={planningColors.emerald} />
@@ -222,7 +226,8 @@ export const PlanningScreen = ({
             {children}
         </ScrollView>
     </View>
-);
+    );
+};
 
 /** A small labelled value used inside Planning summary cards. */
 export const PlanningStat = ({
@@ -276,7 +281,10 @@ export const PlanningModalPanel = ({
     title: string;
     onClose: () => void;
     children: React.ReactNode;
-}) => (
+}) => {
+    const { t } = useTranslation('planning');
+
+    return (
     <View style={styles.modalOverlay}>
         <PlanningCard>
             <View style={styles.modalHeader}>
@@ -284,7 +292,7 @@ export const PlanningModalPanel = ({
                 <TouchableOpacity
                     onPress={onClose}
                     accessibilityRole="button"
-                    accessibilityLabel="Close"
+                    accessibilityLabel={t('Close')}
                 >
                     <PlanningIcon name="arrow-left" />
                 </TouchableOpacity>
@@ -292,7 +300,8 @@ export const PlanningModalPanel = ({
             {children}
         </PlanningCard>
     </View>
-);
+    );
+};
 
 /** A lightweight bar chart (week buckets). */
 export const PlanningBarChart = ({
@@ -367,10 +376,13 @@ export const PlanningLineChart = ({
 
 /** A muted caption marking demo-only data. */
 export const PlanningPreviewNote = ({
-    text = 'Preview data — not connected to your account.',
+    text,
 }: {
     text?: string;
-}) => <Text style={styles.previewNote}>{text}</Text>;
+}) => {
+    const { t } = useTranslation('planning');
+    return <Text style={styles.previewNote}>{text ?? t('Preview data — not connected to your account.')}</Text>;
+};
 
 /** Planning screen and component styles. */
 const styles = StyleSheet.create({

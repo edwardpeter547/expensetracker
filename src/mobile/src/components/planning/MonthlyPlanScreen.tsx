@@ -9,6 +9,7 @@ import { planningDataSource } from '@/contracts';
 import type { PlanningAllocation } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningCard,
     PlanningIconTile,
@@ -35,6 +36,7 @@ const MonthlyPlanScreen = ({
     language: string;
     onBack: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [allocations, setAllocations] = useState<PlanningAllocation[]>([]);
     const [income, setIncome] = useState(0);
 
@@ -55,11 +57,11 @@ const MonthlyPlanScreen = ({
     const allocationPercent = income > 0 ? Math.round((allocated / income) * 100) : 0;
 
     return (
-        <PlanningScreen title="Monthly Plan" subtitle="Give every pound a purpose" onBack={onBack}>
+        <PlanningScreen title={t('Monthly Plan')} subtitle={t('Give every pound a purpose')} onBack={onBack}>
             <PlanningCard>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                     <View>
-                        <Text style={planningStyles.muted}>Planned Monthly Income</Text>
+                        <Text style={planningStyles.muted}>{t('Planned Monthly Income')}</Text>
                         <Text style={planningStyles.large}>
                             {formatPlanningMoney(income, language, currency)}
                         </Text>
@@ -71,9 +73,9 @@ const MonthlyPlanScreen = ({
                     />
                 </View>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <PlanningStat label="Allocated" value={formatPlanningMoney(allocated, language, currency)} />
+                    <PlanningStat label={t('Allocated')} value={formatPlanningMoney(allocated, language, currency)} />
                     <PlanningStat
-                        label="Unallocated"
+                        label={t('Unallocated')}
                         value={formatPlanningMoney(unallocated, language, currency)}
                         color={planningColors.emerald}
                     />
@@ -82,7 +84,7 @@ const MonthlyPlanScreen = ({
             </PlanningCard>
 
             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                <Text style={planningStyles.heading}>Your Allocations</Text>
+                <Text style={planningStyles.heading}>{t('Your Allocations')}</Text>
                 <Text style={planningStyles.muted}>November 2026</Text>
             </View>
 

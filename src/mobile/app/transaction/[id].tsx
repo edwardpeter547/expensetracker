@@ -23,6 +23,7 @@ import {
 import { formatSignedAmount, transactionTitle } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -58,6 +59,7 @@ const DetailRow = ({ label, value }: { label: string; value: string }) => (
 const TransactionDetailsRoute = () => {
     const insets = useSafeAreaInsets();
     const { language, currency } = useLocale();
+    const { t } = useTranslation('transactions');
     const { id } = useLocalSearchParams<{ id: string }>();
 
     const [transaction, setTransaction] = useState<TransactionRecord | null | undefined>(undefined);
@@ -114,21 +116,21 @@ const TransactionDetailsRoute = () => {
     if (!transaction) {
         return (
             <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
-                <RecurringScreenHeader title="Transaction Details" onBack={() => router.back()} />
+                <RecurringScreenHeader title={t('Transaction Details')} onBack={() => router.back()} />
                 <View style={styles.center}>
-                    <Text style={styles.notFound}>Transaction not found.</Text>
+                    <Text style={styles.notFound}>{t('Transaction not found.')}</Text>
                 </View>
             </View>
         );
     }
 
-    const amount = formatSignedAmount(transaction.amount, transaction.transType, language, currency);
     const items = transaction.items ?? [];
     const reconciliation = items.length > 0 ? reconcileItemization(transaction.amount, items) : null;
+    const amount = formatSignedAmount(transaction.amount, transaction.transType, language, currency);
 
     return (
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
-            <RecurringScreenHeader title="Transaction Details" onBack={() => router.back()} />
+            <RecurringScreenHeader title={t('Transaction Details')} onBack={() => router.back()} />
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -142,7 +144,7 @@ const TransactionDetailsRoute = () => {
 
                 <View style={styles.summaryCard}>
                     <Text style={styles.summaryType}>
-                        {transaction.transType === 'INCOME' ? 'Income' : 'Expense'}
+                        {transaction.transType === 'INCOME' ? t('Income') : t('Expenses')}
                     </Text>
                     <Text style={[styles.summaryAmount, transaction.transType === 'INCOME' && styles.income]}>
                         {amount}
@@ -151,43 +153,43 @@ const TransactionDetailsRoute = () => {
                 </View>
 
                 <View style={styles.card}>
-                    <DetailRow label="Category" value={transaction.category} />
+                    <DetailRow label={t('Category')} value={transaction.category} />
                     <DetailRow
-                        label="Date"
+                        label={t('Date')}
                         value={new Date(transaction.transactionDate).toLocaleString(language, {
                             dateStyle: 'medium',
                             timeStyle: 'short',
                         })}
                     />
                     {transaction.description ? (
-                        <DetailRow label="Description" value={transaction.description} />
+                        <DetailRow label={t('Description')} value={transaction.description} />
                     ) : null}
                 </View>
 
                 {transaction.transType === 'EXPENSE' && transaction.merchant ? (
                     <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>Merchant</Text>
+                        <Text style={styles.sectionTitle}>{t('Merchant')}</Text>
                         {transaction.merchant.name ? (
-                            <DetailRow label="Merchant" value={transaction.merchant.name} />
+                            <DetailRow label={t('Merchant')} value={transaction.merchant.name} />
                         ) : null}
                         {transaction.merchant.address ? (
-                            <DetailRow label="Address" value={transaction.merchant.address} />
+                            <DetailRow label={t('Address')} value={transaction.merchant.address} />
                         ) : null}
                         {transaction.merchant.purchaseTime ? (
-                            <DetailRow label="Purchase time" value={transaction.merchant.purchaseTime} />
+                            <DetailRow label={t('Purchase time')} value={transaction.merchant.purchaseTime} />
                         ) : null}
                         {transaction.merchant.paymentMethod ? (
-                            <DetailRow label="Payment method" value={transaction.merchant.paymentMethod} />
+                            <DetailRow label={t('Payment method')} value={transaction.merchant.paymentMethod} />
                         ) : null}
                         {transaction.merchant.reference ? (
-                            <DetailRow label="Reference" value={transaction.merchant.reference} />
+                            <DetailRow label={t('Reference')} value={transaction.merchant.reference} />
                         ) : null}
                     </View>
                 ) : null}
 
                 {transaction.transType === 'EXPENSE' ? (
                     <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>Purchased Items</Text>
+                        <Text style={styles.sectionTitle}>{t('Purchased Items')}</Text>
                         {items.length > 0 ? (
                             <>
                                 {items.map((item) => (
@@ -210,11 +212,11 @@ const TransactionDetailsRoute = () => {
                                 {reconciliation ? (
                                     <View style={styles.reconciliation}>
                                         <DetailRow
-                                            label="Item subtotal"
+                                            label={t('Item subtotal')}
                                             value={formatMoney(reconciliation.subtotal, language, currency)}
                                         />
                                         <DetailRow
-                                            label="Difference"
+                                            label={t('Difference')}
                                             value={formatMoney(reconciliation.difference, language, currency)}
                                         />
                                     </View>
@@ -222,14 +224,14 @@ const TransactionDetailsRoute = () => {
                             </>
                         ) : (
                             <View style={styles.emptyItems}>
-                                <Text style={styles.emptyItemsTitle}>No purchased items recorded</Text>
+                                <Text style={styles.emptyItemsTitle}>{t('No purchased items recorded')}</Text>
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="Add Items"
+                                    accessibilityLabel={t('Add Items')}
                                     onPress={() => router.push(`/add-transaction?id=${transaction.id}&focus=items`)}
                                     style={styles.emptyItemsAction}
                                 >
-                                    <Text style={styles.emptyItemsActionText}>Add Items</Text>
+                                    <Text style={styles.emptyItemsActionText}>{t('Add Items')}</Text>
                                 </Pressable>
                             </View>
                         )}
@@ -237,34 +239,34 @@ const TransactionDetailsRoute = () => {
                 ) : null}
 
                 <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>Receipt</Text>
+                    <Text style={styles.sectionTitle}>{t('Receipt')}</Text>
                     {transaction.receipt ? (
                         <ReceiptAttachmentPreview
                             attachment={{ status: 'selected', file: transaction.receipt }}
                         />
                     ) : (
-                        <Text style={styles.emptyReceipt}>No receipt attached.</Text>
+                        <Text style={styles.emptyReceipt}>{t('No receipt attached')}</Text>
                     )}
                 </View>
 
                 <View style={styles.actions}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Edit Transaction"
+                        accessibilityLabel={t('Edit transaction')}
                         onPress={() => router.push(`/add-transaction?id=${transaction.id}`)}
                         style={styles.editAction}
                     >
                         <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-                        <Text style={styles.editActionText}>Edit Transaction</Text>
+                        <Text style={styles.editActionText}>{t('Edit transaction')}</Text>
                     </Pressable>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Delete Transaction"
+                        accessibilityLabel={t('Delete transaction')}
                         onPress={() => setDeleteOpen(true)}
                         style={styles.deleteAction}
                     >
                         <Ionicons name="trash-outline" size={18} color={C.error} />
-                        <Text style={styles.deleteActionText}>Delete Transaction</Text>
+                        <Text style={styles.deleteActionText}>{t('Delete transaction')}</Text>
                     </Pressable>
                 </View>
             </ScrollView>
@@ -272,26 +274,26 @@ const TransactionDetailsRoute = () => {
             <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => setDeleteOpen(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Delete Transaction?</Text>
+                        <Text style={styles.modalTitle}>{t('Delete Transaction?')}</Text>
                         <Text style={styles.modalText}>
-                            Deleting this transaction can affect spending totals, budgets, and reports.
+                            {t('Deleting this transaction can affect spending totals, budgets, and reports.')}
                         </Text>
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Cancel delete"
+                                accessibilityLabel={t('Cancel delete')}
                                 onPress={() => setDeleteOpen(false)}
                                 style={styles.modalCancel}
                             >
-                                <Text style={styles.modalCancelText}>Cancel</Text>
+                                <Text style={styles.modalCancelText}>{t('Cancel')}</Text>
                             </Pressable>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Confirm delete"
+                                accessibilityLabel={t('Confirm delete')}
                                 onPress={confirmDelete}
                                 style={styles.modalDelete}
                             >
-                                <Text style={styles.modalDeleteText}>Delete</Text>
+                                <Text style={styles.modalDeleteText}>{t('Delete')}</Text>
                             </Pressable>
                         </View>
                     </View>
@@ -329,6 +331,11 @@ const styles = StyleSheet.create({
         letterSpacing: -0.6,
         color: C.ink,
         marginTop: 6,
+    },
+    summaryAmountFraction: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: C.ink,
     },
     income: { color: C.income },
     summaryName: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 8 },

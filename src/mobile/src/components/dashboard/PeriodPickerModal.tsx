@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { DashboardPeriod, DashboardPeriodSelection } from '@/types/dashboard';
 import { startOfDay } from '@/utils/dashboardPeriod';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Modal,
     Pressable,
@@ -60,6 +61,7 @@ const PeriodPickerModal = ({
     onSelectPreset,
     onSelectRange,
 }: PeriodPickerModalProps) => {
+    const { t } = useTranslation('dashboard');
     const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
     const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
     const [rangeStart, setRangeStart] = useState<Date | null>(null);
@@ -182,10 +184,10 @@ const PeriodPickerModal = ({
             <View style={styles.overlay}>
                 <View style={styles.sheet}>
                     <View style={styles.sheetHeader}>
-                        <Text style={styles.sheetTitle}>Select period</Text>
+                        <Text style={styles.sheetTitle}>{t('Select period')}</Text>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Close period picker"
+                            accessibilityLabel={t('Close period picker')}
                             onPress={onClose}
                             hitSlop={8}
                         >
@@ -194,7 +196,7 @@ const PeriodPickerModal = ({
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        <Text style={styles.sectionLabel}>Quick ranges</Text>
+                        <Text style={styles.sectionLabel}>{t('Quick ranges')}</Text>
                         {PRESETS.map((preset) => {
                             const active =
                                 selection.kind === 'preset' && selection.period === preset;
@@ -202,7 +204,7 @@ const PeriodPickerModal = ({
                                 <Pressable
                                     key={preset}
                                     accessibilityRole="button"
-                                    accessibilityLabel={preset}
+                                    accessibilityLabel={t(preset)}
                                     onPress={() => {
                                         onSelectPreset(preset);
                                         onClose();
@@ -215,7 +217,7 @@ const PeriodPickerModal = ({
                                             active && styles.presetTextActive,
                                         ]}
                                     >
-                                        {preset}
+                                        {t(preset)}
                                     </Text>
                                     {active ? (
                                         <Ionicons name="checkmark-circle" size={22} color="#0B7956" />
@@ -224,12 +226,12 @@ const PeriodPickerModal = ({
                             );
                         })}
 
-                        <Text style={styles.sectionLabel}>Or choose a date or range</Text>
+                        <Text style={styles.sectionLabel}>{t('Or choose a date or range')}</Text>
 
                         <View style={styles.calendarHeader}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Previous month"
+                                accessibilityLabel={t('Previous month')}
                                 onPress={showPreviousMonth}
                                 hitSlop={8}
                                 style={styles.monthNav}
@@ -239,7 +241,7 @@ const PeriodPickerModal = ({
                             <Text style={styles.monthTitle}>{monthLabel}</Text>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Next month"
+                                accessibilityLabel={t('Next month')}
                                 onPress={showNextMonth}
                                 hitSlop={8}
                                 style={styles.monthNav}
@@ -301,7 +303,7 @@ const PeriodPickerModal = ({
 
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Apply custom range"
+                            accessibilityLabel={t('Apply')}
                             disabled={!rangeStart}
                             onPress={applyRange}
                             style={[
@@ -309,7 +311,7 @@ const PeriodPickerModal = ({
                                 !rangeStart && styles.applyButtonDisabled,
                             ]}
                         >
-                            <Text style={styles.applyButtonText}>Apply</Text>
+                            <Text style={styles.applyButtonText}>{t('Apply')}</Text>
                         </Pressable>
                     </ScrollView>
                 </View>

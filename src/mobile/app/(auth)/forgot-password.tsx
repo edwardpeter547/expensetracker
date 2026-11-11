@@ -2,18 +2,18 @@ import CenteredAuthScreen from '@/components/auth/CenteredAuthScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type Channel = 'email' | 'mobile' | 'whatsapp';
 
 const CHANNELS: {
   id: Channel;
-  label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { id: 'email', label: 'Email', icon: 'mail-outline' },
-  { id: 'mobile', label: 'Mobile number', icon: 'phone-portrait-outline' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: 'logo-whatsapp' },
+  { id: 'email', icon: 'mail-outline' },
+  { id: 'mobile', icon: 'phone-portrait-outline' },
+  { id: 'whatsapp', icon: 'logo-whatsapp' },
 ];
 
 /**
@@ -21,8 +21,14 @@ const CHANNELS: {
  * channel for the reset code. UI-only; the backend call comes later.
  */
 const ForgotPasswordScreen = () => {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [channel, setChannel] = useState<Channel>('email');
+  const channelLabels: Record<Channel, string> = {
+    email: t('Email'),
+    mobile: t('Mobile number'),
+    whatsapp: t('WhatsApp'),
+  };
 
   /**
    * Continue to the reset-code screen.
@@ -35,27 +41,27 @@ const ForgotPasswordScreen = () => {
     <CenteredAuthScreen>
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.title}>
-          Forgot password?
+          {t('Forgot password?')}
         </Text>
-        <Text style={styles.subtitle}>Choose where to receive your reset code</Text>
+        <Text style={styles.subtitle}>{t('Choose where to receive your reset code')}</Text>
 
-        <Text style={styles.label}>Email</Text>
+        <Text style={styles.label}>{t('Email')}</Text>
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
-          placeholder="you@example.com"
+          placeholder={t('you@example.com')}
           placeholderTextColor="#889A92"
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="email"
           textContentType="emailAddress"
-          accessibilityLabel="Email"
+          accessibilityLabel={t('Email')}
           returnKeyType="done"
         />
 
-        <Text style={[styles.label, styles.channelLabel]}>Receive code via</Text>
+        <Text style={[styles.label, styles.channelLabel]}>{t('Receive code via')}</Text>
         {CHANNELS.map((option) => {
           const selected = channel === option.id;
           return (
@@ -63,7 +69,7 @@ const ForgotPasswordScreen = () => {
               key={option.id}
               onPress={() => setChannel(option.id)}
               accessibilityRole="button"
-              accessibilityLabel={option.label}
+              accessibilityLabel={channelLabels[option.id]}
               accessibilityState={{ selected }}
               style={[styles.option, selected && styles.optionSelected]}
             >
@@ -75,7 +81,7 @@ const ForgotPasswordScreen = () => {
               <Text
                 style={[styles.optionText, selected && styles.optionTextSelected]}
               >
-                {option.label}
+                {channelLabels[option.id]}
               </Text>
               <Ionicons
                 name={selected ? 'radio-button-on' : 'radio-button-off'}
@@ -89,23 +95,23 @@ const ForgotPasswordScreen = () => {
         <Pressable
           onPress={handleSendCode}
           accessibilityRole="button"
-          accessibilityLabel="Send reset code"
+          accessibilityLabel={t('Send reset code')}
           style={({ pressed }) => [
             styles.button,
             pressed && styles.buttonPressed,
           ]}
         >
-          <Text style={styles.buttonText}>Send reset code</Text>
+          <Text style={styles.buttonText}>{t('Send reset code')}</Text>
         </Pressable>
 
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Back to sign in"
+          accessibilityLabel={t('Back to sign in')}
           hitSlop={8}
           style={styles.backLink}
         >
-          <Text style={styles.linkText}>Back to sign in</Text>
+          <Text style={styles.linkText}>{t('Back to sign in')}</Text>
         </Pressable>
       </View>
     </CenteredAuthScreen>

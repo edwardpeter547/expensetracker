@@ -10,6 +10,7 @@ import {
     transactionColors,
 } from '@/constants/transactionsTheme';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 
@@ -58,22 +59,26 @@ const ReceiptActionCard = ({
  * @param {ReceiptActionButtonsProps} props Component props.
  * @returns {JSX.Element} The action row.
  */
-const ReceiptActionButtons = ({ onScan, onUpload }: ReceiptActionButtonsProps) => (
+const ReceiptActionButtons = ({ onScan, onUpload }: ReceiptActionButtonsProps) => {
+    const { t } = useTranslation('transactions');
+
+    return (
     <View style={styles.row}>
         <ReceiptActionCard
             icon="camera-outline"
-            label="Scan Receipt"
-            support="Use camera"
+            label={t('Scan Receipt')}
+            support={t('Use camera')}
             onPress={onScan}
         />
         <ReceiptActionCard
             icon="cloud-upload-outline"
-            label="Upload Receipt"
-            support="Browse files"
+            label={t('Upload Receipt')}
+            support={t('Browse files')}
             onPress={onUpload}
         />
     </View>
-);
+    );
+};
 
 /** Props for the manual-entry divider. */
 export interface ReceiptManualEntryDividerProps {
@@ -87,14 +92,19 @@ export interface ReceiptManualEntryDividerProps {
  * @returns {JSX.Element} The divider.
  */
 export const ReceiptManualEntryDivider = ({
-    label = 'OR ENTER MANUALLY',
-}: ReceiptManualEntryDividerProps) => (
+    label,
+}: ReceiptManualEntryDividerProps) => {
+    const { t } = useTranslation('transactions');
+    const text = label ?? t('OR ENTER MANUALLY');
+
+    return (
     <View style={styles.divider}>
         <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>{label}</Text>
+        <Text style={styles.dividerText}>{text}</Text>
         <View style={styles.dividerLine} />
     </View>
-);
+    );
+};
 
 /** Receipt action styles. */
 const styles = StyleSheet.create({

@@ -20,6 +20,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -48,6 +49,7 @@ const OptionSelectorModal = ({
     onClose,
     onSelect,
 }: OptionSelectorModalProps) => {
+    const { t } = useTranslation('transactions');
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.overlay}>
@@ -56,7 +58,7 @@ const OptionSelectorModal = ({
                         <Text style={styles.sheetTitle}>{title}</Text>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel={`Close ${title}`}
+                            accessibilityLabel={t('Close {{title}}', {title})}
                             onPress={onClose}
                             hitSlop={8}
                         >
@@ -105,7 +107,7 @@ const OptionSelectorModal = ({
                             );
                         })}
                         {options.length === 0 ? (
-                            <Text style={styles.empty}>No options available</Text>
+                            <Text style={styles.empty}>{t('No options available')}</Text>
                         ) : null}
                     </ScrollView>
                 </View>

@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import LoginScreen from '../../../app/(auth)/login';
 import RegisterScreen from '../../../app/(auth)/register';
+import i18n from '@/i18n';
 
 const mockLogin = jest.fn();
 const mockRegister = jest.fn();
@@ -83,6 +84,10 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 const mockUseAuth = useAuth as jest.Mock;
+
+afterEach(async () => {
+    await i18n.changeLanguage('en');
+});
 
 /**
  * Render a component inside act and return the test renderer.
@@ -200,6 +205,19 @@ describe('LoginScreen', () => {
     expect(text).toContain('New to ExpenseTracker?');
     expect(text).toContain('Create account');
     expect(text).toContain('Secure access to your financial world');
+  });
+
+  /**
+   * Switching the effective language must render the French catalogue.
+   */
+  it('renders French labels after switching language', async () => {
+    await i18n.changeLanguage('fr');
+    const tree = render(<LoginScreen />);
+    const text = allText(tree);
+
+    expect(text).toContain('Se connecter');
+    expect(text).toContain('Accédez à votre tableau de bord financier');
+    expect(text).toContain('Adresse e-mail');
   });
 
   it('shows inline errors for an empty form and does not submit', async () => {

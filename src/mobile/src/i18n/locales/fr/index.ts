@@ -1,4 +1,6 @@
-import common from './common';
+import auth from './auth';
+import transactions from './transactions';
+import planning from './planning';
 import errors from './errors';
 
 /**
@@ -7,11 +9,9 @@ import errors from './errors';
 const placeholder = {};
 
 export default {
-    common,
-    auth: placeholder,
-    dashboard: placeholder,
-    transactions: placeholder,
-    planning: placeholder,
+    auth,
+    transactions,
+    planning,
     teams: placeholder,
     profile: placeholder,
     notifications: placeholder,

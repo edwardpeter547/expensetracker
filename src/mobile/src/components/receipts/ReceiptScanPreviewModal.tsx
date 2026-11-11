@@ -19,6 +19,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -59,6 +60,7 @@ const ReceiptScanPreviewModal = ({
     onCancel,
 }: ReceiptScanPreviewModalProps) => {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('transactions');
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
@@ -66,25 +68,25 @@ const ReceiptScanPreviewModal = ({
                 <View style={styles.header}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Close scan preview"
+                        accessibilityLabel={t('Close scan preview')}
                         onPress={onCancel}
                         style={styles.headerButton}
                     >
                         <Ionicons name="close" size={22} color={C.ink} />
                     </Pressable>
-                    <Text style={styles.headerTitle}>Review Scan</Text>
+                    <Text style={styles.headerTitle}>{t('Review Scan')}</Text>
                     <View style={styles.headerButton} />
                 </View>
 
                 <View style={styles.preview}>
                     <Ionicons name="document-outline" size={64} color="#8EA6C4" />
-                    <Text style={styles.previewTitle}>Scanned receipt preview</Text>
+                    <Text style={styles.previewTitle}>{t('Scanned receipt preview')}</Text>
                     <Text style={styles.previewHint}>
-                        The native scanner will place the corrected receipt image here.
+                        {t('The native scanner will place the corrected receipt image here.')}
                     </Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>Enhancement</Text>
+                <Text style={styles.sectionLabel}>{t('Enhancement')}</Text>
                 <View style={styles.enhancements}>
                     {ENHANCEMENTS.map((option) => {
                         const active = option.key === enhancement;
@@ -92,7 +94,7 @@ const ReceiptScanPreviewModal = ({
                             <Pressable
                                 key={option.key}
                                 accessibilityRole="button"
-                                accessibilityLabel={option.label}
+                                accessibilityLabel={t(option.label)}
                                 onPress={() => onEnhancementChange(option.key)}
                                 style={[styles.enhancement, active && styles.enhancementActive]}
                             >
@@ -107,7 +109,7 @@ const ReceiptScanPreviewModal = ({
                                         active && styles.enhancementTextActive,
                                     ]}
                                 >
-                                    {option.label}
+                                    {t(option.label)}
                                 </Text>
                             </Pressable>
                         );
@@ -117,33 +119,33 @@ const ReceiptScanPreviewModal = ({
                 <View style={styles.tools}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Crop or adjust"
+                        accessibilityLabel={t('Crop or adjust')}
                         onPress={onCrop}
                         style={styles.tool}
                     >
                         <Ionicons name="crop-outline" size={20} color={C.green} />
-                        <Text style={styles.toolText}>Crop / Adjust</Text>
+                        <Text style={styles.toolText}>{t('Crop / Adjust')}</Text>
                     </Pressable>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Retake scan"
+                        accessibilityLabel={t('Retake scan')}
                         onPress={onRetake}
                         style={styles.tool}
                     >
                         <Ionicons name="refresh-outline" size={20} color={C.green} />
-                        <Text style={styles.toolText}>Retake</Text>
+                        <Text style={styles.toolText}>{t('Retake')}</Text>
                     </Pressable>
                 </View>
 
                 <View style={[styles.footer, { paddingBottom: insets.bottom + 14 }]}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Use Receipt"
+                        accessibilityLabel={t('Use Receipt')}
                         onPress={onConfirm}
                         style={styles.confirmButton}
                     >
                         <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                        <Text style={styles.confirmText}>Use Receipt</Text>
+                        <Text style={styles.confirmText}>{t('Use Receipt')}</Text>
                     </Pressable>
                 </View>
             </View>

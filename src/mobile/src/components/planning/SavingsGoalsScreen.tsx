@@ -9,6 +9,7 @@ import { planningDataSource } from '@/contracts';
 import type { PlanningGoal } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningButton,
     PlanningCard,
@@ -40,6 +41,7 @@ const SavingsGoalsScreen = ({
     language: string;
     onBack: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [goals, setGoals] = useState<PlanningGoal[]>([]);
     const [modal, setModal] = useState<GoalModal>(null);
     const [selected, setSelected] = useState('');
@@ -80,20 +82,20 @@ const SavingsGoalsScreen = ({
     return (
         <View style={{ flex: 1 }}>
             <PlanningScreen
-                title="Savings Goals"
-                subtitle="Make your future goals achievable"
+                title={t('Savings Goals')}
+                subtitle={t('Make your future goals achievable')}
                 onBack={onBack}
                 onAction={() => setModal('new')}
             >
                 <PlanningCard>
                     <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                         <View style={{ gap: 5 }}>
-                            <Text style={planningStyles.muted}>Total Savings Progress</Text>
+                            <Text style={planningStyles.muted}>{t('Total Savings Progress')}</Text>
                             <Text style={planningStyles.large}>
                                 {formatPlanningMoney(saved, language, currency)}
                             </Text>
                             <Text style={planningStyles.muted}>
-                                of {formatPlanningMoney(total, language, currency)} combined targets
+                                {t('of {{total}} combined targets', {total: formatPlanningMoney(total, language, currency)})}
                             </Text>
                         </View>
                         <PlanningIconTile
@@ -104,14 +106,14 @@ const SavingsGoalsScreen = ({
                     </View>
                     <PlanningProgress value={achievedPercent} />
                     <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                        <Text style={planningStyles.muted}>{goals.length} active goals</Text>
+                        <Text style={planningStyles.muted}>{t('activeGoals', {count: goals.length})}</Text>
                         <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>
-                            {achievedPercent}% achieved
+                            {t('{{percent}}% achieved', {percent: achievedPercent})}
                         </Text>
                     </View>
                 </PlanningCard>
 
-                <Text style={planningStyles.heading}>My Savings Goals</Text>
+                <Text style={planningStyles.heading}>{t('My Savings Goals')}</Text>
                 {goals.map((goal) => {
                     const goalPercent = goal.target > 0
                         ? Math.round((goal.saved / goal.target) * 100)
@@ -125,14 +127,14 @@ const SavingsGoalsScreen = ({
                                 setModal('contribute');
                             }}
                             accessibilityRole="button"
-                            accessibilityLabel={`Add contribution to ${goal.name}`}
+                            accessibilityLabel={t('Add contribution to {{name}}', {name: goal.name})}
                         >
                             <PlanningCard>
                                 <View style={[planningStyles.row, { gap: 12 }]}>
                                     <PlanningIconTile icon={goal.icon} color={goal.color} bg={goal.bg} size={50} />
                                     <View style={{ flex: 1, gap: 5 }}>
                                         <Text style={planningStyles.body}>{goal.name}</Text>
-                                        <Text style={planningStyles.muted}>Target: {goal.date}</Text>
+                                        <Text style={planningStyles.muted}>{t('Target: {{date}}', {date: goal.date})}</Text>
                                     </View>
                                 </View>
                                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
@@ -149,37 +151,37 @@ const SavingsGoalsScreen = ({
                 })}
 
                 <PlanningCard style={{ backgroundColor: '#E7F5F7' }}>
-                    <Text style={[planningStyles.body, { color: '#21665F' }]}>✦ Keep building your future</Text>
+                    <Text style={[planningStyles.body, { color: '#21665F' }]}>{t('✦ Keep building your future')}</Text>
                     <Text style={[planningStyles.muted, { color: '#587F83' }]}>
-                        Consistent contributions can help you reach your goals sooner.
+                        {t('Consistent contributions can help you reach your goals sooner.')}
                     </Text>
                 </PlanningCard>
 
-                <PlanningButton label="＋ Create Savings Goal" outline onPress={() => setModal('new')} />
+                <PlanningButton label={t('＋ Create Savings Goal')} outline onPress={() => setModal('new')} />
                 <PlanningPreviewNote />
             </PlanningScreen>
 
             {modal ? (
                 <PlanningModalPanel
-                    title={modal === 'new' ? 'Create Savings Goal' : 'Add Contribution'}
+                    title={modal === 'new' ? t('Create Savings Goal') : t('Add Contribution')}
                     onClose={() => setModal(null)}
                 >
                     {modal === 'new' ? (
                         <PlanningField
-                            label="Goal name"
+                            label={t('Goal name')}
                             value={name}
                             onChange={setName}
-                            placeholder="e.g. New Car"
+                            placeholder={t('e.g. New Car')}
                         />
                     ) : null}
                     <PlanningField
-                        label={modal === 'new' ? 'Target amount' : 'Contribution amount'}
+                        label={modal === 'new' ? t('Target amount') : t('Contribution amount')}
                         value={amount}
                         onChange={setAmount}
                         keyboardType="numeric"
                     />
                     <PlanningPreviewNote />
-                    <PlanningButton label="Save" onPress={submit} />
+                    <PlanningButton label={t('Save')} onPress={submit} />
                 </PlanningModalPanel>
             ) : null}
         </View>

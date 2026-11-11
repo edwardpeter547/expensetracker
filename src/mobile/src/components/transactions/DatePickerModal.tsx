@@ -18,6 +18,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -56,6 +57,7 @@ const DatePickerModal = ({
     onClose,
     onSelect,
 }: DatePickerModalProps) => {
+    const { t } = useTranslation('transactions');
     const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
     const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
 
@@ -115,10 +117,10 @@ const DatePickerModal = ({
             <View style={styles.overlay}>
                 <View style={styles.sheet}>
                     <View style={styles.sheetHeader}>
-                        <Text style={styles.sheetTitle}>Select date</Text>
+                        <Text style={styles.sheetTitle}>{t('Select date')}</Text>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Close date picker"
+                            accessibilityLabel={t('Close')}
                             onPress={onClose}
                             hitSlop={8}
                         >
@@ -129,7 +131,7 @@ const DatePickerModal = ({
                     <View style={styles.calendarHeader}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Previous month"
+                            accessibilityLabel={t('Previous month')}
                             onPress={showPreviousMonth}
                             hitSlop={8}
                             style={styles.monthNav}
@@ -139,7 +141,7 @@ const DatePickerModal = ({
                         <Text style={styles.monthTitle}>{monthLabel}</Text>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Next month"
+                            accessibilityLabel={t('Next month')}
                             onPress={showNextMonth}
                             hitSlop={8}
                             style={styles.monthNav}

@@ -1,12 +1,13 @@
 # Translation Developer Guide
 
-This guide explains how translations are organised and how to add and use them
-across the backend and the Expo mobile application.
+This guide explains how ExpenseTracker organises translations and how to add
+and use them across the backend and the Expo mobile application.
 
-> **Status note.** Backend `i18n-node` usage described here already exists.
-> Mobile `i18next` / `react-i18next` usage is the approved target and is
-> **proposed, not yet implemented**; those examples are labelled
-> `Proposed (not yet implemented)`.
+The backend uses `i18n-node` with generated JSON catalogues. The mobile app
+uses `i18next` / `react-i18next` with TypeScript catalogues. The mobile
+`auth`, `dashboard`, `transactions`, and `planning` namespaces are
+implemented; `teams`, `profile`, and `notifications` are implemented in a
+follow-up task (#193).
 
 ## Backend translation files
 
@@ -35,7 +36,7 @@ export default {
 };
 ```
 
-Use a translation in a controller (existing pattern):
+Use a translation in a controller:
 
 ```js
 response.status(201).json({
@@ -46,7 +47,7 @@ response.status(201).json({
 });
 ```
 
-Use a translation without a request (existing pattern, for email):
+Use a translation without a request, for example when rendering email:
 
 ```js
 const subject = i18n.__(
@@ -55,170 +56,243 @@ const subject = i18n.__(
 );
 ```
 
-## Mobile translation files (proposed)
+## Mobile translation files
 
-Mobile resources are feature-based `i18next` namespaces:
+Mobile translation data lives in two folders:
 
 ```text
 src/mobile/src/i18n/
-  index.ts              # i18next initialisation
+  index.ts                                # i18next initialisation
   locales/
     en/
-      common.json
-      auth.json
-      dashboard.json
-      transactions.json
-      planning.json
-      teams.json
-      profile.json
-      notifications.json
-      ai.json
+      auth.ts
+      dashboard.ts
+      transactions.ts
+      planning.ts
+      errors.ts
+      index.ts
     fr/
-      common.json
-      auth.json
-      ...
+      auth.ts
+      dashboard.ts
+      transactions.ts
+      planning.ts
+      errors.ts
+      index.ts
+  messages/
+    auth.ts                               # generated
+    dashboard.ts                          # generated
+    transactions.ts                       # generated
+    planning.ts                           # generated
+    common.ts                             # hand-maintained
+    planningPlurals.ts                    # hand-maintained
+    types.ts
+    build.ts
+scripts/
+  build-message-catalogues.mjs
 ```
 
-```text
-Proposed (not yet implemented)
+### `locales/` — authoring layer
+
+`locales/<language>/<namespace>.ts` is where translations are authored. Files
+are keyed by a readable path, with one file per language:
+
+```ts
+// locales/en/auth.ts
+export default {
+    login: {
+        title: 'Sign in',
+        email: 'Email address',
+    },
+};
 ```
 
-The namespaces reflect the current feature organisation: `common`, `auth`,
-`dashboard`, `transactions`, `planning`, `teams`, `profile`, `notifications`,
-and `ai`.
+```ts
+// locales/fr/auth.ts
+export default {
+    login: {
+        title: 'Se connecter',
+        email: 'Adresse e-mail',
+    },
+};
+```
 
-## Initialising i18next (proposed)
+English is the canonical fallback. The English file is also the source of the
+keys used at runtime.
 
-```tsx
-// Proposed (not yet implemented) — src/mobile/src/i18n/index.ts
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import en from './locales/en';
-import fr from './locales/fr';
+### `messages/` — runtime layer
 
-export const SUPPORTED_LANGUAGES = ['en', 'fr'] as const;
-export const DEFAULT_LANGUAGE = 'en';
+`messages/<namespace>.ts` is the generated catalogue consumed by the app.
+Each English string is the runtime key and maps to every supported language:
+
+```ts
+// messages/auth.ts (generated)
+const messages: MessageCatalogue = {
+    "Sign in": { en: "Sign in", fr: "Se connecter" },
+    "Email address": { en: "Email address", fr: "Adresse e-mail" },
+};
+```
+
+Components therefore call `t('Sign in')` rather than `t('login.title')`.
+
+`messages/common.ts` and `messages/planningPlurals.ts` are hand-maintained
+because they contain shared strings and i18next plural forms respectively.
+They are not overwritten by the generator.
+
+## Generating mobile catalogues
+
+Run from `src/mobile`:
+
+```bash
+node scripts/build-message-catalogues.mjs
+```
+
+Or use the Task orchestration from the repository root:
+
+```bash
+task mobile:translate
+```
+
+The script takes no command-line arguments. It:
+
+1. Reads `SUPPORTED_LANGUAGES` from
+   `src/mobile/src/localization/registry.ts`.
+2. Loads every `locales/<language>/<namespace>.ts` file for the namespaces
+   `auth`, `dashboard`, `transactions`, and `planning`.
+3. Uses the English file as the source of runtime keys.
+4. Looks up the same key path in every other language.
+5. Writes the per-language source-as-key catalogues to `messages/`.
+
+If a translation is missing in a language, the generator falls back to the
+English source for that language so the catalogue stays complete. Missing
+locale files are an error and fail the build.
+
+## Initialising i18next
+
+`src/mobile/src/i18n/index.ts` initialises i18next from the generated
+catalogues and the key-based `errors` namespace:
+
+```ts
+const sourceResources = buildLanguageResources(catalogues, plurals, SUPPORTED_LANGUAGES);
 
 i18n.use(initReactI18next).init({
-    resources: {
-        en: { translation: en },
-        fr: { translation: fr },
-    },
+    resources: sourceResources,
     lng: DEFAULT_LANGUAGE,
     fallbackLng: DEFAULT_LANGUAGE,
+    supportedLngs: [...SUPPORTED_LANGUAGES],
+    ns: [...I18N_NAMESPACES],
+    defaultNS: 'common',
     interpolation: { escapeValue: false },
+    react: { useSuspense: false },
 });
-
-export default i18n;
 ```
 
-`i18next` resolves region tags (`en-GB`, `fr-CA`) to their base language via
-its fallback configuration, while `LocaleContext` remains the source of truth
-for the detected/selected language and calls `i18n.changeLanguage(...)`.
-
-## Using translations in components (proposed)
+## Using translations in components
 
 ```tsx
-// Proposed (not yet implemented)
 import { useTranslation } from 'react-i18next';
 
 const WelcomeScreen = () => {
     const { t } = useTranslation('auth');
-    return <Text>{t('welcome.getStarted')}</Text>;
+    return <Text>{t('Sign in')}</Text>;
 };
 ```
 
-Nested keys use dot notation and are organised by namespace:
-
-```json
-{
-  "welcome": {
-    "tagline": "Take control of your finances",
-    "getStarted": "Get Started",
-    "signIn": "Sign In"
-  }
-}
-```
+Use the English source string as the key. Do not use the key path from the
+`locales/` authoring files.
 
 ## Interpolation and pluralisation
 
-```json
-{
-  "transactions": {
-    "count_one": "{{count}} transaction",
-    "count_other": "{{count}} transactions"
-  }
-}
+Interpolation is part of the source string:
+
+```ts
+t('We sent a 6-digit code to {{channel}}', { channel });
+```
+
+i18next plural forms use `_one` and `_other` suffixes. Shared plurals live in
+`messages/common.ts`; planning-specific plurals live in
+`messages/planningPlurals.ts`:
+
+```ts
+// messages/planningPlurals.ts
+export default {
+    en: {
+        activeGoals_one: '{{count}} active goal',
+        activeGoals_other: '{{count}} active goals',
+    },
+    fr: {
+        activeGoals_one: '{{count}} objectif actif',
+        activeGoals_other: '{{count}} objectifs actifs',
+    },
+};
 ```
 
 ```tsx
-// Proposed (not yet implemented)
-t('transactions.count', { count: 3 }); // "3 transactions"
+t('activeGoals', { count: goals.length });
 ```
-
-Backend `i18n-node` pluralisation follows its documented key suffix
-convention; adopt it only where plural copy is actually required.
 
 ## Accessibility translations
 
-Accessibility labels are translations too and must be extracted with the
-visible text:
+Accessibility labels and hints are translations too and use the same source
+keys as visible text:
 
 ```tsx
-// Proposed (not yet implemented)
 <Pressable
     accessibilityRole="button"
-    accessibilityLabel={t('welcome.getStarted')}
+    accessibilityLabel={t('Create account')}
 >
-    <Text>{t('welcome.getStarted')}</Text>
+    <Text>{t('Create account')}</Text>
 </Pressable>
 ```
 
-## Runtime language switching (proposed)
+## Runtime language switching
 
-`LocaleContext` is the single entry point. It persists the choice and calls
-`i18n.changeLanguage(language)` so all mounted `useTranslation` consumers
-re-render immediately:
-
-```tsx
-// Proposed (not yet implemented)
-const { language, setLanguage } = useLocale();
-await setLanguage('fr'); // updates context + cache + i18next
-```
-
-No restart is required. Navigation titles, active screens, forms, validation
-messages, and accessibility labels all react to the changed language.
-
-## Backend error-code translation
-
-The backend emits a stable machine-readable `code` (declared in
-`src/backend/src/constants/error-codes.js`). The mobile app maps codes to
-localised messages through the resolver in `src/mobile/src/api/errors.ts`:
-
-```ts
-// Implemented — src/mobile/src/api/errors.ts
-import { normalizeApiError, translateApiError } from '@/api/errors';
-
-const error = normalizeApiError(cause);
-const { message, fieldErrors } = translateApiError(error, t);
-```
-
-Known codes translate through their `errors.*` key with safe interpolation
-params and never fall back to raw server prose. Unknown codes and legacy
-payloads fall back to the server `message`, then to a generic string.
-
-The `i18next` `errors` namespace resources and the `t` wiring remain
-`Proposed (not yet implemented)` — see issue #188.
+`LocaleContext` persists the choice and calls `i18n.changeLanguage(language)`.
+Mounted `useTranslation` consumers re-render without a restart.
 
 ## Adding a new language
 
-1. Add `src/backend/translations/<code>.js`.
-2. Run `node --experimental-vm-modules src/backend/scripts/generate.locales.js`.
-3. Add `src/mobile/src/i18n/locales/<code>/` with every namespace.
-4. Add `<code>` to `src/backend/src/constants/localization.js` and
-   `src/mobile/src/localization/registry.ts` (and to the mobile i18n
-   resources).
-5. Run the catalogue parity and CI checks.
+1. Add the language to both supported-language registries:
+
+   - `src/backend/src/constants/localization.js`
+   - `src/mobile/src/localization/registry.ts`
+
+2. Add the backend source file and regenerate backend JSON:
+
+   ```bash
+   # create src/backend/translations/<code>.js
+   node --experimental-vm-modules src/backend/scripts/generate.locales.js
+   ```
+
+3. Add the mobile authoring files:
+
+   ```text
+   src/mobile/src/i18n/locales/<code>/auth.ts
+   src/mobile/src/i18n/locales/<code>/dashboard.ts
+   src/mobile/src/i18n/locales/<code>/transactions.ts
+   src/mobile/src/i18n/locales/<code>/planning.ts
+   src/mobile/src/i18n/locales/<code>/errors.ts
+   src/mobile/src/i18n/locales/<code>/index.ts
+   ```
+
+4. Add the new language's entries to the hand-maintained catalogues:
+
+   - `src/mobile/src/i18n/messages/common.ts`
+   - `src/mobile/src/i18n/messages/planningPlurals.ts`
+
+5. Register the new language's keyed resources in
+   `src/mobile/src/i18n/index.ts`.
+
+6. Regenerate the mobile feature catalogues:
+
+   ```bash
+   cd src/mobile
+   node scripts/build-message-catalogues.mjs
+   ```
+
+7. Run validation and CI parity checks.
+
+The generator and resource builder iterate over `SUPPORTED_LANGUAGES`, so no
+two-language logic needs changing.
 
 ## Running translation validation
 
@@ -231,16 +305,15 @@ cd src/mobile && npm run lint
 ```
 
 CI additionally enforces catalogue parity, missing-reference detection,
-placeholder compatibility, and invalid-resource checks (see the gap-analysis
-documentation).
+placeholder compatibility, and invalid-resource checks.
 
 ## Avoiding hardcoded strings and anti-patterns
 
-- Do not concatenate fragments that grammar order differs between languages
-  (`"Delete " + name`) — use full strings with interpolation.
-- Do not use the same key for a noun and a verb.
-- Do not assume word order, plural rules, or separator symbols are identical
-  across languages.
+- Do not concatenate fragments whose grammar order differs between languages
+  (`"Delete " + name`); use a full source string with interpolation.
+- Do not use the same source string for a noun and a verb.
+- Do not assume word order, plural rules, or separators are identical across
+  languages.
 - Do not embed currency symbols in copy; format money with `Intl`.
 - Do not translate user-generated content.
 - Do not treat language as a proxy for currency, country, or timezone.

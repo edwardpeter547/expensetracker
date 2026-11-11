@@ -13,6 +13,37 @@ import { initReactI18next } from 'react-i18next';
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '@/localization/registry';
 import en from './locales/en';
 import fr from './locales/fr';
+import commonCatalogue, { plurals as commonPlurals } from './messages/common';
+import dashboardCatalogue from './messages/dashboard';
+import authCatalogue from './messages/auth';
+import transactionsCatalogue from './messages/transactions';
+import planningCatalogue from './messages/planning';
+import planningPlurals from './messages/planningPlurals';
+import { buildLanguageResources } from './messages/build';
+
+const catalogues = {
+    common: commonCatalogue,
+    dashboard: dashboardCatalogue,
+    auth: authCatalogue,
+    transactions: transactionsCatalogue,
+    planning: planningCatalogue,
+};
+const plurals = {
+    common: commonPlurals,
+    planning: planningPlurals,
+};
+
+const sourceResources = buildLanguageResources(catalogues, plurals, SUPPORTED_LANGUAGES);
+
+/**
+ * Key-based resources that are not part of the source-keyed catalogues.
+ * These are mainly the API error namespace and the placeholder feature
+ * namespaces that are still waiting for their extraction pass.
+ */
+const keyedResources: Record<string, Record<string, unknown>> = {
+    en,
+    fr,
+};
 
 /**
  * Feature namespaces bootstrapped for the initial en/fr rollout.
@@ -34,10 +65,19 @@ i18nInstance.use(initReactI18next);
 
 void i18nInstance
     .init({
-        resources: {
-            en,
-            fr,
-        },
+        resources: Object.fromEntries(
+            SUPPORTED_LANGUAGES.map((language) => [
+                language,
+                {
+                    ...(keyedResources[language] ?? {}),
+                    common: sourceResources[language].common,
+                    dashboard: sourceResources[language].dashboard,
+                    auth: sourceResources[language].auth,
+                    transactions: sourceResources[language].transactions,
+                    planning: sourceResources[language].planning,
+                },
+            ]),
+        ),
         lng: DEFAULT_LANGUAGE,
         fallbackLng: DEFAULT_LANGUAGE,
         supportedLngs: [...SUPPORTED_LANGUAGES],
