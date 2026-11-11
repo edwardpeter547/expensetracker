@@ -58,6 +58,17 @@ describe('startOfMonthInTimeZone', () => {
         expect(startOfMonthInTimeZone(reference, undefined).toISOString())
             .toBe('2026-05-01T00:00:00.000Z');
     });
+
+    /**
+     * A reference near the year boundary in a positive-offset timezone must
+     * roll the local month into the following year rather than truncating to
+     * the UTC year.
+     */
+    test('rolls the month across the year in a positive-offset timezone', () => {
+        const reference = new Date('2026-12-31T23:00:00.000Z');
+        expect(startOfMonthInTimeZone(reference, 'Asia/Kolkata').toISOString())
+            .toBe('2026-12-31T18:30:00.000Z');
+    });
 });
 
 describe('getPeriodBounds', () => {
@@ -115,5 +126,50 @@ describe('getPeriodBounds', () => {
             'QUARTERLY',
             'UTC',
         )).toThrow(RangeError);
+    });
+
+    /**
+     * Half-hour offset zones must produce their own UTC instants for monthly
+     * boundaries rather than falling back to whole-hour offsets.
+     */
+    test('applies half-hour timezone offsets to monthly boundaries', () => {
+        const bounds = getPeriodBounds(
+            new Date('2026-05-10T12:00:00.000Z'),
+            'MONTHLY',
+            'Asia/Kolkata',
+        );
+
+        expect(bounds.start.toISOString()).toBe('2026-04-30T18:30:00.000Z');
+        expect(bounds.end.toISOString()).toBe('2026-05-31T18:30:00.000Z');
+    });
+
+    /**
+     * A summer date in Europe/London uses the British Summer Time offset and
+     * therefore starts the month one hour before UTC midnight.
+     */
+    test('applies daylight-saving offsets for Europe/London', () => {
+        const bounds = getPeriodBounds(
+            new Date('2026-07-15T12:00:00.000Z'),
+            'MONTHLY',
+            'Europe/London',
+        );
+
+        expect(bounds.start.toISOString()).toBe('2026-06-30T23:00:00.000Z');
+        expect(bounds.end.toISOString()).toBe('2026-07-31T23:00:00.000Z');
+    });
+
+    /**
+     * Yearly boundaries must span the local calendar year in the recipient's
+     * timezone and return UTC instants for both edges.
+     */
+    test('derives yearly boundaries in a positive-offset timezone', () => {
+        const bounds = getPeriodBounds(
+            new Date('2026-07-01T12:00:00.000Z'),
+            'YEARLY',
+            'Asia/Kolkata',
+        );
+
+        expect(bounds.start.toISOString()).toBe('2025-12-31T18:30:00.000Z');
+        expect(bounds.end.toISOString()).toBe('2026-12-31T18:30:00.000Z');
     });
 });
