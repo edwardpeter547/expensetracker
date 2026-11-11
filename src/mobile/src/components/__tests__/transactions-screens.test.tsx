@@ -9,6 +9,7 @@
 import { act, create } from 'react-test-renderer';
 import { Text, TextInput } from 'react-native';
 import type { ReactElement } from 'react';
+import '@/i18n';
 import {
     AddTransactionScreen,
     TransactionsScreen,

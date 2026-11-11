@@ -16,6 +16,7 @@ import {
     type TransactionItem,
 } from '@/components/transactions/TransactionsScreens';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
 import { transactionDataSource } from '@/contracts';
 import {
@@ -73,6 +74,7 @@ const mapTransaction = (
  */
 const TransactionsRoute = () => {
     const { language, currency } = useLocale();
+    const { user } = useAuth();
     const {
         transactions,
         loading,
@@ -112,6 +114,7 @@ const TransactionsRoute = () => {
             onRetry={() => void refresh()}
             onRefresh={() => void refreshSilently()}
             blurSignal={blurSignal}
+            timeZone={user?.timezone ?? null}
             onBack={() => {
                 if (router.canGoBack()) {
                     router.back();

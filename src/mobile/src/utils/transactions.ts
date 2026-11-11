@@ -4,10 +4,12 @@
  * Filtering, search, day grouping, signed amount formatting, and form
  * validation are all pure functions so they can be unit-tested without a
  * device or React renderer. The module intentionally avoids React Native
- * imports.
+ * component imports.
  */
 
+import i18n from '@/i18n';
 import { formatMoney, parseMoneyInput } from '@/localization/format';
+import { calendarDayDifference, datePartsInTimeZone } from '@/localization/relative-date';
 import { SYSTEM_CATEGORIES } from '@/localization/systemCategories';
 import type {
     Category,
@@ -95,30 +97,33 @@ export const filterTransactions = (
  * @param {Date} date The transaction's local day.
  * @param {Date} now The reference instant.
  * @param {string} [locale='en-US'] The display locale.
+ * @param {string|null} [timeZone] The user's IANA timezone preference.
  * @returns {string} `Today`, `Yesterday`, or a formatted date.
  */
 export const transactionDayLabel = (
     date: Date,
     now: Date,
     locale = 'en-US',
+    timeZone?: string | null,
 ): string => {
-    const today = startOfTransactionDay(now);
-    const target = startOfTransactionDay(date);
-    const dayDifference = Math.round(
-        (today.getTime() - target.getTime()) / 86400000,
-    );
+    const dayDifference = calendarDayDifference(date, now, timeZone);
 
-    if (dayDifference === 0) return 'Today';
-    if (dayDifference === 1) return 'Yesterday';
+    const labelLanguage = (locale || 'en').split('-')[0].toLowerCase();
+    const translate = i18n.getFixedT(labelLanguage, 'common');
+    if (dayDifference === 0) return translate('today');
+    if (dayDifference === 1) return translate('yesterday');
 
+    const targetParts = datePartsInTimeZone(date, timeZone);
+    const currentParts = datePartsInTimeZone(now, timeZone);
     const options: Intl.DateTimeFormatOptions = {
         day: 'numeric',
         month: 'short',
+        timeZone: timeZone ?? undefined,
     };
-    if (target.getFullYear() !== today.getFullYear()) {
+    if (targetParts.year !== currentParts.year) {
         options.year = 'numeric';
     }
-    return target.toLocaleDateString(locale, options);
+    return new Intl.DateTimeFormat(locale, options).format(date);
 };
 
 /**
@@ -127,12 +132,14 @@ export const transactionDayLabel = (
  * @param {TransactionRecord[]} transactions The filtered transactions.
  * @param {Date} [now=new Date()] The reference instant for relative labels.
  * @param {string} [locale='en-US'] The display locale.
+ * @param {string|null} [timeZone] The user's IANA timezone preference.
  * @returns {TransactionSection[]} Day groups in descending date order.
  */
 export const groupTransactionsByDay = (
     transactions: TransactionRecord[],
     now: Date = new Date(),
     locale = 'en-US',
+    timeZone?: string | null,
 ): TransactionSection[] => {
     const sorted = [...transactions].sort(
         (left, right) =>
@@ -145,7 +152,7 @@ export const groupTransactionsByDay = (
 
     for (const transaction of sorted) {
         const date = new Date(transaction.transactionDate);
-        const label = transactionDayLabel(date, now, locale);
+        const label = transactionDayLabel(date, now, locale, timeZone);
 
         if (!current || current.title !== label) {
             current = { title: label, data: [] };

@@ -79,4 +79,7 @@ export default {
     serviceUnavailable: 'Service indisponible. Veuillez réessayer plus tard.',
     uniqueConstraintViolation: '{{field}} existe déjà',
     invalidDate: 'Format de date invalide',
+    network: 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
+    timeout: 'Le serveur a mis trop de temps à répondre. Veuillez réessayer.',
+    sessionExpired: 'Votre session a expiré. Veuillez vous reconnecter.',
 } as const;

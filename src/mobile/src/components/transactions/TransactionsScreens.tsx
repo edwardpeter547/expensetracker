@@ -11,6 +11,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
+import { calendarDayDifference } from '@/localization/relative-date';
 import {
     ActivityIndicator,
     FlatList,
@@ -26,7 +28,7 @@ import {
     type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
     transactionColors,
     transactionTypography,
@@ -212,32 +214,6 @@ export const Segmented = <T extends string>({
 /** One list row with its optional date heading. */
 type TransactionRow = TransactionItem & { heading: string | null };
 
-/**
- * Resolve a relative day heading for a transaction timestamp.
- *
- * @param {string} iso The ISO transaction timestamp.
- * @param {Date} now The reference instant.
- * @returns {string} The day heading.
- */
-const dateGroup = (iso: string, now: Date): string => {
-    const date = new Date(iso);
-    if (Number.isNaN(date.valueOf())) return 'Other';
-
-    const day = (value: Date): string =>
-        `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
-    if (day(date) === day(now)) return 'Today';
-
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (day(date) === day(yesterday)) return 'Yesterday';
-
-    return date.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
-};
-
 /** Transactions screen props. */
 export interface TransactionsScreenProps {
     transactions: TransactionItem[];
@@ -255,6 +231,7 @@ export interface TransactionsScreenProps {
     onRefresh?: () => void;
     blurSignal?: number;
     now?: Date;
+    timeZone?: string | null;
 }
 
 /**
@@ -279,8 +256,10 @@ export function TransactionsScreen({
     onRefresh,
     blurSignal,
     now = new Date(),
+    timeZone,
 }: TransactionsScreenProps) {
     const insets = useSafeAreaInsets();
+    const { t, i18n } = useTranslation('common');
     const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
     const [searching, setSearching] = useState(false);
     const [query, setQuery] = useState('');
@@ -302,6 +281,22 @@ export function TransactionsScreen({
             openRowId.current = null;
         }
     }, [blurSignal]);
+
+    const dateGroup = useCallback((iso: string, reference: Date): string => {
+        const date = new Date(iso);
+        if (Number.isNaN(date.valueOf())) return t('other');
+
+        const difference = calendarDayDifference(date, reference, timeZone);
+        if (difference === 0) return t('today');
+        if (difference === 1) return t('yesterday');
+
+        return new Intl.DateTimeFormat(i18n.language, {
+            timeZone: timeZone ?? undefined,
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        }).format(date);
+    }, [t, i18n.language, timeZone]);
 
     const rows = useMemo<TransactionRow[]>(() => {
         const sorted = [...transactions].sort(
@@ -325,7 +320,7 @@ export function TransactionsScreen({
                 const heading = group !== previousGroup ? group : null;
                 return rows.concat({ ...transaction, heading });
             }, []);
-    }, [transactions, filter, query, now]);
+    }, [transactions, filter, query, now, dateGroup]);
 
     return (
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>

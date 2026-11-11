@@ -116,4 +116,38 @@ describe('API error translation integration', () => {
         expect(translateApiError(error, createErrorTranslator('en')).message)
             .toBe('Unmapped problem');
     });
+
+    /**
+     * Client-generated network and timeout kinds must localise through the
+     * `errors` namespace rather than remaining English-only.
+     */
+    test('localises network and timeout kinds', () => {
+        const network = normalizeApiError({isAxiosError: true, message: 'Network Error'});
+        const timeout = normalizeApiError({isAxiosError: true, code: 'ECONNABORTED'});
+
+        expect(translateApiError(network, createErrorTranslator('fr')).message)
+            .toBe('Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.');
+        expect(translateApiError(timeout, createErrorTranslator('fr')).message)
+            .toBe('Le serveur a mis trop de temps à répondre. Veuillez réessayer.');
+    });
+
+    /**
+     * An uncoded 401 and a 500 must use their kind fallbacks in the selected
+     * language without leaking server prose.
+     */
+    test('localises uncoded auth and server fallbacks', () => {
+        const unauthorized = normalizeApiError({
+            isAxiosError: true,
+            response: {status: 401, data: {}},
+        });
+        const server = normalizeApiError({
+            isAxiosError: true,
+            response: {status: 500, data: {message: 'boom'}},
+        });
+
+        expect(translateApiError(unauthorized, createErrorTranslator('fr')).message)
+            .toBe('Votre session a expiré. Veuillez vous reconnecter.');
+        expect(translateApiError(server, createErrorTranslator('fr')).message)
+            .toBe('Le serveur a rencontré une erreur. Veuillez réessayer plus tard.');
+    });
 });

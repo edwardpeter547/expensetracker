@@ -103,6 +103,26 @@ describe('groupTransactionsByDay', () => {
         const sections = groupTransactionsByDay(rows, now, 'en-US');
         expect(sections[0].data.map((row) => row.id)).toEqual(['later', 'earlier']);
     });
+
+    it('localises relative labels into French', () => {
+        const rows = [
+            transaction({
+                id: 'today',
+                transactionDate: '2026-10-27T09:00:00.000Z',
+            }),
+            transaction({
+                id: 'yesterday',
+                transactionDate: '2026-10-26T09:00:00.000Z',
+            }),
+        ];
+
+        const sections = groupTransactionsByDay(rows, now, 'fr');
+
+        expect(sections.map((section) => section.title)).toEqual([
+            'Aujourd\'hui',
+            'Hier',
+        ]);
+    });
 });
 
 describe('formatSignedAmount', () => {
