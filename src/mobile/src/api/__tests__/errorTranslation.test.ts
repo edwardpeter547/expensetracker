@@ -23,13 +23,13 @@ import {
  */
 const makeTranslator = (language: string) => {
     return (key: string, options?: Record<string, unknown> & { defaultValue?: string }) => {
-        if (key === 'errors.budget.limitExceeded') {
+        if (key === 'budget.limitExceeded') {
             const limit = options?.limit;
             return language === 'fr'
                 ? `Budget de ${limit} dépassé`
                 : `Budget limit of ${limit} exceeded`;
         }
-        if (key === 'errors.validation.tooShort') {
+        if (key === 'validation.tooShort') {
             return language === 'fr'
                 ? `Au moins ${options?.limit} caractères`
                 : `At least ${options?.limit} characters`;
@@ -49,7 +49,7 @@ describe('error-code catalogue', () => {
     test('recognizes registered codes and returns stable translation keys', () => {
         assert.equal(isKnownApiErrorCode('VALIDATION_ERROR'), true);
         assert.equal(isKnownApiErrorCode('NOT_A_CODE'), false);
-        assert.equal(apiErrorTranslationKey('VALIDATION_ERROR'), 'errors.validation');
+        assert.equal(apiErrorTranslationKey('VALIDATION_ERROR'), 'validationError');
         assert.equal(apiErrorTranslationKey('NOT_A_CODE'), null);
         assert.equal(apiErrorTranslationKey(undefined), null);
     });

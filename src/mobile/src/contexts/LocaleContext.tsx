@@ -12,6 +12,7 @@ import {
 import {
     SUPPORTED_LANGUAGES,
 } from '@/localization/registry';
+import i18n from '@/i18n';
 
 /**
  * Locale state exposed to the rest of the application.
@@ -86,6 +87,10 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
 
     const language = languageOverride ?? devicePreferences.language;
     const currency = currencyOverride ?? devicePreferences.currency;
+
+    useEffect(() => {
+        void i18n.changeLanguage(language);
+    }, [language]);
 
     const setLanguage = async (nextLanguage: string) => {
         if (!SUPPORTED_LANGUAGES.includes(nextLanguage as never)) {

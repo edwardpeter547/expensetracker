@@ -7,7 +7,9 @@ import { FeatureAccessProvider } from "@/contexts/FeatureAccessContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useAuth } from "@/hooks/useAuth";
+import i18n from "@/i18n";
 import { Stack } from "expo-router";
+import { I18nextProvider } from "react-i18next";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -50,17 +52,19 @@ const RootLayoutContent = () => {
 export default function RootLayout() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <ThemeProvider>
-                <LocaleProvider>
-                    <AuthProvider>
-                        <AppLockProvider>
-                            <FeatureAccessProvider>
-                                <RootLayoutContent />
-                            </FeatureAccessProvider>
-                        </AppLockProvider>
-                    </AuthProvider>
-                </LocaleProvider>
-            </ThemeProvider>
+            <I18nextProvider i18n={i18n}>
+                <ThemeProvider>
+                    <LocaleProvider>
+                        <AuthProvider>
+                            <AppLockProvider>
+                                <FeatureAccessProvider>
+                                    <RootLayoutContent />
+                                </FeatureAccessProvider>
+                            </AppLockProvider>
+                        </AuthProvider>
+                    </LocaleProvider>
+                </ThemeProvider>
+            </I18nextProvider>
         </GestureHandlerRootView>
     )
 }
