@@ -5,6 +5,7 @@
 import { act, create } from 'react-test-renderer';
 import { Text } from 'react-native';
 import type { ReactElement } from 'react';
+import i18n from '@/i18n';
 import RecurringShortcut from '@/components/recurring/RecurringShortcut';
 import RecurringScheduleListItem from '@/components/recurring/RecurringScheduleListItem';
 import RecurringStatusBadge from '@/components/recurring/RecurringStatusBadge';
@@ -51,6 +52,10 @@ const render = (element: ReactElement): ReturnType<typeof create> => {
 };
 
 describe('RecurringShortcut', () => {
+    afterEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
     it('renders the shortcut and emits its press action', () => {
         const onPress = jest.fn();
         const tree = render(<RecurringShortcut onPress={onPress} />);
@@ -60,6 +65,14 @@ describe('RecurringShortcut', () => {
             tree.root.findByProps({ accessibilityLabel: 'Recurring Transactions' }).props.onPress();
         });
         expect(onPress).toHaveBeenCalled();
+    });
+
+    it('renders French recurring shortcut copy after switching language', async () => {
+        await i18n.changeLanguage('fr');
+        const tree = render(<RecurringShortcut onPress={jest.fn()} />);
+
+        expect(allText(tree)).toContain('Transactions récurrentes');
+        expect(allText(tree)).toContain('Gérez salaire, loyer et abonnements');
     });
 });
 

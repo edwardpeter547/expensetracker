@@ -20,7 +20,7 @@ describe('i18next bootstrap', () => {
      * Interpolation must replace placeholders from the current language.
      */
     test('interpolates values in the default namespace', () => {
-        expect(i18n.t('greeting', {name: 'Ada'})).toBe('Hello, Ada');
+        expect(i18n.t('Hello, {{name}}', {name: 'Ada'})).toBe('Hello, Ada');
     });
 
     /**
@@ -36,11 +36,11 @@ describe('i18next bootstrap', () => {
      * a restart.
      */
     test('switches languages at runtime', async () => {
-        expect(i18n.t('greeting', {name: 'Ada'})).toBe('Hello, Ada');
+        expect(i18n.t('Hello, {{name}}', {name: 'Ada'})).toBe('Hello, Ada');
 
         await i18n.changeLanguage('fr');
 
-        expect(i18n.t('greeting', {name: 'Ada'})).toBe('Bonjour, Ada');
+        expect(i18n.t('Hello, {{name}}', {name: 'Ada'})).toBe('Bonjour, Ada');
         expect(i18n.t('items', {count: 2})).toBe('2 éléments');
     });
 

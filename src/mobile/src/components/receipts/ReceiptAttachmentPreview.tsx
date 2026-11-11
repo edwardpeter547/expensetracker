@@ -17,6 +17,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 
@@ -53,6 +54,7 @@ const ReceiptAttachmentPreview = ({
     onReplace,
     onRemove,
 }: ReceiptAttachmentPreviewProps) => {
+    const { t } = useTranslation('transactions');
     const file = attachment.file;
     const size = formatSize(file?.sizeBytes);
 
@@ -60,7 +62,7 @@ const ReceiptAttachmentPreview = ({
         return (
             <View style={styles.empty}>
                 <Ionicons name="document-attach-outline" size={18} color={C.muted} />
-                <Text style={styles.emptyText}>No receipt attached</Text>
+                <Text style={styles.emptyText}>{t('No receipt attached')}</Text>
             </View>
         );
     }
@@ -74,7 +76,7 @@ const ReceiptAttachmentPreview = ({
                 </Text>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Remove receipt"
+                    accessibilityLabel={t('Remove receipt')}
                     onPress={onRemove}
                 >
                     <Ionicons name="trash-outline" size={18} color={C.muted} />
@@ -108,14 +110,14 @@ const ReceiptAttachmentPreview = ({
                     </View>
                 ) : null}
                 {attachment.status === 'ready' ? (
-                    <Text style={styles.readyText}>Ready</Text>
+                    <Text style={styles.readyText}>{t('Ready')}</Text>
                 ) : null}
             </View>
 
             <View style={styles.actions}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="View receipt"
+                    accessibilityLabel={t('View receipt')}
                     onPress={onView}
                     hitSlop={6}
                 >
@@ -123,7 +125,7 @@ const ReceiptAttachmentPreview = ({
                 </Pressable>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Replace receipt"
+                    accessibilityLabel={t('Replace receipt')}
                     onPress={onReplace}
                     hitSlop={6}
                 >
@@ -131,7 +133,7 @@ const ReceiptAttachmentPreview = ({
                 </Pressable>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Remove receipt"
+                    accessibilityLabel={t('Remove receipt')}
                     onPress={onRemove}
                     hitSlop={6}
                 >

@@ -36,6 +36,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import Svg, { Circle, G } from 'react-native-svg';
 
 /** Fixed design tokens from the approved V1.5 handoff. */
@@ -73,6 +74,8 @@ export interface ExpenseDashboardProps {
     selection: DashboardPeriodSelection;
     /** Display locale used by the currency and date formatters. */
     language: string;
+    /** Selected display currency, overriding the account/data default. */
+    currency?: string;
     /** In-memory bearer token for authenticated avatar image headers. */
     accessToken?: string | null;
     /** Called when the user selects a different quick range. */
@@ -127,6 +130,7 @@ const DashboardAvatar = ({
     accessToken?: string | null;
     onPress?: () => void;
 }) => {
+    const { t } = useTranslation('dashboard');
     const [imageFailed, setImageFailed] = useState(false);
     const showImage = Boolean(data?.avatarUri && !imageFailed);
 
@@ -134,7 +138,7 @@ const DashboardAvatar = ({
         <Pressable
             onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel="Open profile"
+            accessibilityLabel={t('Open profile')}
             style={styles.avatar}
         >
             {showImage ? (
@@ -237,6 +241,7 @@ const SpendingDonut = ({
     currency: string;
     language: string;
 }) => {
+    const { t } = useTranslation('dashboard');
     const [selected, setSelected] = useState<string | null>(null);
     const radius = 50;
     const circumference = 2 * Math.PI * radius;
@@ -253,7 +258,7 @@ const SpendingDonut = ({
         <View style={styles.chartRow}>
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Reset spending category selection"
+                accessibilityLabel={t('Reset spending category selection')}
                 onPress={() => setSelected(null)}
                 style={styles.donutWrap}
             >
@@ -292,7 +297,7 @@ const SpendingDonut = ({
 
             <View style={styles.legend}>
                 {segments.positive.length === 0 ? (
-                    <Text style={styles.legendEmpty}>No spending this period</Text>
+                    <Text style={styles.legendEmpty}>{t('No spending this period')}</Text>
                 ) : (
                     segments.positive.map((item) => (
                         <Pressable
@@ -365,13 +370,14 @@ const SpendingGoalProgress = ({
     currency: string;
     language: string;
 }) => {
+    const { t } = useTranslation('dashboard');
     const progress = spendingProgress(spent, goal);
     const toneColor = GOAL_TONE_COLORS[progress.tone];
 
     return (
         <View style={styles.goalBlock}>
             <View style={styles.goalHeader}>
-                <Text style={styles.goalTitle}>Monthly Spending Goal</Text>
+                <Text style={styles.goalTitle}>{t('Monthly Spending Goal')}</Text>
                 <Text style={[styles.goalPercent, { color: toneColor }]}>
                     {progress.actualPercent}%
                 </Text>
@@ -507,6 +513,7 @@ export default function ExpenseDashboard({
     error,
     selection,
     language,
+    currency: displayCurrency,
     accessToken,
     firstNameFallback,
     lastNameFallback,
@@ -520,6 +527,7 @@ export default function ExpenseDashboard({
     onOpenTeam,
 }: ExpenseDashboardProps) {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('dashboard');
     const [pickerOpen, setPickerOpen] = useState(false);
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [dashboardLayout, setDashboardLayout] = useState<{
@@ -527,17 +535,20 @@ export default function ExpenseDashboard({
         height: number;
     } | null>(null);
 
-    const currency = data?.currency ?? 'USD';
+    const currency = displayCurrency ?? data?.currency ?? 'USD';
     const firstName = firstNameFallback?.trim() || data?.firstName || 'User';
     const displayName = [firstName, lastNameFallback?.trim()].filter(Boolean).join(' ');
-    const periodLabel = selectionLabel(selection, language);
+    const periodLabel =
+        selection.kind === 'preset'
+            ? t(selection.period)
+            : selectionLabel(selection, language);
 
     const spendingChange = useMemo(() => {
         const change = data?.spendingChangePercent;
-        if (change === null || change === undefined) return '— no previous data';
+        if (change === null || change === undefined) return `— ${t('no previous data')}`;
         const arrow = change >= 0 ? '↗' : '↘';
-        return `${arrow}${Math.abs(change)}% from previous period`;
-    }, [data?.spendingChangePercent]);
+        return `${arrow}${Math.abs(change)}% ${t('from previous period')}`;
+    }, [data?.spendingChangePercent, t]);
 
     return (
         <View
@@ -567,7 +578,7 @@ export default function ExpenseDashboard({
                             onPress={onAvatarPress}
                         />
                         <View>
-                            <Text style={styles.greeting}>Welcome back,</Text>
+                            <Text style={styles.greeting}>{t('Welcome back,')}</Text>
                             <Text style={styles.name}>{displayName}</Text>
                         </View>
                     </View>
@@ -577,7 +588,7 @@ export default function ExpenseDashboard({
                             onNotificationPress?.();
                         }}
                         accessibilityRole="button"
-                        accessibilityLabel="Notifications"
+                        accessibilityLabel={t('Notifications')}
                         style={styles.bell}
                     >
                         <Ionicons name="notifications-outline" size={22} color={C.white} />
@@ -586,7 +597,7 @@ export default function ExpenseDashboard({
 
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Period: ${periodLabel}`}
+                    accessibilityLabel={t('Period: {{label}}', {label: periodLabel})}
                     onPress={() => {
                         setNotificationOpen(false);
                         setPickerOpen(true);
@@ -600,9 +611,9 @@ export default function ExpenseDashboard({
 
                 {notificationOpen ? (
                     <View style={[styles.notificationsPopup, { top: insets.top + 70 }]}>
-                        <Text style={styles.popupTitle}>Notifications</Text>
+                        <Text style={styles.popupTitle}>{t('Notifications')}</Text>
                         <Text style={styles.popupSub}>
-                            Notifications aren&apos;t available yet.
+                            {t("Notifications aren't available yet.")}
                         </Text>
                     </View>
                 ) : null}
@@ -633,18 +644,18 @@ export default function ExpenseDashboard({
                             <Text style={styles.errorText}>{error}</Text>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Retry loading dashboard"
+                                accessibilityLabel={t('Retry loading dashboard')}
                                 onPress={onRetry}
                                 style={styles.retryButton}
                             >
-                                <Text style={styles.retryButtonText}>Retry</Text>
+                                <Text style={styles.retryButtonText}>{t('Retry')}</Text>
                             </Pressable>
                         </View>
                     ) : (
                         <>
                             <View style={styles.stats}>
                                 <View style={styles.stat}>
-                                    <Text style={[styles.statLabel, { color: '#498DE5' }]}>Income</Text>
+                                    <Text style={[styles.statLabel, { color: '#498DE5' }]}>{t('Income')}</Text>
                                     <Text
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
@@ -655,7 +666,7 @@ export default function ExpenseDashboard({
                                     </Text>
                                 </View>
                                 <View style={styles.stat}>
-                                    <Text style={[styles.statLabel, { color: '#E8666C' }]}>Expenses</Text>
+                                    <Text style={[styles.statLabel, { color: '#E8666C' }]}>{t('Expenses')}</Text>
                                     <Text
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
@@ -666,7 +677,7 @@ export default function ExpenseDashboard({
                                     </Text>
                                 </View>
                                 <View style={styles.stat}>
-                                    <Text style={[styles.statLabel, { color: '#4CBF7E' }]}>Balance</Text>
+                                    <Text style={[styles.statLabel, { color: '#4CBF7E' }]}>{t('Balance')}</Text>
                                     <Text
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
@@ -685,7 +696,7 @@ export default function ExpenseDashboard({
                                 language={language}
                             />
 
-                            <Text style={styles.sectionTitle}>Spending by Category</Text>
+                            <Text style={styles.sectionTitle}>{t('Spending by Category')}</Text>
                             <SpendingDonut
                                 categories={data?.categories ?? []}
                                 total={data?.totalSpending ?? '0'}
@@ -700,7 +711,7 @@ export default function ExpenseDashboard({
                             />
                             {teams.length > 0 ? (
                                 <View style={styles.teamSection}>
-                                    <Text style={styles.teamSectionLabel}>TEAM FINANCE</Text>
+                                    <Text style={styles.teamSectionLabel}>{t('TEAM FINANCE')}</Text>
                                     {teams.map((team) => (
                                         <TeamFinanceCard
                                             key={team.id}
@@ -725,7 +736,7 @@ export default function ExpenseDashboard({
                 style={[styles.spendingCard, { top: insets.top + CARD_TOP }]}
             >
                 <View>
-                    <Text style={styles.spendingLabel}>Total Spending</Text>
+                    <Text style={styles.spendingLabel}>{t('Total Spending')}</Text>
                     <Text style={styles.spendingAmount}>
                         {data
                             ? formatAmount(data.totalSpending, currency, language, 2)
@@ -899,9 +910,20 @@ const styles = StyleSheet.create({
         color: C.white,
         lineHeight: 40,
     },
+    spendingAmountFraction: {
+        color: '#A0E9BD',
+    },
+    spendingCopy: {
+        flex: 1,
+        minWidth: 0,
+        paddingRight: 12,
+    },
     spendingChange: {
         fontSize: 14,
         color: '#E2FFF2',
+        flexShrink: 1,
+        marginTop: 5,
+        lineHeight: 18,
     },
     miniBars: {
         height: 48,
@@ -909,6 +931,7 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         gap: 6,
         marginRight: 10,
+        flexShrink: 0,
     },
     miniBar: {
         width: 10,
@@ -944,6 +967,11 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         color: C.ink,
         letterSpacing: -0.5,
+    },
+    statValueFraction: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: C.ink,
     },
     goalBlock: {
         marginTop: 26,

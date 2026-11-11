@@ -1,6 +1,7 @@
 import { brandColors } from '@/constants/designTokens';
 import useStyles from '@/hooks/useStyles';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 interface AuthHeaderProps {
@@ -14,6 +15,7 @@ interface AuthHeaderProps {
  */
 const AuthHeader = ({ title, subtitle, onBack }: AuthHeaderProps) => {
   const styles = useStyles('authForm');
+  const { t } = useTranslation('auth');
 
   return (
     <View>
@@ -22,7 +24,7 @@ const AuthHeader = ({ title, subtitle, onBack }: AuthHeaderProps) => {
         style={styles.backButton}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t('Go back')}
       >
         <Ionicons name="chevron-back" size={22} color={brandColors.backIcon} />
       </TouchableOpacity>

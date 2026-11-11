@@ -13,6 +13,7 @@ import {
 } from '@/components/transactions/categoryPresentation';
 import DatePickerModal from '@/components/transactions/DatePickerModal';
 import OptionSelectorModal from '@/components/transactions/OptionSelectorModal';
+import { useTranslation } from 'react-i18next';
 import {
     AddTransactionScreen,
     type SelectOption,
@@ -128,6 +129,7 @@ const toBudgetOptions = (budgets: Budget[], language: string): SelectOption[] =>
  */
 const AddTransactionRoute = () => {
     const { language, currency } = useLocale();
+    const { t } = useTranslation('transactions');
     const params = useLocalSearchParams<{ id?: string; focus?: string }>();
     const editId = params.id;
     const { categories, budgets, loading, error, reload } = useTransactionFormOptions();
@@ -430,7 +432,7 @@ const AddTransactionRoute = () => {
 
             <OptionSelectorModal
                 visible={budgetModalOpen}
-                title="Select a budget"
+                title={t('Select a budget')}
                 options={budgetOptions}
                 selectedId={pendingBudgetId}
                 onClose={() => setBudgetModalOpen(false)}

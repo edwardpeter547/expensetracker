@@ -18,6 +18,7 @@ import {
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useTranslation } from 'react-i18next';
 import { transactionDataSource } from '@/contracts';
 import {
     transactionColors,
@@ -74,6 +75,7 @@ const mapTransaction = (
  */
 const TransactionsRoute = () => {
     const { language, currency } = useLocale();
+    const { t } = useTranslation('transactions');
     const { user } = useAuth();
     const {
         transactions,
@@ -134,23 +136,23 @@ const TransactionsRoute = () => {
             <Modal visible={deleteId !== null} transparent animationType="fade" onRequestClose={() => setDeleteId(null)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Delete Transaction?</Text>
+                        <Text style={styles.modalTitle}>{t('Delete Transaction?')}</Text>
                         <Text style={styles.modalText}>
-                            Deleting this transaction can affect spending totals, budgets, and reports.
+                            {t('Deleting this transaction can affect spending totals, budgets, and reports.')}
                         </Text>
                         {deleteNotice ? <Text style={styles.modalNotice}>{deleteNotice}</Text> : null}
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Cancel delete"
+                                accessibilityLabel={t('Cancel delete')}
                                 onPress={() => setDeleteId(null)}
                                 style={styles.modalCancel}
                             >
-                                <Text style={styles.modalCancelText}>Cancel</Text>
+                                <Text style={styles.modalCancelText}>{t('Cancel')}</Text>
                             </Pressable>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Confirm delete"
+                                accessibilityLabel={t('Confirm delete')}
                                 onPress={async () => {
                                     if (!deleteId) return;
                                     try {
@@ -159,7 +161,7 @@ const TransactionsRoute = () => {
                                         setDeleteNotice(
                                             cause instanceof Error
                                                 ? cause.message
-                                                : 'Deleting is UI-only and unavailable without demo mode.',
+                                                : t('Deleting is UI-only and unavailable without demo mode.'),
                                         );
                                         return;
                                     }
@@ -168,7 +170,7 @@ const TransactionsRoute = () => {
                                 }}
                                 style={styles.modalDelete}
                             >
-                                <Text style={styles.modalDeleteText}>Delete</Text>
+                                <Text style={styles.modalDeleteText}>{t('Delete')}</Text>
                             </Pressable>
                         </View>
                     </View>

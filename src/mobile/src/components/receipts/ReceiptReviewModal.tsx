@@ -17,6 +17,7 @@ import type {
 } from '@/types/receipt';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -44,16 +45,17 @@ const ReceiptReviewModal = ({
     onApply,
 }: ReceiptReviewModalProps) => {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('transactions');
 
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.overlay}>
                 <View style={[styles.sheet, { paddingBottom: insets.bottom + 18 }]}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Receipt Review</Text>
+                        <Text style={styles.title}>{t('Receipt Review')}</Text>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Close receipt review"
+                            accessibilityLabel={t('Close receipt review')}
                             onPress={onClose}
                             hitSlop={8}
                         >

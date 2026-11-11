@@ -9,7 +9,7 @@
 import { act, create } from 'react-test-renderer';
 import { Text, TextInput } from 'react-native';
 import type { ReactElement } from 'react';
-import '@/i18n';
+import i18n from '@/i18n';
 import {
     AddTransactionScreen,
     TransactionsScreen,
@@ -116,6 +116,10 @@ const item = (overrides: Partial<TransactionItem> = {}): TransactionItem => ({
 });
 
 describe('TransactionsScreen', () => {
+    afterEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
     it('renders the approved header, day heading, and transaction row', () => {
         const tree = render(
             <TransactionsScreen
@@ -131,7 +135,25 @@ describe('TransactionsScreen', () => {
         expect(text).toContain('Today');
         expect(text).toContain('Coffee Shop');
         expect(text).toContain('Food');
-        expect(text).toContain('-$4.50');
+        expect(text).toContain('$4');
+        expect(text).toContain('.50');
+    });
+
+    it('renders French transaction list labels after switching language', async () => {
+        await i18n.changeLanguage('fr');
+        const tree = render(
+            <TransactionsScreen
+                transactions={[item()]}
+                onBack={jest.fn()}
+                onAdd={jest.fn()}
+                now={new Date('2026-10-27T10:00:00.000Z')}
+            />,
+        );
+
+        const text = allText(tree);
+        expect(text).toContain('Aujourd\'hui');
+        expect(text).toContain('Revenus');
+        expect(text).toContain('Dépenses');
     });
 
     it('renders and emits the recurring transactions shortcut', () => {

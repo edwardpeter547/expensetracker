@@ -1,6 +1,7 @@
 import CenteredAuthScreen from '@/components/auth/CenteredAuthScreen';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   StyleSheet,
@@ -11,23 +12,6 @@ import {
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
-
-/**
- * Map a delivery channel id to the copy shown on the code screen.
- *
- * @param channel - The selected delivery channel id.
- * @returns The human-readable channel phrase.
- */
-const channelLabelFor = (channel?: string): string => {
-  switch (channel) {
-    case 'mobile':
-      return 'your mobile number';
-    case 'whatsapp':
-      return 'your WhatsApp';
-    default:
-      return 'your email';
-  }
-};
 
 /**
  * Format a countdown value as mm:ss.
@@ -46,6 +30,7 @@ const formatExpiry = (seconds: number): string =>
  */
 const ResetCodeScreen = () => {
   const { channel } = useLocalSearchParams<{ channel?: string }>();
+  const { t } = useTranslation('auth');
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [codeError, setCodeError] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
@@ -95,12 +80,19 @@ const ResetCodeScreen = () => {
   const handleVerify = () => {
     const entered = digits.join('');
     if (entered.length < CODE_LENGTH) {
-      setCodeError('Enter all 6 digits');
+      setCodeError(t('Enter all 6 digits'));
       return;
     }
     setCodeError('');
     router.push('/reset-password');
   };
+
+  const channelLabel =
+    channel === 'mobile'
+      ? t('your mobile number')
+      : channel === 'whatsapp'
+        ? t('your WhatsApp')
+        : t('your email');
 
   /**
    * Reset the code entry and restart the expiry countdown.
@@ -116,10 +108,10 @@ const ResetCodeScreen = () => {
     <CenteredAuthScreen>
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.title}>
-          Enter code
+          {t('Enter code')}
         </Text>
         <Text style={styles.subtitle}>
-          {`We sent a 6-digit code to ${channelLabelFor(channel)}`}
+          {t('We sent a 6-digit code to {{channel}}', {channel: channelLabel})}
         </Text>
 
         <View style={styles.codeRow}>
@@ -140,7 +132,7 @@ const ResetCodeScreen = () => {
               textContentType="oneTimeCode"
               autoComplete="one-time-code"
               selectTextOnFocus
-              accessibilityLabel={`Digit ${index + 1}`}
+              accessibilityLabel={t('Digit {{index}}', {index: index + 1})}
               returnKeyType={index === CODE_LENGTH - 1 ? 'done' : 'next'}
               onSubmitEditing={() => {
                 if (index < CODE_LENGTH - 1) {
@@ -160,39 +152,39 @@ const ResetCodeScreen = () => {
         ) : null}
 
         <Text style={styles.expiryText}>
-          {`Code expires in ${formatExpiry(secondsLeft)}`}
+          {t('Code expires in {{time}}', {time: formatExpiry(secondsLeft)})}
         </Text>
 
         <Pressable
           onPress={handleVerify}
           accessibilityRole="button"
-          accessibilityLabel="Verify code"
+          accessibilityLabel={t('Verify code')}
           style={({ pressed }) => [
             styles.button,
             pressed && styles.buttonPressed,
           ]}
         >
-          <Text style={styles.buttonText}>Verify code</Text>
+          <Text style={styles.buttonText}>{t('Verify code')}</Text>
         </Pressable>
 
         <Pressable
           onPress={handleResend}
           accessibilityRole="button"
-          accessibilityLabel="Resend code"
+          accessibilityLabel={t('Resend code')}
           hitSlop={8}
           style={styles.resendLink}
         >
-          <Text style={styles.linkText}>Resend code</Text>
+          <Text style={styles.linkText}>{t('Resend code')}</Text>
         </Pressable>
 
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Change delivery method"
+          accessibilityLabel={t('Change delivery method')}
           hitSlop={8}
           style={styles.backLink}
         >
-          <Text style={styles.linkText}>Change delivery method</Text>
+          <Text style={styles.linkText}>{t('Change delivery method')}</Text>
         </Pressable>
       </View>
     </CenteredAuthScreen>

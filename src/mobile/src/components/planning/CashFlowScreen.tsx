@@ -9,6 +9,7 @@ import { planningDataSource } from '@/contracts';
 import type { PlanningCashFlowSeries, PlanningCashMovement } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import PlanningDualLineChart from './PlanningDualLineChart';
 import {
     PlanningCard,
@@ -34,6 +35,7 @@ const CashFlowScreen = ({
     language: string;
     onBack: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [movements, setMovements] = useState<PlanningCashMovement[]>([]);
     const [series, setSeries] = useState<PlanningCashFlowSeries>({
         labels: [],
@@ -59,10 +61,10 @@ const CashFlowScreen = ({
         .reduce((sum, movement) => sum + movement.amount, 0);
 
     return (
-        <PlanningScreen title="Cash Flow" subtitle="Know what's coming next" onBack={onBack}>
+        <PlanningScreen title={t('Cash Flow')} subtitle={t("Know what's coming next")} onBack={onBack}>
             <PlanningCard>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>Projected Available Balance</Text>
+                    <Text style={planningStyles.muted}>{t('Projected Available Balance')}</Text>
                     <PlanningIconTile
                         icon="trending-up"
                         color={planningColors.emerald}
@@ -74,9 +76,9 @@ const CashFlowScreen = ({
                     {formatPlanningMoney(2840, language, currency, 2)}
                 </Text>
                 <Text style={{ color: planningColors.emerald, fontSize: 12, fontWeight: '700' }}>
-                    Estimated end-of-month balance
+                    {t('Estimated end-of-month balance')}
                 </Text>
-                <Text style={planningStyles.heading}>Income vs Expenses</Text>
+                <Text style={planningStyles.heading}>{t('Income vs Expenses')}</Text>
                 <PlanningDualLineChart
                     labels={series.labels}
                     income={series.income}
@@ -92,7 +94,7 @@ const CashFlowScreen = ({
                         bg={planningColors.emeraldLight}
                         size={38}
                     />
-                    <Text style={planningStyles.muted}>Expected Inflows</Text>
+                    <Text style={planningStyles.muted}>{t('Expected Inflows')}</Text>
                     <Text style={planningStyles.heading}>
                         {formatPlanningMoney(inflows, language, currency)}
                     </Text>
@@ -104,7 +106,7 @@ const CashFlowScreen = ({
                         bg={planningColors.orangeLight}
                         size={38}
                     />
-                    <Text style={planningStyles.muted}>Expected Outflows</Text>
+                    <Text style={planningStyles.muted}>{t('Expected Outflows')}</Text>
                     <Text style={planningStyles.heading}>
                         {formatPlanningMoney(Math.abs(outflows), language, currency)}
                     </Text>
@@ -112,7 +114,7 @@ const CashFlowScreen = ({
             </View>
 
             <PlanningCard>
-                <Text style={planningStyles.heading}>Upcoming Cash Movements</Text>
+                <Text style={planningStyles.heading}>{t('Upcoming Cash Movements')}</Text>
                 {movements.map((movement) => (
                     <View key={movement.name} style={[planningStyles.row, { gap: 12 }]}>
                         <PlanningIconTile

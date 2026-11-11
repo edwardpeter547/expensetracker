@@ -85,6 +85,7 @@ const DashboardScreen = () => {
             error={error}
             selection={selection}
             language={language}
+            currency={currency}
             accessToken={accessToken}
             teams={teams}
             onOpenTeam={(teamId) =>

@@ -23,6 +23,7 @@ import {
     View,
 } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -50,18 +51,22 @@ const EditableField = ({
     value: string;
     onChange: (value: string) => void;
     missing?: boolean;
-}) => (
+}) => {
+    const { t } = useTranslation('transactions');
+
+    return (
     <View style={styles.field}>
         <Text style={styles.fieldLabel}>{label}</Text>
         <TextInput
             style={[styles.input, missing && styles.inputMissing]}
             value={value}
             onChangeText={onChange}
-            placeholder="Not found"
+            placeholder={t('Not found')}
             placeholderTextColor={C.muted}
         />
     </View>
-);
+    );
+};
 
 /**
  * Render recognition status and an editable review card when suggestions
@@ -75,6 +80,7 @@ const ReceiptRecognitionPanel = ({
     onRetry,
     onApply,
 }: ReceiptRecognitionPanelProps) => {
+    const { t } = useTranslation('transactions');
     const [result, setResult] = useState<ReceiptRecognitionResult>(
         () => state.result ?? {},
     );
@@ -88,7 +94,7 @@ const ReceiptRecognitionPanel = ({
             <View style={styles.statusCard}>
                 <ActivityIndicator color={C.green} />
                 <Text style={styles.statusText}>
-                    {state.message || 'Processing receipt…'}
+                    {state.message || t('Processing receipt…')}
                 </Text>
             </View>
         );
@@ -103,15 +109,15 @@ const ReceiptRecognitionPanel = ({
                     color={state.status === 'failed' ? C.error : C.muted}
                 />
                 <Text style={styles.statusText}>
-                    {state.message || 'Receipt recognition is unavailable.'}
+                    {state.message || t('Receipt recognition is unavailable.')}
                 </Text>
                 {state.status === 'failed' && onRetry ? (
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Retry recognition"
+                        accessibilityLabel={t('Retry recognition')}
                         onPress={onRetry}
                     >
-                        <Text style={styles.retry}>Retry</Text>
+                        <Text style={styles.retry}>{t('Retry')}</Text>
                     </Pressable>
                 ) : null}
             </View>
@@ -123,7 +129,7 @@ const ReceiptRecognitionPanel = ({
             <View style={styles.statusCard}>
                 <Ionicons name="sparkles-outline" size={22} color={C.green} />
                 <Text style={styles.statusText}>
-                    Receipt recognition is ready when you are.
+                    {t('Receipt recognition is ready when you are.')}
                 </Text>
             </View>
         );
@@ -137,10 +143,10 @@ const ReceiptRecognitionPanel = ({
             <View style={styles.reviewHeader}>
                 <View>
                     <Text style={styles.reviewTitle}>
-                        {state.status === 'partial' ? 'Review partial results' : 'Receipt recognized'}
+                        {state.status === 'partial' ? t('Review partial results') : t('Receipt recognized')}
                     </Text>
                     <Text style={styles.reviewSubtitle}>
-                        {state.message || 'Check the suggested values below.'}
+                        {state.message || t('Check the suggested values below.')}
                     </Text>
                 </View>
                 {typeof confidence === 'number' ? (
@@ -154,31 +160,31 @@ const ReceiptRecognitionPanel = ({
 
             <View style={styles.fields}>
                 <EditableField
-                    label="Merchant"
+                    label={t('Merchant')}
                     value={result.merchant ?? ''}
                     onChange={(value) => update('merchant', value)}
                     missing={missing.has('merchant')}
                 />
                 <EditableField
-                    label="Total"
+                    label={t('Total')}
                     value={result.total ?? ''}
                     onChange={(value) => update('total', value)}
                     missing={missing.has('total')}
                 />
                 <EditableField
-                    label="Date"
+                    label={t('Date')}
                     value={result.date ?? ''}
                     onChange={(value) => update('date', value)}
                     missing={missing.has('date')}
                 />
                 <EditableField
-                    label="Currency"
+                    label={t('Currency')}
                     value={result.currency ?? ''}
                     onChange={(value) => update('currency', value)}
                     missing={missing.has('currency')}
                 />
                 <EditableField
-                    label="Category"
+                    label={t('Category')}
                     value={result.categoryName ?? ''}
                     onChange={(value) => update('categoryName', value)}
                     missing={missing.has('categoryName')}
@@ -187,11 +193,11 @@ const ReceiptRecognitionPanel = ({
 
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Apply suggested values"
+                accessibilityLabel={t('Apply suggested values')}
                 onPress={() => onApply?.(result)}
                 style={styles.apply}
             >
-                <Text style={styles.applyText}>Apply suggested values</Text>
+                <Text style={styles.applyText}>{t('Apply suggested values')}</Text>
             </Pressable>
         </View>
     );

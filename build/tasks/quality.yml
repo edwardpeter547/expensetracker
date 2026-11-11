@@ -32,6 +32,7 @@ tasks:
   mobile:check:
     desc: Run mobile quality checks
     deps:
+      - mobile:translate
       - lint
       - test:mobile
       - test:typecheck

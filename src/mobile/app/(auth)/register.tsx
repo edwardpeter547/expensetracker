@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -89,6 +90,7 @@ const deriveUsernameFromEmail = (email: string): string => {
  */
 const RegisterScreen = () => {
   const { register } = useAuth();
+  const { t } = useTranslation('auth');
   const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
@@ -123,20 +125,20 @@ const RegisterScreen = () => {
   const validate = (): boolean => {
     const next: FieldErrors = {};
     if (!email.trim()) {
-      next.email = 'Email is required';
+      next.email = t('Email is required');
     } else if (!isValidEmail(email)) {
-      next.email = 'Enter a valid email address';
+      next.email = t('Enter a valid email address');
     }
     if (!firstName.trim()) {
-      next.firstName = 'First name is required';
+      next.firstName = t('First name is required');
     }
     if (!lastName.trim()) {
-      next.lastName = 'Last name is required';
+      next.lastName = t('Last name is required');
     }
     if (!password) {
-      next.password = 'Password is required';
+      next.password = t('Password is required');
     } else if (!isPasswordStrong(password)) {
-      next.password = 'Password must meet all strength requirements';
+      next.password = t('Password must meet all strength requirements');
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -176,7 +178,7 @@ const RegisterScreen = () => {
    * @param {'Google' | 'Apple'} provider The unavailable provider name.
    */
   const handleUnavailableProvider = (provider: 'Google' | 'Apple') => {
-    setFormError(`${provider} sign-in isn't available yet.`);
+    setFormError(t("{{provider}} sign-in isn't available yet.", {provider}));
   };
 
   const passwordRules = getPasswordRequirements(password);
@@ -191,12 +193,22 @@ const RegisterScreen = () => {
           : C.strong;
 
   const requirements = [
-    { id: 'length', label: 'At least 8 characters', satisfied: passwordRules.length },
-    { id: 'uppercase', label: 'One uppercase letter', satisfied: passwordRules.uppercase },
-    { id: 'lowercase', label: 'One lowercase letter', satisfied: passwordRules.lowercase },
-    { id: 'number', label: 'One number', satisfied: passwordRules.number },
-    { id: 'special', label: 'One special character', satisfied: passwordRules.special },
+    { id: 'length', label: t('At least 8 characters'), satisfied: passwordRules.length },
+    { id: 'uppercase', label: t('One uppercase letter'), satisfied: passwordRules.uppercase },
+    { id: 'lowercase', label: t('One lowercase letter'), satisfied: passwordRules.lowercase },
+    { id: 'number', label: t('One number'), satisfied: passwordRules.number },
+    { id: 'special', label: t('One special character'), satisfied: passwordRules.special },
   ];
+
+  const strengthLabels = {
+    Weak: t('Weak'),
+    Fair: t('Fair'),
+    Good: t('Good'),
+    Strong: t('Strong'),
+  } as const;
+  const strengthLabel = strength.label
+    ? strengthLabels[strength.label as keyof typeof strengthLabels] ?? strength.label
+    : t('Not rated');
 
   return (
     <KeyboardAvoidingView
@@ -220,13 +232,13 @@ const RegisterScreen = () => {
 
         <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.title}>
-            Create Account
+            {t('Create Account')}
           </Text>
-          <Text style={styles.subtitle}>Start your financial journey</Text>
+          <Text style={styles.subtitle}>{t('Start your financial journey')}</Text>
 
           <View style={styles.fields}>
             <View>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('Email')}</Text>
               <TextInput
                 style={[styles.input, errors.email ? styles.inputError : null]}
                 value={email}
@@ -234,14 +246,14 @@ const RegisterScreen = () => {
                   setEmail(value);
                   clearError('email');
                 }}
-                placeholder="you@example.com"
+                placeholder={t('you@example.com')}
                 placeholderTextColor={C.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
                 textContentType="emailAddress"
-                accessibilityLabel="Email"
+                accessibilityLabel={t('Email')}
                 editable={!loading}
                 returnKeyType="next"
                 onSubmitEditing={() => firstNameRef.current?.focus()}
@@ -255,7 +267,7 @@ const RegisterScreen = () => {
 
             <View style={styles.nameRow}>
               <View style={styles.nameField}>
-                <Text style={styles.label}>First name</Text>
+                <Text style={styles.label}>{t('First name')}</Text>
                 <TextInput
                   ref={firstNameRef}
                   style={[styles.input, errors.firstName ? styles.inputError : null]}
@@ -264,12 +276,12 @@ const RegisterScreen = () => {
                     setFirstName(value);
                     clearError('firstName');
                   }}
-                  placeholder="Jane"
+                  placeholder={t('Jane')}
                   placeholderTextColor={C.placeholder}
                   autoCapitalize="words"
                   autoComplete="given-name"
                   textContentType="givenName"
-                  accessibilityLabel="First name"
+                  accessibilityLabel={t('First name')}
                   editable={!loading}
                   returnKeyType="next"
                   onSubmitEditing={() => lastNameRef.current?.focus()}
@@ -281,7 +293,7 @@ const RegisterScreen = () => {
                 ) : null}
               </View>
               <View style={styles.nameField}>
-                <Text style={styles.label}>Last name</Text>
+                <Text style={styles.label}>{t('Last name')}</Text>
                 <TextInput
                   ref={lastNameRef}
                   style={[styles.input, errors.lastName ? styles.inputError : null]}
@@ -290,12 +302,12 @@ const RegisterScreen = () => {
                     setLastName(value);
                     clearError('lastName');
                   }}
-                  placeholder="Doe"
+                  placeholder={t('Doe')}
                   placeholderTextColor={C.placeholder}
                   autoCapitalize="words"
                   autoComplete="family-name"
                   textContentType="familyName"
-                  accessibilityLabel="Last name"
+                  accessibilityLabel={t('Last name')}
                   editable={!loading}
                   returnKeyType="next"
                   onSubmitEditing={() => passwordRef.current?.focus()}
@@ -309,7 +321,7 @@ const RegisterScreen = () => {
             </View>
 
             <View>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('Password')}</Text>
               <View
                 style={[styles.passwordWrap, errors.password ? styles.inputError : null]}
               >
@@ -321,14 +333,14 @@ const RegisterScreen = () => {
                     setPassword(value);
                     clearError('password');
                   }}
-                  placeholder="Create a password"
+                  placeholder={t('Create a password')}
                   placeholderTextColor={C.placeholder}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="new-password"
                   textContentType="newPassword"
-                  accessibilityLabel="Password"
+                  accessibilityLabel={t('Password')}
                   editable={!loading}
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
@@ -338,7 +350,7 @@ const RegisterScreen = () => {
                 <Pressable
                   onPress={() => setShowPassword((current) => !current)}
                   accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  accessibilityLabel={showPassword ? t('Hide password') : t('Show password')}
                   hitSlop={10}
                   style={styles.eyeButton}
                 >
@@ -359,9 +371,9 @@ const RegisterScreen = () => {
             {passwordFocused ? (
               <View
                 style={styles.requirements}
-                accessibilityLabel={`Password requirements: ${requirements
+                accessibilityLabel={t('Password requirements: {{items}}', {items: requirements
                   .map((requirement) => requirement.label)
-                  .join(', ')}`}
+                  .join(', ')})}
               >
                 {requirements.map((requirement) => (
                   <View
@@ -369,7 +381,7 @@ const RegisterScreen = () => {
                     style={styles.requirementRow}
                     accessible
                     accessibilityLabel={`${requirement.label}, ${
-                      requirement.satisfied ? 'satisfied' : 'not satisfied'
+                      requirement.satisfied ? t('satisfied') : t('not satisfied')
                     }`}
                   >
                     <Ionicons
@@ -393,7 +405,7 @@ const RegisterScreen = () => {
             {!passwordFocused && password.length > 0 ? (
               <View
                 style={styles.strengthRow}
-                accessibilityLabel={`Password strength: ${strength.label || 'Not rated'}`}
+                accessibilityLabel={t('Password strength: {{label}}', {label: strengthLabel})}
               >
                 <View style={styles.strengthTrack}>
                   <View
@@ -407,7 +419,7 @@ const RegisterScreen = () => {
                   />
                 </View>
                 <Text style={[styles.strengthLabel, { color: strengthColor }]}>
-                  {strength.label || 'Not rated'}
+                  {strengthLabel}
                 </Text>
               </View>
             ) : null}
@@ -423,7 +435,7 @@ const RegisterScreen = () => {
             onPress={handleRegister}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="Create Account"
+            accessibilityLabel={t('Create Account')}
             accessibilityState={{ disabled: loading, busy: loading }}
             style={({ pressed }) => [
               styles.button,
@@ -434,51 +446,51 @@ const RegisterScreen = () => {
             {loading ? (
               <ActivityIndicator color={C.white} />
             ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
+              <Text style={styles.buttonText}>{t('Create Account')}</Text>
             )}
           </Pressable>
 
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+            <Text style={styles.dividerText}>{t('OR CONTINUE WITH')}</Text>
             <View style={styles.divider} />
           </View>
 
           <Pressable
             onPress={() => handleUnavailableProvider('Google')}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
+            accessibilityLabel={t('Continue with Google')}
             style={({ pressed }) => [
               styles.googleButton,
               pressed && styles.buttonPressed,
             ]}
           >
             <GoogleIcon size={22} />
-            <Text style={styles.googleText}>Continue with Google</Text>
+            <Text style={styles.googleText}>{t('Continue with Google')}</Text>
           </Pressable>
 
           <Pressable
             onPress={() => handleUnavailableProvider('Apple')}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Apple"
+            accessibilityLabel={t('Continue with Apple')}
             style={({ pressed }) => [
               styles.appleButton,
               pressed && styles.buttonPressed,
             ]}
           >
             <Ionicons name="logo-apple" size={23} color={C.white} />
-            <Text style={styles.appleText}>Continue with Apple</Text>
+            <Text style={styles.appleText}>{t('Continue with Apple')}</Text>
           </Pressable>
 
           <View style={styles.registerRow}>
-            <Text style={styles.registerPrompt}>Already have an account? </Text>
+            <Text style={styles.registerPrompt}>{t('Already have an account? ')}</Text>
             <Pressable
               onPress={() => router.push('/login')}
               accessibilityRole="button"
-              accessibilityLabel="Sign In"
+              accessibilityLabel={t('Sign In')}
               hitSlop={4}
             >
-              <Text style={styles.registerLink}>Sign In</Text>
+              <Text style={styles.registerLink}>{t('Sign In')}</Text>
             </Pressable>
           </View>
         </View>

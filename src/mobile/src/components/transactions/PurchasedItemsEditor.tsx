@@ -20,6 +20,7 @@ import {
 } from '@/utils/itemization';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -46,6 +47,7 @@ const PurchasedItemsEditor = ({
     currency,
     onChange,
 }: PurchasedItemsEditorProps) => {
+    const { t } = useTranslation('transactions');
     const [expanded, setExpanded] = useState(true);
 
     const updateItem = (id: string, patch: Partial<PurchasedItem>) => {
@@ -69,26 +71,26 @@ const PurchasedItemsEditor = ({
         <View style={styles.section}>
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Toggle purchased items"
+                accessibilityLabel={t('Toggle purchased items')}
                 onPress={() => setExpanded((current) => !current)}
                 style={styles.toggle}
             >
-                <Text style={styles.title}>Purchased Items</Text>
-                <Text style={styles.toggleText}>{expanded ? 'Hide' : 'Show'}</Text>
+                <Text style={styles.title}>{t('Purchased Items')}</Text>
+                <Text style={styles.toggleText}>{expanded ? t('Hide') : t('Show')}</Text>
             </Pressable>
 
             {expanded ? (
                 <>
                     {items.length === 0 ? (
-                        <Text style={styles.empty}>No purchased items recorded.</Text>
+                        <Text style={styles.empty}>{t('No purchased items recorded.')}</Text>
                     ) : (
                         items.map((item) => (
                             <View key={item.id} style={styles.item}>
                                 <View style={styles.itemHeader}>
-                                    <Text style={styles.itemTitle}>Item</Text>
+                                    <Text style={styles.itemTitle}>{t('Item')}</Text>
                                     <Pressable
                                         accessibilityRole="button"
-                                        accessibilityLabel={`Remove ${item.name || 'item'}`}
+                                        accessibilityLabel={t('Remove {{name}}', {name: item.name || t('Item')})}
                                         onPress={() => removeItem(item.id)}
                                         hitSlop={6}
                                     >
@@ -98,7 +100,7 @@ const PurchasedItemsEditor = ({
                                 <TextInput
                                     value={item.name}
                                     onChangeText={(value) => updateItem(item.id, { name: value })}
-                                    placeholder="Item name"
+                                    placeholder={t('Item name')}
                                     placeholderTextColor={C.muted}
                                     style={styles.input}
                                 />
@@ -107,7 +109,7 @@ const PurchasedItemsEditor = ({
                                         keyboardType="number-pad"
                                         value={item.quantity}
                                         onChangeText={(value) => updateItem(item.id, { quantity: value })}
-                                        placeholder="Qty"
+                                        placeholder={t('Qty')}
                                         placeholderTextColor={C.muted}
                                         style={[styles.input, styles.quantity]}
                                     />
@@ -115,7 +117,7 @@ const PurchasedItemsEditor = ({
                                         keyboardType="decimal-pad"
                                         value={item.unitPrice}
                                         onChangeText={(value) => updateItem(item.id, { unitPrice: value })}
-                                        placeholder="Unit price"
+                                        placeholder={t('Unit price')}
                                         placeholderTextColor={C.muted}
                                         style={[styles.input, styles.price]}
                                     />
@@ -136,30 +138,30 @@ const PurchasedItemsEditor = ({
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Add Item"
+                        accessibilityLabel={t('Add Item')}
                         onPress={addItem}
                         style={styles.addItem}
                     >
                         <Ionicons name="add" size={18} color={C.green} />
-                        <Text style={styles.addItemText}>Add Item</Text>
+                        <Text style={styles.addItemText}>{t('Add Item')}</Text>
                     </Pressable>
 
                     <View style={styles.reconciliation}>
                         <View style={styles.reconciliationRow}>
-                            <Text style={styles.reconciliationLabel}>Item subtotal</Text>
+                            <Text style={styles.reconciliationLabel}>{t('Item subtotal')}</Text>
                             <Text style={styles.reconciliationValue}>
                                 {formatMoney(reconciliation.subtotal, language, currency)}
                             </Text>
                         </View>
                         <View style={styles.reconciliationRow}>
-                            <Text style={styles.reconciliationLabel}>Difference</Text>
+                            <Text style={styles.reconciliationLabel}>{t('Difference')}</Text>
                             <Text style={styles.reconciliationValue}>
                                 {formatMoney(reconciliation.difference, language, currency)}
                             </Text>
                         </View>
                     </View>
                     <Text style={styles.hint}>
-                        Changing items does not automatically change the transaction amount.
+                        {t('Changing items does not automatically change the transaction amount.')}
                     </Text>
                 </>
             ) : null}

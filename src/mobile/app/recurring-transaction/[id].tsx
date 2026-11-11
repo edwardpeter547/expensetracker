@@ -19,6 +19,7 @@ import type { RecurringSchedule, RecurringStatus } from '@/types/recurring';
 import { formatSignedAmount } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Modal,
@@ -54,6 +55,7 @@ const DetailRow = ({ label, value }: { label: string; value: string }) => (
 const RecurringTransactionDetailsRoute = () => {
     const insets = useSafeAreaInsets();
     const { language, currency } = useLocale();
+    const { t } = useTranslation('transactions');
     const { id } = useLocalSearchParams<{ id: string }>();
     const [fixture, setFixture] = useState<RecurringSchedule | null>(null);
     const [loaded, setLoaded] = useState(false);
@@ -93,9 +95,9 @@ const RecurringTransactionDetailsRoute = () => {
     if (!fixture) {
         return (
             <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
-                <RecurringScreenHeader title="Recurring Transaction" onBack={() => router.back()} />
+                <RecurringScreenHeader title={t('Recurring Transaction')} onBack={() => router.back()} />
                 <View style={styles.center}>
-                    <Text style={styles.mutedText}>Recurring schedule not found.</Text>
+                    <Text style={styles.mutedText}>{t('Recurring schedule not found.')}</Text>
                 </View>
             </View>
         );
@@ -103,11 +105,11 @@ const RecurringTransactionDetailsRoute = () => {
 
     const amount = fixture.amount
         ? formatSignedAmount(fixture.amount, fixture.type, language, currency)
-        : `Variable amount${fixture.estimatedAmount ? ` · ~${fixture.estimatedAmount}` : ''}`;
+        : `${t('Variable amount')}${fixture.estimatedAmount ? ` · ~${fixture.estimatedAmount}` : ''}`;
 
     return (
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
-            <RecurringScreenHeader title="Recurring Transaction" onBack={() => router.back()} />
+            <RecurringScreenHeader title={t('Recurring Transaction')} onBack={() => router.back()} />
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -124,7 +126,7 @@ const RecurringTransactionDetailsRoute = () => {
                         </View>
                         <View style={styles.heroCopy}>
                             <Text style={styles.name}>{fixture.name}</Text>
-                            <Text style={styles.type}>{fixture.type === 'INCOME' ? 'Income' : 'Expense'}</Text>
+                            <Text style={styles.type}>{fixture.type === 'INCOME' ? t('Income') : t('Expense')}</Text>
                         </View>
                         <Text style={[styles.amount, fixture.type === 'INCOME' && styles.amountIncome]}>
                             {amount}
@@ -135,33 +137,33 @@ const RecurringTransactionDetailsRoute = () => {
                 </View>
 
                 <View style={styles.card}>
-                    <DetailRow label="Category" value={fixture.categoryName} />
-                    <DetailRow label="Frequency" value={fixture.repeatDay} />
-                    <DetailRow label="Start date" value={fixture.startDate} />
-                    <DetailRow label="Next scheduled date" value={fixture.nextDate} />
+                    <DetailRow label={t('Category')} value={fixture.categoryName} />
+                    <DetailRow label={t('Frequency')} value={t(fixture.repeatDay)} />
+                    <DetailRow label={t('Start date')} value={fixture.startDate} />
+                    <DetailRow label={t('Next scheduled date')} value={fixture.nextDate} />
                     <DetailRow
-                        label="End condition"
+                        label={t('End condition')}
                         value={
                             fixture.endCondition === 'UNTIL_CANCELED'
-                                ? 'Until canceled'
+                                ? t('Until canceled')
                                 : fixture.endCondition === 'ON_DATE'
-                                    ? fixture.endDate ?? 'Specific date'
-                                    : `${fixture.endOccurrences ?? ''} occurrences`
+                                    ? fixture.endDate ?? t('Specific date')
+                                    : t('{{count}} occurrences', {count: fixture.endOccurrences ?? ''})
                         }
                     />
                     <DetailRow
-                        label="Recording preference"
+                        label={t('Recording preference')}
                         value={
                             fixture.recordingPreference === 'REQUIRE_CONFIRMATION'
-                                ? 'Require confirmation'
-                                : 'Automatically record'
+                                ? t('Require confirmation')
+                                : t('Automatically record')
                         }
                     />
                     {fixture.budgetName ? (
-                        <DetailRow label="Budget" value={fixture.budgetName} />
+                        <DetailRow label={t('Budget')} value={fixture.budgetName} />
                     ) : null}
                     {fixture.description ? (
-                        <DetailRow label="Description" value={fixture.description} />
+                        <DetailRow label={t('Description')} value={fixture.description} />
                     ) : null}
                 </View>
 
@@ -179,45 +181,45 @@ const RecurringTransactionDetailsRoute = () => {
                 <View style={styles.actions}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Edit Recurring Transaction"
+                        accessibilityLabel={t('Edit Recurring Transaction')}
                         onPress={() => router.push(`/add-recurring-transaction?id=${fixture.id}`)}
                         style={styles.primaryAction}
                     >
                         <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-                        <Text style={styles.primaryActionText}>Edit</Text>
+                        <Text style={styles.primaryActionText}>{t('Edit')}</Text>
                     </Pressable>
 
                     {status === 'PAUSED' ? (
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Resume schedule"
+                            accessibilityLabel={t('Resume schedule')}
                             onPress={() => setStatus('ACTIVE')}
                             style={styles.secondaryAction}
                         >
                             <Ionicons name="play-outline" size={18} color={C.green} />
-                            <Text style={styles.secondaryActionText}>Resume</Text>
+                            <Text style={styles.secondaryActionText}>{t('Resume')}</Text>
                         </Pressable>
                     ) : status === 'ACTIVE' || status === 'AWAITING_CONFIRMATION' ? (
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Pause schedule"
+                            accessibilityLabel={t('Pause schedule')}
                             onPress={() => setStatus('PAUSED')}
                             style={styles.secondaryAction}
                         >
                             <Ionicons name="pause-outline" size={18} color={C.green} />
-                            <Text style={styles.secondaryActionText}>Pause</Text>
+                            <Text style={styles.secondaryActionText}>{t('Pause')}</Text>
                         </Pressable>
                     ) : null}
 
                     {status !== 'CANCELED' ? (
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Cancel schedule"
+                            accessibilityLabel={t('Cancel schedule')}
                             onPress={() => setCancelOpen(true)}
                             style={styles.dangerAction}
                         >
                             <Ionicons name="close-circle-outline" size={18} color={C.error} />
-                            <Text style={styles.dangerActionText}>Cancel</Text>
+                            <Text style={styles.dangerActionText}>{t('Cancel')}</Text>
                         </Pressable>
                     ) : null}
                 </View>
@@ -226,29 +228,29 @@ const RecurringTransactionDetailsRoute = () => {
             <Modal visible={cancelOpen} transparent animationType="fade" onRequestClose={() => setCancelOpen(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Cancel recurring transaction?</Text>
+                        <Text style={styles.modalTitle}>{t('Cancel recurring transaction?')}</Text>
                         <Text style={styles.modalText}>
-                            Canceled schedules are ended and cannot be resumed.
+                            {t('Canceled schedules are ended and cannot be resumed.')}
                         </Text>
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Keep schedule"
+                                accessibilityLabel={t('Keep schedule')}
                                 onPress={() => setCancelOpen(false)}
                                 style={styles.modalSecondary}
                             >
-                                <Text style={styles.modalSecondaryText}>Keep</Text>
+                                <Text style={styles.modalSecondaryText}>{t('Keep')}</Text>
                             </Pressable>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Confirm cancel"
+                                accessibilityLabel={t('Confirm cancel')}
                                 onPress={() => {
                                     setStatus('CANCELED');
                                     setCancelOpen(false);
                                 }}
                                 style={styles.modalDanger}
                             >
-                                <Text style={styles.modalDangerText}>Cancel Schedule</Text>
+                                <Text style={styles.modalDangerText}>{t('Cancel Schedule')}</Text>
                             </Pressable>
                         </View>
                     </View>

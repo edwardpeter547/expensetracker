@@ -7,6 +7,7 @@
  */
 
 import { act, create } from 'react-test-renderer';
+import i18n from '@/i18n';
 import { Text } from 'react-native';
 import ExpenseDashboard from '../dashboard/ExpenseDashboard';
 import type { DashboardData } from '../../types/dashboard';
@@ -141,6 +142,10 @@ describe('ExpenseDashboard', () => {
         jest.clearAllMocks();
     });
 
+    afterEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
     it('renders the approved header, cards, and category section', () => {
         const text = allText(render());
 
@@ -155,6 +160,15 @@ describe('ExpenseDashboard', () => {
         expect(text).toContain('6-Month Trend');
         expect(text).toContain('Food');
         expect(text).toContain('12% from previous period');
+    });
+
+    it('renders French labels after switching language', async () => {
+        await i18n.changeLanguage('fr');
+        const text = allText(render());
+
+        expect(text).toContain('Bon retour,');
+        expect(text).toContain('Dépenses');
+        expect(text).toContain('Revenus');
     });
 
     it('renders an explicit empty chart state for zero spending', () => {

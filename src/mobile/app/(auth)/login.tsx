@@ -7,6 +7,7 @@ import { isValidEmail } from '@/utils/authValidation';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -61,6 +62,7 @@ const C = {
  */
 const LoginScreen = () => {
   const { login, user, loginWithBiometrics } = useAuth();
+  const { t } = useTranslation('auth');
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === 'ios';
 
@@ -98,12 +100,12 @@ const LoginScreen = () => {
   const validate = (): boolean => {
     const next: FieldErrors = {};
     if (!email.trim()) {
-      next.email = 'Email is required';
+      next.email = t('Email is required');
     } else if (!isValidEmail(email)) {
-      next.email = 'Enter a valid email address';
+      next.email = t('Enter a valid email address');
     }
     if (!password) {
-      next.password = 'Password is required';
+      next.password = t('Password is required');
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -156,7 +158,7 @@ const LoginScreen = () => {
    * @param {'Google' | 'Apple'} provider The unavailable provider name.
    */
   const handleUnavailableProvider = (provider: 'Google' | 'Apple') => {
-    setFormError(`${provider} sign-in isn't available yet.`);
+    setFormError(t("{{provider}} sign-in isn't available yet.", {provider}));
   };
 
   return (
@@ -181,11 +183,11 @@ const LoginScreen = () => {
 
         <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.title}>
-            Sign in
+            {t('Sign in')}
           </Text>
-          <Text style={styles.subtitle}>Access your financial dashboard</Text>
+          <Text style={styles.subtitle}>{t('Access your financial dashboard')}</Text>
 
-          <Text style={styles.label}>Email address</Text>
+          <Text style={styles.label}>{t('Email address')}</Text>
           <TextInput
             style={[styles.input, errors.email ? styles.inputError : null]}
             value={email}
@@ -193,14 +195,14 @@ const LoginScreen = () => {
               setEmail(value);
               clearError('email');
             }}
-            placeholder="you@example.com"
+            placeholder={t('you@example.com')}
             placeholderTextColor={C.placeholder}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="email"
             textContentType="emailAddress"
-            accessibilityLabel="Email address"
+            accessibilityLabel={t('Email address')}
             editable={!loading}
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
@@ -211,7 +213,7 @@ const LoginScreen = () => {
             </Text>
           ) : null}
 
-          <Text style={[styles.label, styles.passwordLabel]}>Password</Text>
+          <Text style={[styles.label, styles.passwordLabel]}>{t('Password')}</Text>
           <View
             style={[styles.passwordWrap, errors.password ? styles.inputError : null]}
           >
@@ -223,14 +225,14 @@ const LoginScreen = () => {
                 setPassword(value);
                 clearError('password');
               }}
-              placeholder="Enter your password"
+              placeholder={t('Enter your password')}
               placeholderTextColor={C.placeholder}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="current-password"
               textContentType="password"
-              accessibilityLabel="Password"
+              accessibilityLabel={t('Password')}
               editable={!loading}
               returnKeyType="done"
               onSubmitEditing={handleLogin}
@@ -238,7 +240,7 @@ const LoginScreen = () => {
             <Pressable
               onPress={() => setShowPassword((current) => !current)}
               accessibilityRole="button"
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              accessibilityLabel={showPassword ? t('Hide password') : t('Show password')}
               hitSlop={10}
               style={styles.eyeButton}
             >
@@ -258,11 +260,11 @@ const LoginScreen = () => {
           <Pressable
             onPress={() => router.push('/forgot-password')}
             accessibilityRole="button"
-            accessibilityLabel="Forgot Password?"
+            accessibilityLabel={t('Forgot Password?')}
             style={styles.forgot}
             hitSlop={8}
           >
-            <Text style={styles.forgotText}>Forgot Password?</Text>
+            <Text style={styles.forgotText}>{t('Forgot Password?')}</Text>
           </Pressable>
 
           {formError ? (
@@ -275,7 +277,7 @@ const LoginScreen = () => {
             onPress={handleLogin}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="Sign In"
+            accessibilityLabel={t('Sign In')}
             accessibilityState={{ disabled: loading, busy: loading }}
             style={({ pressed }) => [
               styles.signInButton,
@@ -287,7 +289,7 @@ const LoginScreen = () => {
               <ActivityIndicator color={C.white} />
             ) : (
               <>
-                <Text style={styles.signInText}>Sign In</Text>
+                <Text style={styles.signInText}>{t('Sign In')}</Text>
                 <Ionicons name="arrow-forward" size={20} color={C.white} />
               </>
             )}
@@ -295,41 +297,41 @@ const LoginScreen = () => {
 
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+            <Text style={styles.dividerText}>{t('OR CONTINUE WITH')}</Text>
             <View style={styles.divider} />
           </View>
 
           <Pressable
             onPress={() => handleUnavailableProvider('Google')}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
+            accessibilityLabel={t('Continue with Google')}
             style={({ pressed }) => [
               styles.googleButton,
               pressed && styles.signInButtonPressed,
             ]}
           >
             <GoogleIcon size={22} />
-            <Text style={styles.googleText}>Continue with Google</Text>
+            <Text style={styles.googleText}>{t('Continue with Google')}</Text>
           </Pressable>
 
           <Pressable
             onPress={() => handleUnavailableProvider('Apple')}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Apple"
+            accessibilityLabel={t('Continue with Apple')}
             style={({ pressed }) => [
               styles.appleButton,
               pressed && styles.signInButtonPressed,
             ]}
           >
             <Ionicons name="logo-apple" size={23} color={C.white} />
-            <Text style={styles.appleText}>Continue with Apple</Text>
+            <Text style={styles.appleText}>{t('Continue with Apple')}</Text>
           </Pressable>
 
           {!isIOS ? (
             <>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Sign in with Biometrics"
+                accessibilityLabel={t('Sign in with Biometrics')}
                 onPress={() => void handleBiometricLogin()}
                 disabled={biometricLoading}
                 accessibilityState={{ disabled: biometricLoading, busy: biometricLoading }}
@@ -344,7 +346,7 @@ const LoginScreen = () => {
                 ) : (
                   <>
                     <MaterialCommunityIcons name="fingerprint" size={25} color={C.link} />
-                    <Text style={styles.biometricText}>Sign in with Biometrics</Text>
+                    <Text style={styles.biometricText}>{t('Sign in with Biometrics')}</Text>
                   </>
                 )}
               </Pressable>
@@ -357,14 +359,14 @@ const LoginScreen = () => {
           ) : null}
 
           <View style={styles.registerRow}>
-            <Text style={styles.registerPrompt}>New to ExpenseTracker? </Text>
+            <Text style={styles.registerPrompt}>{t('New to ExpenseTracker? ')}</Text>
             <Pressable
               onPress={() => router.push('/register')}
               accessibilityRole="button"
-              accessibilityLabel="Create account"
+              accessibilityLabel={t('Create account')}
               hitSlop={4}
             >
-              <Text style={styles.registerLink}>Create account</Text>
+              <Text style={styles.registerLink}>{t('Create account')}</Text>
             </Pressable>
           </View>
         </View>

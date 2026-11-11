@@ -12,6 +12,7 @@ import {
 } from '@/constants/transactionsTheme';
 import type { RecurringSchedule } from '@/types/recurring';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -40,6 +41,7 @@ const RecurringConfirmationCard = ({
     onEditActual,
     onNotYet,
 }: RecurringConfirmationCardProps) => {
+    const { t } = useTranslation('transactions');
     const isIncome = schedule.type === 'INCOME';
 
     return (
@@ -49,16 +51,15 @@ const RecurringConfirmationCard = ({
                     <Ionicons name="help-circle-outline" size={22} color={C.green} />
                 </View>
                 <Text style={styles.title}>
-                    {isIncome ? 'Have you received this payment?' : 'Have you made this payment?'}
+                    {isIncome ? t('Have you received this payment?') : t('Have you made this payment?')}
                 </Text>
             </View>
 
             <Text style={styles.hint}>
-                Confirm the actual amount before it is recorded as a completed
-                transaction.
+                {t('Confirm the actual amount before it is recorded as a completed transaction.')}
             </Text>
 
-            <Text style={styles.label}>Actual amount</Text>
+            <Text style={styles.label}>{t('Actual amount')}</Text>
             <View style={styles.amountRow}>
                 <TextInput
                     keyboardType="decimal-pad"
@@ -70,7 +71,7 @@ const RecurringConfirmationCard = ({
                 />
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Edit actual amount"
+                    accessibilityLabel={t('Edit actual amount')}
                     onPress={onEditActual}
                     hitSlop={6}
                 >
@@ -80,20 +81,20 @@ const RecurringConfirmationCard = ({
 
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={isIncome ? 'Confirm Payment' : 'Confirm Payment'}
+                accessibilityLabel={t('Confirm Payment')}
                 onPress={onConfirm}
                 style={styles.confirm}
             >
-                <Text style={styles.confirmText}>Confirm Payment</Text>
+                <Text style={styles.confirmText}>{t('Confirm Payment')}</Text>
             </Pressable>
 
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Not Yet / Remind Later"
+                accessibilityLabel={t('Not Yet / Remind Later')}
                 onPress={onNotYet}
                 style={styles.later}
             >
-                <Text style={styles.laterText}>Not Yet / Remind Later</Text>
+                <Text style={styles.laterText}>{t('Not Yet / Remind Later')}</Text>
             </Pressable>
         </View>
     );

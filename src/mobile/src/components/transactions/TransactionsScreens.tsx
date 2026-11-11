@@ -154,21 +154,25 @@ const Header = ({
     title: string;
     onBack: () => void;
     onSearch?: () => void;
-}) => (
+}) => {
+    const { t: tx } = useTranslation('transactions');
+
+    return (
     <View style={styles.header}>
-        <Pressable accessibilityLabel="Back" onPress={onBack} style={styles.headerSide}>
+        <Pressable accessibilityLabel={tx('Back')} onPress={onBack} style={styles.headerSide}>
             <Ionicons name="chevron-back" size={22} color={C.ink} />
         </Pressable>
         <Text style={styles.headerTitle}>{title}</Text>
         <View style={styles.headerSide}>
             {onSearch && (
-                <Pressable accessibilityLabel="Search" onPress={onSearch}>
+                <Pressable accessibilityLabel={tx('Search')} onPress={onSearch}>
                     <Ionicons name="search-outline" size={21} color={C.ink} />
                 </Pressable>
             )}
         </View>
     </View>
-);
+    );
+};
 
 /**
  * Render the approved segmented pill control.
@@ -260,6 +264,7 @@ export function TransactionsScreen({
 }: TransactionsScreenProps) {
     const insets = useSafeAreaInsets();
     const { t, i18n } = useTranslation('common');
+    const { t: tx } = useTranslation('transactions');
     const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
     const [searching, setSearching] = useState(false);
     const [query, setQuery] = useState('');
@@ -284,11 +289,11 @@ export function TransactionsScreen({
 
     const dateGroup = useCallback((iso: string, reference: Date): string => {
         const date = new Date(iso);
-        if (Number.isNaN(date.valueOf())) return t('other');
+        if (Number.isNaN(date.valueOf())) return t('Other');
 
         const difference = calendarDayDifference(date, reference, timeZone);
-        if (difference === 0) return t('today');
-        if (difference === 1) return t('yesterday');
+        if (difference === 0) return t('Today');
+        if (difference === 1) return t('Yesterday');
 
         return new Intl.DateTimeFormat(i18n.language, {
             timeZone: timeZone ?? undefined,
@@ -326,7 +331,7 @@ export function TransactionsScreen({
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
             <StatusBar style="dark" />
             <Header
-                title="Transactions"
+                title={tx('Transactions')}
                 onBack={onBack}
                 onSearch={() => setSearching((value) => !value)}
             />
@@ -335,7 +340,7 @@ export function TransactionsScreen({
                     <Ionicons name="search-outline" size={20} color={C.muted} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by name or category"
+                        placeholder={tx('Search by name or category')}
                         placeholderTextColor="#9AA9C0"
                         value={query}
                         onChangeText={(value) => {
@@ -348,9 +353,9 @@ export function TransactionsScreen({
             <RecurringShortcut onPress={onRecurringPress ?? (() => undefined)} />
             <Segmented
                 options={[
-                    { label: 'All', value: 'all' },
-                    { label: 'Income', value: 'income' },
-                    { label: 'Expenses', value: 'expense' },
+                    { label: tx('All'), value: 'all' },
+                    { label: tx('Income'), value: 'income' },
+                    { label: tx('Expenses'), value: 'expense' },
                 ]}
                 value={filter}
                 onChange={setFilter}
@@ -360,8 +365,8 @@ export function TransactionsScreen({
             ) : error ? (
                 <View style={styles.center}>
                     <Text style={styles.empty}>{error}</Text>
-                    <Pressable accessibilityLabel="Retry" onPress={onRetry}>
-                        <Text style={styles.retry}>Retry</Text>
+                    <Pressable accessibilityLabel={tx('Retry')} onPress={onRetry}>
+                        <Text style={styles.retry}>{tx('Retry')}</Text>
                     </Pressable>
                 </View>
             ) : (
@@ -373,7 +378,7 @@ export function TransactionsScreen({
                     showsVerticalScrollIndicator={false}
                     refreshing={refreshing}
                     onRefresh={onRefresh}
-                    ListEmptyComponent={<Text style={styles.empty}>No transactions found</Text>}
+                    ListEmptyComponent={<Text style={styles.empty}>{tx('No transactions found')}</Text>}
                     renderItem={({ item }) => (
                         <>
                             {item.heading && <Text style={styles.day}>{item.heading}</Text>}
@@ -436,7 +441,7 @@ export function TransactionsScreen({
             <GradientButton
                 style={styles.fab}
                 onPress={onAdd}
-                accessibilityLabel="Add transaction"
+                accessibilityLabel={tx('Add transaction')}
             >
                 <Ionicons name="add" color="white" size={31} />
             </GradientButton>
@@ -567,6 +572,7 @@ export function AddTransactionScreen({
     onRemoveReceipt,
 }: AddTransactionScreenProps) {
     const insets = useSafeAreaInsets();
+    const { t: tx } = useTranslation('transactions');
     const [kind, setKind] = useState<TransactionKind>(initialValues?.kind ?? 'expense');
     const [amount, setAmount] = useState(initialValues?.amount ?? '');
     const [categoryId, setCategoryId] = useState(initialValues?.categoryId ?? '');
@@ -585,11 +591,11 @@ export function AddTransactionScreen({
      */
     const submit = () => {
         if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
-            setValidation('Enter a valid positive amount.');
+            setValidation(tx('Enter a valid positive amount.'));
             return;
         }
         if (!categoryId) {
-            setValidation('Select a category.');
+            setValidation(tx('Select a category'));
             return;
         }
         setValidation('');
@@ -611,7 +617,7 @@ export function AddTransactionScreen({
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <StatusBar style="dark" />
-            <Header title={mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'} onBack={onBack} />
+            <Header title={mode === 'edit' ? tx('Edit Transaction') : tx('Add Transaction')} onBack={onBack} />
             <ScrollView
                 contentContainerStyle={styles.formScroll}
                 keyboardShouldPersistTaps="handled"
@@ -619,8 +625,8 @@ export function AddTransactionScreen({
             >
                 <Segmented
                     options={[
-                        { label: 'Expense', value: 'expense' },
-                        { label: 'Income', value: 'income' },
+                        { label: tx('Expenses'), value: 'expense' },
+                        { label: tx('Income'), value: 'income' },
                     ]}
                     value={kind}
                     onChange={(value) => {
@@ -651,14 +657,14 @@ export function AddTransactionScreen({
                     {optionsError ? (
                         <View style={styles.optionsError}>
                             <Text style={styles.optionsErrorText}>{optionsError}</Text>
-                            <Pressable accessibilityLabel="Retry loading options" onPress={onRetryOptions}>
-                                <Text style={styles.retry}>Retry</Text>
+                            <Pressable accessibilityLabel={tx('Retry loading options')} onPress={onRetryOptions}>
+                                <Text style={styles.retry}>{tx('Retry')}</Text>
                             </Pressable>
                         </View>
                     ) : null}
 
                     <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Amount</Text>
+                        <Text style={styles.fieldLabel}>{tx('Amount')}</Text>
                         <View style={styles.amountField}>
                             <Text style={styles.currency}>{currencySymbol}</Text>
                             <TextInput
@@ -673,26 +679,26 @@ export function AddTransactionScreen({
                     </View>
 
                     <SelectField
-                        label="Category"
-                        value={category?.label || 'Select a category'}
+                        label={tx('Category')}
+                        value={category?.label || tx('Select a category')}
                         icon={category?.iconName || 'fast-food-outline'}
                         disabled={optionsLoading}
                         onPress={() => onChooseCategory?.(categories, categoryId, setCategoryId)}
                     />
 
                     <SelectField
-                        label="Date"
+                        label={tx('Date')}
                         value={date}
                         icon="calendar-outline"
                         onPress={() => onChooseDate?.(date, setDate)}
                     />
 
                     <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Description</Text>
+                        <Text style={styles.fieldLabel}>{tx('Description')}</Text>
                         <TextInput
                             multiline
                             textAlignVertical="top"
-                            placeholder="What was this for?"
+                            placeholder={tx('What was this for?')}
                             placeholderTextColor="#9aa9c0"
                             value={description}
                             onChangeText={setDescription}
@@ -701,16 +707,15 @@ export function AddTransactionScreen({
                     </View>
 
                     <SelectField
-                        label="Add to Budget (Optional)"
-                        value={budget?.label || 'Select a budget'}
+                        label={tx('Add to Budget (Optional)')}
+                        value={budget?.label || tx('Select a budget')}
                         disabled={optionsLoading || kind === 'income'}
                         onPress={() => onChooseBudget?.(budgets, budgetId, setBudgetId)}
                     />
 
                     {budgetId ? (
                         <Text style={styles.budgetHint}>
-                            Budget linking isn&apos;t supported by the API yet, so this selection
-                            will not be attached to the saved transaction.
+                            {tx("Budget linking isn't supported by the API yet, so this selection will not be attached to the saved transaction.")}
                         </Text>
                     ) : null}
 
@@ -738,13 +743,13 @@ export function AddTransactionScreen({
                 disabled={saving}
                 style={styles.save}
                 onPress={submit}
-                accessibilityLabel={mode === 'edit' ? 'Save Changes' : 'Save Transaction'}
+                accessibilityLabel={mode === 'edit' ? tx('Save Changes') : tx('Save Transaction')}
             >
                 {saving ? (
                     <ActivityIndicator color="white" />
                 ) : (
                     <Text style={styles.saveText}>
-                        {mode === 'edit' ? 'Save Changes' : 'Save Transaction'}
+                        {mode === 'edit' ? tx('Save Changes') : tx('Save Transaction')}
                     </Text>
                 )}
             </GradientButton>
@@ -869,6 +874,11 @@ const styles = StyleSheet.create({
     txAmount: {
         fontSize: T.amount,
         fontWeight: T.amountWeight,
+        color: C.ink,
+    },
+    txAmountFraction: {
+        fontSize: 12,
+        fontWeight: '700',
         color: C.ink,
     },
     txTime: { fontSize: T.time, color: C.subtle, marginTop: 3 },

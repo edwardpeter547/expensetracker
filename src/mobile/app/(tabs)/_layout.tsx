@@ -9,6 +9,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 /** Approved active tab color. */
 const ACTIVE_TINT = '#0B7956';
@@ -20,7 +21,10 @@ const INACTIVE_TINT = '#7588A9';
  *
  * @returns {JSX.Element} The tab navigator.
  */
-const TabLayout = () => (
+const TabLayout = () => {
+    const { t } = useTranslation('common');
+
+    return (
     <Tabs
         screenOptions={{
             tabBarActiveTintColor: ACTIVE_TINT,
@@ -39,7 +43,7 @@ const TabLayout = () => (
         <Tabs.Screen
             name="index"
             options={{
-                title: 'Home',
+                title: t('Home'),
                 headerShown: false,
                 tabBarIcon: ({ focused, color }) => (
                     <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
@@ -49,7 +53,7 @@ const TabLayout = () => (
         <Tabs.Screen
             name="transactions"
             options={{
-                title: 'Transactions',
+                title: t('Transactions'),
                 headerShown: false,
                 tabBarIcon: ({ focused, color }) => (
                     <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={22} color={color} />
@@ -59,7 +63,7 @@ const TabLayout = () => (
         <Tabs.Screen
             name="budgets"
             options={{
-                title: 'Planning',
+                title: t('Planning'),
                 headerShown: false,
                 tabBarIcon: ({ focused, color }) => (
                     <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
@@ -69,7 +73,7 @@ const TabLayout = () => (
         <Tabs.Screen
             name="goals"
             options={{
-                title: 'Teams',
+                title: t('Teams'),
                 headerShown: false,
                 tabBarIcon: ({ focused, color }) => (
                     <Ionicons
@@ -83,7 +87,7 @@ const TabLayout = () => (
         <Tabs.Screen
             name="profile"
             options={{
-                title: 'Profile',
+                title: t('Profile'),
                 headerShown: false,
                 tabBarIcon: ({ focused, color }) => (
                     <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
@@ -91,6 +95,7 @@ const TabLayout = () => (
             }}
         />
     </Tabs>
-);
+    );
+};
 
 export default TabLayout;

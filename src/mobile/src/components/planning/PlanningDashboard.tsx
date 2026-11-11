@@ -14,6 +14,7 @@ import type {
 } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningCard,
     PlanningIcon,
@@ -69,6 +70,7 @@ const PlanningDashboard = ({
     onOpenTool: (key: string) => void;
     onBack?: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const [period, setPeriod] = useState<PlanningPeriodKey>('month');
     const [summaries, setSummaries] = useState<Record<PlanningPeriodKey, PlanningPeriodSummary>>({
         month: { budget: 0, spent: 0, saved: 0, goal: 0, change: 0 },
@@ -95,7 +97,7 @@ const PlanningDashboard = ({
     const goalsPercent = Math.round((summary.saved / summary.goal) * 100);
 
     return (
-        <PlanningScreen title="Planning" subtitle="Your money, thoughtfully planned." onBack={onBack}>
+        <PlanningScreen title={t('Planning')} subtitle={t('Your money, thoughtfully planned.')} onBack={onBack}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
                 {PERIOD_OPTIONS.map(([id, label]) => {
                     const active = period === id;
@@ -104,7 +106,7 @@ const PlanningDashboard = ({
                             key={id}
                             onPress={() => setPeriod(id)}
                             accessibilityRole="button"
-                            accessibilityLabel={label}
+                            accessibilityLabel={t(label)}
                             style={{
                                 flex: 1,
                                 backgroundColor: active ? planningColors.emeraldLight : '#FFFFFF',
@@ -122,7 +124,7 @@ const PlanningDashboard = ({
                                     color: active ? planningColors.emerald : planningColors.muted,
                                 }}
                             >
-                                {label}
+                                {t(label)}
                             </Text>
                         </TouchableOpacity>
                     );
@@ -138,21 +140,21 @@ const PlanningDashboard = ({
                             bg={planningColors.emeraldLight}
                             size={38}
                         />
-                        <Text style={planningStyles.body}>Budget Overview</Text>
+                        <Text style={planningStyles.body}>{t('Budget Overview')}</Text>
                     </View>
                     <Text style={{ color: planningColors.emerald, fontSize: 12, fontWeight: '700' }}>
-                        On track
+                        {t('On track')}
                     </Text>
                 </View>
                 <View style={[planningStyles.row, { justifyContent: 'space-between', alignItems: 'flex-end' }]}>
                     <View>
-                        <Text style={planningStyles.muted}>Total spent</Text>
+                        <Text style={planningStyles.muted}>{t('Total spent')}</Text>
                         <Text style={planningStyles.large}>
                             {formatPlanningMoney(summary.spent, language, currency)}
                         </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={planningStyles.muted}>Budget limit</Text>
+                        <Text style={planningStyles.muted}>{t('Budget limit')}</Text>
                         <Text style={planningStyles.body}>
                             {formatPlanningMoney(summary.budget, language, currency)}
                         </Text>
@@ -160,9 +162,9 @@ const PlanningDashboard = ({
                 </View>
                 <PlanningProgress value={spentPercent} />
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>{spentPercent}% used</Text>
+                    <Text style={planningStyles.muted}>{t('{{percent}}% used', {percent: spentPercent})}</Text>
                     <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>
-                        {formatPlanningMoney(summary.budget - summary.spent, language, currency)} remaining
+                        {t('{{amount}} remaining', {amount: formatPlanningMoney(summary.budget - summary.spent, language, currency)})}
                     </Text>
                 </View>
             </PlanningCard>
@@ -177,14 +179,14 @@ const PlanningDashboard = ({
                             size={26}
                         />
                         <Text numberOfLines={1} style={summaryTitleStyle}>
-                            Goals Saved
+                            {t('Goals Saved')}
                         </Text>
                     </View>
                     <Text style={planningStyles.large}>
                         {formatPlanningMoney(summary.saved, language, currency)}
                     </Text>
                     <PlanningProgress value={goalsPercent} color={SUMMARY_GOALS_COLOR} />
-                    <Text style={planningStyles.muted}>{goalsPercent}% of targets</Text>
+                    <Text style={planningStyles.muted}>{t('{{percent}}% of targets', {percent: goalsPercent})}</Text>
                 </PlanningCard>
                 <PlanningCard style={{ flex: 1, gap: 10, padding: 14 }}>
                     <View style={[planningStyles.row, { gap: 7 }]}>
@@ -195,20 +197,20 @@ const PlanningDashboard = ({
                             size={26}
                         />
                         <Text numberOfLines={1} style={summaryTitleStyle}>
-                            Spending Trend
+                            {t('Spending Trend')}
                         </Text>
                     </View>
                     <Text style={planningStyles.large}>
                         {summary.change > 0 ? '+' : ''}
                         {summary.change}%
                     </Text>
-                    <Text style={planningStyles.muted}>vs. prior period</Text>
+                    <Text style={planningStyles.muted}>{t('vs. prior period')}</Text>
                 </PlanningCard>
             </View>
 
             <View style={{ gap: 5, marginTop: 5 }}>
-                <Text style={planningStyles.heading}>Your Planning Tools</Text>
-                <Text style={planningStyles.muted}>Everything you need to plan ahead</Text>
+                <Text style={planningStyles.heading}>{t('Your Planning Tools')}</Text>
+                <Text style={planningStyles.muted}>{t('Everything you need to plan ahead')}</Text>
             </View>
             <View
                 style={{
@@ -224,7 +226,7 @@ const PlanningDashboard = ({
                         onPress={() => onOpenTool(tool.key)}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={tool.name}
+                        accessibilityLabel={t(tool.name)}
                         style={[
                             {
                                 backgroundColor: planningColors.surface,
@@ -254,8 +256,8 @@ const PlanningDashboard = ({
                             </View>
                         </View>
                         <View style={{ gap: 5 }}>
-                            <Text style={planningStyles.body}>{tool.name}</Text>
-                            <Text style={planningStyles.muted}>{tool.desc}</Text>
+                            <Text style={planningStyles.body}>{t(tool.name)}</Text>
+                            <Text style={planningStyles.muted}>{t(tool.desc)}</Text>
                         </View>
                     </TouchableOpacity>
                 ))}

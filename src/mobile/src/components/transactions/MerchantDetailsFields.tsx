@@ -9,6 +9,7 @@ import {
 import type { MerchantDetails } from '@/types/transaction';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -26,6 +27,7 @@ export interface MerchantDetailsFieldsProps {
  * @returns {JSX.Element} The merchant editor.
  */
 const MerchantDetailsFields = ({ value, onChange }: MerchantDetailsFieldsProps) => {
+    const { t } = useTranslation('transactions');
     const [expanded, setExpanded] = useState(true);
 
     const setField = (key: keyof MerchantDetails, next: string) => {
@@ -36,21 +38,21 @@ const MerchantDetailsFields = ({ value, onChange }: MerchantDetailsFieldsProps) 
         <View style={styles.section}>
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Toggle merchant details"
+                accessibilityLabel={t('Toggle merchant details')}
                 onPress={() => setExpanded((current) => !current)}
                 style={styles.toggle}
             >
-                <Text style={styles.title}>Merchant Details</Text>
-                <Text style={styles.toggleText}>{expanded ? 'Hide' : 'Show'}</Text>
+                <Text style={styles.title}>{t('Merchant Details')}</Text>
+                <Text style={styles.toggleText}>{expanded ? t('Hide') : t('Show')}</Text>
             </Pressable>
 
             {expanded ? (
                 <View style={styles.fields}>
-                    <Field label="Merchant name" value={value.name ?? ''} onChange={(next) => setField('name', next)} />
-                    <Field label="Merchant address" value={value.address ?? ''} onChange={(next) => setField('address', next)} />
-                    <Field label="Purchase time" value={value.purchaseTime ?? ''} onChange={(next) => setField('purchaseTime', next)} />
-                    <Field label="Payment method" value={value.paymentMethod ?? ''} onChange={(next) => setField('paymentMethod', next)} />
-                    <Field label="Receipt / transaction reference" value={value.reference ?? ''} onChange={(next) => setField('reference', next)} />
+                    <Field label={t('Merchant name')} value={value.name ?? ''} onChange={(next) => setField('name', next)} />
+                    <Field label={t('Merchant address')} value={value.address ?? ''} onChange={(next) => setField('address', next)} />
+                    <Field label={t('Purchase time')} value={value.purchaseTime ?? ''} onChange={(next) => setField('purchaseTime', next)} />
+                    <Field label={t('Payment method')} value={value.paymentMethod ?? ''} onChange={(next) => setField('paymentMethod', next)} />
+                    <Field label={t('Receipt / transaction reference')} value={value.reference ?? ''} onChange={(next) => setField('reference', next)} />
                 </View>
             ) : null}
         </View>
@@ -66,18 +68,22 @@ const Field = ({
     label: string;
     value: string;
     onChange: (value: string) => void;
-}) => (
+}) => {
+    const { t } = useTranslation('transactions');
+
+    return (
     <View style={styles.field}>
         <Text style={styles.label}>{label}</Text>
         <TextInput
             value={value}
             onChangeText={onChange}
-            placeholder="Optional"
+            placeholder={t('Optional')}
             placeholderTextColor={C.muted}
             style={styles.input}
         />
     </View>
-);
+    );
+};
 
 /** Merchant editor styles. */
 const styles = StyleSheet.create({

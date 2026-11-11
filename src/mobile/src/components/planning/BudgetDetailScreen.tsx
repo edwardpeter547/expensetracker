@@ -8,6 +8,7 @@
 import type { PlanningBudget } from '@/types/planning';
 import type { PlanningTransactionItem } from '@/utils/planning';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
     PlanningBarChart,
     PlanningButton,
@@ -45,19 +46,20 @@ const BudgetDetailScreen = ({
     onBack: () => void;
     onSeeAll: () => void;
 }) => {
+    const { t } = useTranslation('planning');
     const usedPercent = budget.limit > 0 ? Math.round((budget.spent / budget.limit) * 100) : 0;
 
     return (
         <PlanningScreen
             title={budget.name}
-            subtitle="Category budget details"
+            subtitle={t('Category budget details')}
             onBack={onBack}
         >
             <PlanningCard>
                 <View style={[planningStyles.row, { gap: 12 }]}>
                     <PlanningIconTile icon={budget.icon} color={budget.color} bg={budget.bg} size={54} />
                     <View style={{ flex: 1, gap: 6 }}>
-                        <Text style={planningStyles.muted}>Monthly budget</Text>
+                        <Text style={planningStyles.muted}>{t('Monthly budget')}</Text>
                         <Text style={planningStyles.heading}>
                             {formatPlanningMoney(budget.spent, language, currency)} /{' '}
                             {formatPlanningMoney(budget.limit, language, currency)}
@@ -66,22 +68,22 @@ const BudgetDetailScreen = ({
                 </View>
                 <PlanningProgress value={usedPercent} color={budget.color} />
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>{usedPercent}% used</Text>
+                    <Text style={planningStyles.muted}>{t('{{percent}}% used', {percent: usedPercent})}</Text>
                     <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>
-                        {formatPlanningMoney(budget.limit - budget.spent, language, currency)} remaining
+                        {t('{{amount}} remaining', {amount: formatPlanningMoney(budget.limit - budget.spent, language, currency)})}
                     </Text>
                 </View>
             </PlanningCard>
 
             <PlanningCard>
-                <Text style={planningStyles.heading}>Weekly Spending</Text>
+                <Text style={planningStyles.heading}>{t('Weekly Spending')}</Text>
                 <PlanningBarChart values={weeklyValues} labels={WEEK_LABELS} />
             </PlanningCard>
 
             <PlanningCard>
-                <Text style={planningStyles.heading}>Recent Transactions</Text>
+                <Text style={planningStyles.heading}>{t('Recent Transactions')}</Text>
                 {transactions.length === 0 ? (
-                    <Text style={planningStyles.muted}>No recent transactions for this category.</Text>
+                    <Text style={planningStyles.muted}>{t('No recent transactions for this category.')}</Text>
                 ) : (
                     transactions.map((transaction) => (
                         <View key={transaction.id} style={[planningStyles.row, { gap: 12 }]}>
@@ -101,7 +103,7 @@ const BudgetDetailScreen = ({
                         </View>
                     ))
                 )}
-                <PlanningButton label="See All Transactions" outline onPress={onSeeAll} />
+                <PlanningButton label={t('See All Transactions')} outline onPress={onSeeAll} />
             </PlanningCard>
         </PlanningScreen>
     );

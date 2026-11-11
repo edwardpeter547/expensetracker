@@ -2,6 +2,7 @@ import CenteredAuthScreen from '@/components/auth/CenteredAuthScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 /**
@@ -10,6 +11,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
  * UI-only: the new password is not submitted to a backend yet.
  */
 const ResetPasswordScreen = () => {
+  const { t } = useTranslation('auth');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,11 +23,11 @@ const ResetPasswordScreen = () => {
   const handleUpdatePassword = () => {
     setError('');
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('Password must be at least 8 characters'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match');
+      setError(t('Passwords do not match'));
       return;
     }
     router.replace('/login');
@@ -35,13 +37,13 @@ const ResetPasswordScreen = () => {
     <CenteredAuthScreen>
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.title}>
-          Create new password
+          {t('Create new password')}
         </Text>
         <Text style={styles.subtitle}>
-          Choose a new password for your account
+          {t('Choose a new password for your account')}
         </Text>
 
-        <Text style={styles.label}>New password</Text>
+        <Text style={styles.label}>{t('New password')}</Text>
         <View style={styles.passwordWrap}>
           <TextInput
             style={styles.passwordInput}
@@ -50,20 +52,20 @@ const ResetPasswordScreen = () => {
               setPassword(value);
               setError('');
             }}
-            placeholder="Enter a new password"
+            placeholder={t('Enter a new password')}
             placeholderTextColor="#889A92"
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="new-password"
             textContentType="newPassword"
-            accessibilityLabel="New password"
+            accessibilityLabel={t('New password')}
             returnKeyType="next"
           />
           <Pressable
             onPress={() => setShowPassword((current) => !current)}
             accessibilityRole="button"
-            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            accessibilityLabel={showPassword ? t('Hide password') : t('Show password')}
             hitSlop={10}
             style={styles.eyeButton}
           >
@@ -75,7 +77,7 @@ const ResetPasswordScreen = () => {
           </Pressable>
         </View>
 
-        <Text style={[styles.label, styles.confirmLabel]}>Confirm password</Text>
+        <Text style={[styles.label, styles.confirmLabel]}>{t('Confirm password')}</Text>
         <View style={styles.passwordWrap}>
           <TextInput
             style={styles.passwordInput}
@@ -84,14 +86,14 @@ const ResetPasswordScreen = () => {
               setConfirm(value);
               setError('');
             }}
-            placeholder="Re-enter your new password"
+            placeholder={t('Re-enter your new password')}
             placeholderTextColor="#889A92"
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="new-password"
             textContentType="newPassword"
-            accessibilityLabel="Confirm password"
+            accessibilityLabel={t('Confirm password')}
             returnKeyType="done"
             onSubmitEditing={handleUpdatePassword}
           />
@@ -106,23 +108,23 @@ const ResetPasswordScreen = () => {
         <Pressable
           onPress={handleUpdatePassword}
           accessibilityRole="button"
-          accessibilityLabel="Update password"
+          accessibilityLabel={t('Update password')}
           style={({ pressed }) => [
             styles.button,
             pressed && styles.buttonPressed,
           ]}
         >
-          <Text style={styles.buttonText}>Update password</Text>
+          <Text style={styles.buttonText}>{t('Update password')}</Text>
         </Pressable>
 
         <Pressable
           onPress={() => router.replace('/login')}
           accessibilityRole="button"
-          accessibilityLabel="Back to sign in"
+          accessibilityLabel={t('Back to sign in')}
           hitSlop={8}
           style={styles.backLink}
         >
-          <Text style={styles.linkText}>Back to sign in</Text>
+          <Text style={styles.linkText}>{t('Back to sign in')}</Text>
         </Pressable>
       </View>
     </CenteredAuthScreen>

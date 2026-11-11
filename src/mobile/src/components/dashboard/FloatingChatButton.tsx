@@ -10,6 +10,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Animated,
     PanResponder,
@@ -58,6 +59,7 @@ const FloatingChatButton = ({
     onPress,
     containerSize,
 }: FloatingChatButtonProps) => {
+    const { t } = useTranslation('dashboard');
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const initial = {
         x: Math.max(EDGE_MARGIN, windowWidth - SIZE - EDGE_MARGIN),
@@ -149,7 +151,7 @@ const FloatingChatButton = ({
         >
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Open AI chat"
+                accessibilityLabel={t('Open AI chat')}
                 onPress={onPress}
                 style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
             >

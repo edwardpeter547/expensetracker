@@ -7,6 +7,7 @@
 
 import FloatingChatButton from '@/components/dashboard/FloatingChatButton';
 import { act, create } from 'react-test-renderer';
+import '@/i18n';
 
 jest.mock('@expo/vector-icons', () => {
     const Ionicons = () => null;

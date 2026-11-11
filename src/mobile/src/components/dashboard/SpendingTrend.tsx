@@ -11,6 +11,7 @@ import type { SpendingTrendPoint } from '@/types/dashboard';
 import { fromScaledInteger, toScaledInteger } from '@/utils/money';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { G, Line, Rect } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 /** Fixed chart dimensions and bar geometry. */
 const CHART_WIDTH = 170;
@@ -59,6 +60,7 @@ const SpendingTrend = ({
     language,
     topCategory = '—',
 }: SpendingTrendProps) => {
+    const { t } = useTranslation('dashboard');
     const maximum = Math.max(
         0,
         ...points.flatMap((point) => [Number(point.income), Number(point.expenses)]),
@@ -106,16 +108,16 @@ const SpendingTrend = ({
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>6-Month Trend</Text>
+            <Text style={styles.title}>{t('6-Month Trend')}</Text>
 
             <View style={styles.legendRow}>
                 <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: '#2BAC7B' }]} />
-                    <Text style={styles.legendText}>Income</Text>
+                    <Text style={styles.legendText}>{t('Income')}</Text>
                 </View>
                 <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: '#E8666C' }]} />
-                    <Text style={styles.legendText}>Expenses</Text>
+                    <Text style={styles.legendText}>{t('Expenses')}</Text>
                 </View>
             </View>
 
@@ -177,7 +179,7 @@ const SpendingTrend = ({
                 <View style={styles.summary}>
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryCell}>
-                            <Text style={styles.statLabel}>Avg income</Text>
+                            <Text style={styles.statLabel}>{t('Avg income')}</Text>
                             <Text style={styles.statValue}>
                                 {formatMoney(
                                     averageMoney(points.map((point) => point.income)),
@@ -189,7 +191,7 @@ const SpendingTrend = ({
                         </View>
                         <View style={[styles.summaryCell, styles.summaryCellRight]}>
                             <Text style={[styles.statLabel, styles.statTextRight]}>
-                                Savings rate
+                                {t('Savings rate')}
                             </Text>
                             <Text
                                 style={[
@@ -212,7 +214,7 @@ const SpendingTrend = ({
 
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryCell}>
-                            <Text style={styles.statLabel}>Avg expenses</Text>
+                            <Text style={styles.statLabel}>{t('Avg expenses')}</Text>
                             <Text style={styles.statValue}>
                                 {formatMoney(
                                     averageMoney(points.map((point) => point.expenses)),
@@ -224,7 +226,7 @@ const SpendingTrend = ({
                         </View>
                         <View style={[styles.summaryCell, styles.summaryCellRight]}>
                             <Text style={[styles.statLabel, styles.statTextRight]}>
-                                Top category
+                                {t('Top category')}
                             </Text>
                             <Text
                                 numberOfLines={1}
@@ -238,7 +240,7 @@ const SpendingTrend = ({
             </View>
 
             {!hasActivity ? (
-                <Text style={styles.emptyText}>No activity in the last 6 months</Text>
+                <Text style={styles.emptyText}>{t('No activity in the last 6 months')}</Text>
             ) : null}
         </View>
     );
@@ -321,6 +323,11 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#12213A',
         letterSpacing: -0.3,
+    },
+    statValueFraction: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#12213A',
     },
     statTextRight: {
         textAlign: 'right',

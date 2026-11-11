@@ -110,8 +110,8 @@ export const transactionDayLabel = (
 
     const labelLanguage = (locale || 'en').split('-')[0].toLowerCase();
     const translate = i18n.getFixedT(labelLanguage, 'common');
-    if (dayDifference === 0) return translate('today');
-    if (dayDifference === 1) return translate('yesterday');
+    if (dayDifference === 0) return translate('Today');
+    if (dayDifference === 1) return translate('Yesterday');
 
     const targetParts = datePartsInTimeZone(date, timeZone);
     const currentParts = datePartsInTimeZone(now, timeZone);

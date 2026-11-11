@@ -4,11 +4,12 @@ ExpenseTracker detects its initial language and currency from the device and
 keeps display formatting separate from stored monetary values.
 
 > **Status.** Device language/currency detection, preference persistence,
-> money/date formatting, and system-category labels described below are
-> **implemented**. A full mobile UI translation layer
-> (`i18next`/`react-i18next`), stable API error codes, preference
-> synchronisation, and a language selection UI are the **approved target** and
-> remain planned.
+> money/date formatting, system-category labels, and the mobile
+> `i18next`/`react-i18next` feature catalogues for `auth`, `dashboard`,
+> `transactions`, and `planning` are **implemented**. `teams`, `profile`, and
+> `notifications` are the next mobile extraction task (#193). Stable API error
+> codes, preference synchronisation, and a language selection UI are the
+> **approved target** and remain planned.
 
 Related documents:
 

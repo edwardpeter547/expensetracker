@@ -41,9 +41,10 @@ of writing.
 - **Mobile detection.** `src/mobile/src/contexts/LocaleContext.tsx` drives
   `expo-localization`, AsyncStorage persistence, and
   `src/mobile/src/localization/{detect,format,storage,systemCategories}.ts`.
-- **Mobile UI.** There is no translation catalogue; screens, navigation
-  titles, validation messages, and accessibility labels are hardcoded English.
-  Only money/date formatting and system-category labels are localised.
+- **Mobile UI.** `i18next` / `react-i18next` provide source-as-key feature
+  catalogues for `auth`, `dashboard`, `transactions`, and `planning`. The
+  `teams`, `profile`, and `notifications` namespaces are placeholders pending
+  task #193. Money/date formatting and system-category labels are localised.
 
 ## 3. Target architecture
 
@@ -358,8 +359,15 @@ runtime language switching, and financial formatting regressions.
 
 1. Add `src/backend/translations/<code>.js` and regenerate
    `src/backend/src/locales/<code>.json`.
-2. Add the mobile `<code>` namespace catalogues.
+2. Add the mobile authoring files under
+   `src/mobile/src/i18n/locales/<code>/` for `auth`, `dashboard`,
+   `transactions`, `planning`, `errors`, and `index`.
 3. Add `<code>` to `src/backend/src/constants/localization.js` and
    `src/mobile/src/localization/registry.ts`.
-4. Run the catalogue parity and CI checks.
-5. Add any regional formatting metadata independently if needed.
+4. Add `<code>` entries to the hand-maintained
+   `src/mobile/src/i18n/messages/common.ts` and plural catalogues.
+5. Register the new language in `src/mobile/src/i18n/index.ts`.
+6. Regenerate mobile catalogues from `src/mobile` with
+   `node scripts/build-message-catalogues.mjs`.
+7. Run the catalogue parity and CI checks.
+8. Add any regional formatting metadata independently if needed.

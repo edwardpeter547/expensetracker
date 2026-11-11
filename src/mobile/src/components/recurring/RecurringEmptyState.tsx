@@ -7,6 +7,7 @@ import {
     transactionColors,
 } from '@/constants/transactionsTheme';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 
@@ -25,29 +26,36 @@ export interface RecurringEmptyStateProps {
  * @returns {JSX.Element} The empty state.
  */
 const RecurringEmptyState = ({
-    title = 'No recurring transactions yet',
-    message = 'Set up regular income, bills and subscriptions to keep track of what\u2019s coming up.',
-    actionLabel = 'Add Recurring Transaction',
+    title,
+    message,
+    actionLabel,
     onAction,
-}: RecurringEmptyStateProps) => (
-    <View style={styles.container}>
-        <View style={styles.iconWrap}>
-            <Ionicons name="repeat-outline" size={32} color={C.green} />
+}: RecurringEmptyStateProps) => {
+    const { t } = useTranslation('transactions');
+    const resolvedTitle = title ?? t('No recurring transactions yet');
+    const resolvedMessage = message ?? t("Set up regular income, bills and subscriptions to keep track of what's coming up.");
+    const resolvedActionLabel = actionLabel ?? t('Add Recurring Transaction');
+
+    return (
+        <View style={styles.container}>
+            <View style={styles.iconWrap}>
+                <Ionicons name="repeat-outline" size={32} color={C.green} />
+            </View>
+            <Text style={styles.title}>{resolvedTitle}</Text>
+            <Text style={styles.message}>{resolvedMessage}</Text>
+            {onAction ? (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={resolvedActionLabel}
+                    onPress={onAction}
+                    style={styles.action}
+                >
+                    <Text style={styles.actionText}>{resolvedActionLabel}</Text>
+                </Pressable>
+            ) : null}
         </View>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.message}>{message}</Text>
-        {onAction ? (
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={actionLabel}
-                onPress={onAction}
-                style={styles.action}
-            >
-                <Text style={styles.actionText}>{actionLabel}</Text>
-            </Pressable>
-        ) : null}
-    </View>
-);
+    );
+};
 
 /** Empty state styles. */
 const styles = StyleSheet.create({

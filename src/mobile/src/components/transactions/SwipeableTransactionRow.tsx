@@ -20,6 +20,7 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
 
 const C = transactionColors;
 
@@ -40,6 +41,7 @@ export interface SwipeableTransactionRowProps {
  */
 const SwipeableTransactionRow = forwardRef<Swipeable, SwipeableTransactionRowProps>(
     ({ children, onEdit, onDelete, onWillOpen }, ref) => {
+        const { t } = useTranslation('transactions');
         const [openDirection, setOpenDirection] = useState<'left' | 'right' | null>(null);
         const suppressPressRef = useRef(false);
 
@@ -81,7 +83,7 @@ const SwipeableTransactionRow = forwardRef<Swipeable, SwipeableTransactionRowPro
         const renderLeftActions = (_progress: unknown, _drag: unknown, swipeable: Swipeable) => (
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Edit transaction"
+                accessibilityLabel={t('Edit transaction')}
                 onPress={() => {
                     swipeable.close();
                     onEdit();
@@ -89,7 +91,7 @@ const SwipeableTransactionRow = forwardRef<Swipeable, SwipeableTransactionRowPro
                 style={styles.editAction}
             >
                 <Ionicons name="create-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.actionText}>Edit</Text>
+                <Text style={styles.actionText}>{t('Edit')}</Text>
             </Pressable>
         );
 
@@ -104,7 +106,7 @@ const SwipeableTransactionRow = forwardRef<Swipeable, SwipeableTransactionRowPro
         const renderRightActions = (_progress: unknown, _drag: unknown, swipeable: Swipeable) => (
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Delete transaction"
+                accessibilityLabel={t('Delete transaction')}
                 onPress={() => {
                     swipeable.close();
                     onDelete();
@@ -112,7 +114,7 @@ const SwipeableTransactionRow = forwardRef<Swipeable, SwipeableTransactionRowPro
                 style={styles.deleteAction}
             >
                 <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.actionText}>Delete</Text>
+                <Text style={styles.actionText}>{t('Delete')}</Text>
             </Pressable>
         );
 
