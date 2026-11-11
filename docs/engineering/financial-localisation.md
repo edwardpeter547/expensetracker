@@ -50,6 +50,10 @@ const formatted = new Intl.NumberFormat(locale, {
 Currency symbols must not be hardcoded in copy. The backend email templates
 must use the same `Intl` approach instead of locale-blind helpers.
 
+The formatting locale is derived from the translation language plus the device
+region with `resolveMoneyLocale` (`src/mobile/src/localization/format.ts`), so
+region, language, and currency remain independent.
+
 ## Numeric input parsing
 
 The decimal separator is locale-dependent (`1.234,56` in `fr-FR` versus
@@ -69,9 +73,10 @@ catalogue rather than being hardcoded, because they vary by language.
 ## Timezone-aware reporting periods
 
 Timestamps are stored in UTC. Financial periods such as "this month" must be
-derived from the user's IANA timezone, not the server's local clock. The
-approved roadmap includes applying `User.timezone` to dashboard and budget
-period boundaries; this is currently missing.
+derived from the user's IANA timezone, not the server's local clock. Dashboard
+month-to-date and budget month/week/year boundaries use the helpers in
+`src/backend/src/utils/financial-period.js`, covered by the boundary regression
+suite in its test directory and `budget.service.spending.test.js`.
 
 ## Transaction date semantics
 

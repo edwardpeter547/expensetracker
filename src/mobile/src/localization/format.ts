@@ -6,6 +6,37 @@
  */
 
 /**
+ * Resolve the locale used for money parsing and display.
+ *
+ * Translation language, display region, and currency are independent: the
+ * language comes from the user preference while the region comes from the
+ * device, so a French speaker in Canada formats with `fr-CA` rather than
+ * `fr-FR`. A language that already carries a region is preserved when no
+ * explicit region is supplied.
+ *
+ * @param {string} language The base translation language (for example `fr`).
+ * @param {string|null} [regionCode] The ISO 3166-1 alpha-2 device region.
+ * @returns {string} A BCP-47 locale such as `fr-CA` or `en-GB`.
+ */
+export const resolveMoneyLocale = (language: string, regionCode?: string | null): string => {
+    const raw = (language ?? '').trim();
+    if (!raw) return 'en';
+
+    const [basePart, existingRegion] = raw.split('-');
+    const base = basePart.toLowerCase() || 'en';
+
+    const region = (
+        typeof regionCode === 'string' && /^[A-Za-z]{2}$/.test(regionCode.trim())
+            ? regionCode.trim()
+            : existingRegion && /^[A-Za-z]{2}$/.test(existingRegion)
+                ? existingRegion
+                : ''
+    ).toUpperCase();
+
+    return region ? `${base}-${region}` : base;
+};
+
+/**
  * Extract the locale's decimal separator.
  *
  * @param {string} locale The BCP-47 locale.
@@ -32,19 +63,21 @@ export const decimalSeparatorForLocale = (locale: string): string => {
  * Parse a user-entered money value into a canonical decimal string.
  *
  * @param {string} raw The raw input string.
- * @param {string} locale The locale used to interpret separators.
+ * @param {string} language The display language used to interpret separators.
  * @param {number} [maxFractionDigits=2] Maximum accepted decimal places.
+ * @param {string|null} [regionCode] Optional device region for the locale.
  * @returns {string} A canonical `1234.56` string, or an empty string when
  *   the input is not a valid positive decimal.
  */
 export const parseMoneyInput = (
     raw: string,
-    locale: string,
+    language: string,
     maxFractionDigits = 2,
+    regionCode?: string | null,
 ): string => {
     if (!raw) return '';
 
-    const decimalSeparator = decimalSeparatorForLocale(locale);
+    const decimalSeparator = decimalSeparatorForLocale(resolveMoneyLocale(language, regionCode));
     const cleaned = raw
         .replace(/[^\d.,]/g, '')
         .replace(/\s/g, '');
@@ -81,20 +114,21 @@ export const parseMoneyInput = (
  * Format a canonical decimal string as locale- and currency-aware display text.
  *
  * @param {string|number} amount The canonical amount.
- * @param {string} locale The display locale.
+ * @param {string} language The display language.
  * @param {string} currency The ISO 4217 currency code.
  * @param {number} [maxFractionDigits=2] Displayed fraction digits.
  * @returns {string} The formatted currency string.
  */
 export const formatMoney = (
     amount: string | number,
-    locale: string,
+    language: string,
     currency: string,
     maxFractionDigits = 2,
 ): string => {
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(language, {
         style: 'currency',
         currency,
+        currencyDisplay: 'narrowSymbol',
         minimumFractionDigits: maxFractionDigits,
         maximumFractionDigits: maxFractionDigits,
     }).format(Number(amount));

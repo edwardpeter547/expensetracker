@@ -23,7 +23,7 @@ const QuickAddForm = ({formType, onClose, onSuccess} : QuickAddFormProps) => {
     const { colors } = useTheme();
     const homeStyles = useStyles("home");
     const authStyles = useStyles("auth");
-    const { language } = useLocale();
+    const { language, regionCode } = useLocale();
 
     const [amount, setAmount] = useState<string>("");
     const [category, setCategory] =  useState<string>("");
@@ -41,7 +41,7 @@ const QuickAddForm = ({formType, onClose, onSuccess} : QuickAddFormProps) => {
             return;
         }
 
-        const normalizedAmount = parseMoneyInput(amount, language);
+        const normalizedAmount = parseMoneyInput(amount, language, 2, regionCode);
         if(!normalizedAmount){
             setError("Enter a valid amount");
             return;

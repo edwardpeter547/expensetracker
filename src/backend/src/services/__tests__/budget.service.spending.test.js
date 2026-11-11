@@ -110,4 +110,61 @@ describe('budget spending aggregation', () => {
             lt: new Date('2026-06-01T04:00:00.000Z'),
         });
     });
+
+    /**
+     * Weekly spending boundaries must start on Sunday in the recipient's
+     * timezone, including zones with a half-hour offset from UTC.
+     */
+    test('derives weekly spending boundaries in a half-hour timezone', async () => {
+        aggregateSpending.mockResolvedValue({ _sum: { amount: '10' } });
+        const currentDate = new Date('2026-05-13T12:00:00.000Z');
+
+        await budgetService.getBudgetWithSpending(
+            [makeBudget({ period: 'WEEKLY' })],
+            currentDate,
+            USER_ID,
+            'Asia/Kolkata',
+        );
+
+        const where = aggregateSpending.mock.calls[0][0].where;
+        expect(where.transactionDate.gte.toISOString()).toBe('2026-05-09T18:30:00.000Z');
+        expect(where.transactionDate.lt.toISOString()).toBe('2026-05-16T18:30:00.000Z');
+    });
+
+    /**
+     * Yearly spending boundaries must span the recipient's local calendar
+     * year and be converted into UTC query instants.
+     */
+    test('derives yearly spending boundaries in the user timezone', async () => {
+        aggregateSpending.mockResolvedValue({ _sum: { amount: '1' } });
+        const currentDate = new Date('2026-07-01T12:00:00.000Z');
+
+        await budgetService.getBudgetWithSpending(
+            [makeBudget({ period: 'YEARLY' })],
+            currentDate,
+            USER_ID,
+            'Asia/Kolkata',
+        );
+
+        const where = aggregateSpending.mock.calls[0][0].where;
+        expect(where.transactionDate.gte.toISOString()).toBe('2025-12-31T18:30:00.000Z');
+        expect(where.transactionDate.lt.toISOString()).toBe('2026-12-31T18:30:00.000Z');
+    });
+
+    /**
+     * Fractional spending must be summed and subtracted with Decimal
+     * precision, and the source budget record must remain untouched.
+     */
+    test('computes fractional totals with Decimal precision without mutation', async () => {
+        aggregateSpending.mockResolvedValue({ _sum: { amount: '0.30' } });
+        const budget = makeBudget({ amount: '100.0000' });
+        const currentDate = new Date('2026-05-10T12:00:00.000Z');
+
+        const result = await budgetService.getBudgetWithSpending([budget], currentDate, USER_ID, 'UTC');
+
+        expect(result[0].spent).toBe('0.3');
+        expect(result[0].remaining).toBe('99.7');
+        expect(budget.amount).toBe('100.0000');
+        expect(budget.currency).toBe('USD');
+    });
 });
