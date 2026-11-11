@@ -1,6 +1,7 @@
 import * as Localization from 'expo-localization';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
+import { setApiLanguage } from '@/api/api-language';
 import { resolveInitialPreferences } from '@/localization/detect';
 import {
     clearCurrencyOverride,
@@ -28,6 +29,7 @@ interface LocaleContextValue {
     followDeviceLanguage: () => Promise<void>;
     followDeviceCurrency: () => Promise<void>;
     applyRemotePreferences: (language?: string | null, currency?: string | null) => void;
+    clearRemotePreferences: () => void;
 }
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
@@ -54,6 +56,8 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
     const [device, setDevice] = useState(readDevicePreferences);
     const [languageOverride, setLanguageOverrideState] = useState<string | null>(null);
     const [currencyOverride, setCurrencyOverrideState] = useState<string | null>(null);
+    const [remoteLanguage, setRemoteLanguage] = useState<string | null>(null);
+    const [remoteCurrency, setRemoteCurrency] = useState<string | null>(null);
     const [hydrated, setHydrated] = useState(false);
 
     useEffect(() => {
@@ -85,11 +89,12 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
         [device],
     );
 
-    const language = languageOverride ?? devicePreferences.language;
-    const currency = currencyOverride ?? devicePreferences.currency;
+    const language = languageOverride ?? remoteLanguage ?? devicePreferences.language;
+    const currency = currencyOverride ?? remoteCurrency ?? devicePreferences.currency;
 
     useEffect(() => {
         void i18n.changeLanguage(language);
+        setApiLanguage(language);
     }, [language]);
 
     const setLanguage = async (nextLanguage: string) => {
@@ -125,16 +130,25 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
      * be followed until the user explicitly chooses otherwise.
      */
     const applyRemotePreferences = useCallback(
-        (remoteLanguage?: string | null, remoteCurrency?: string | null) => {
-            if (remoteLanguage && SUPPORTED_LANGUAGES.includes(remoteLanguage as never)) {
-                setLanguageOverrideState(remoteLanguage);
+        (nextLanguage?: string | null, nextCurrency?: string | null) => {
+            if (nextLanguage && SUPPORTED_LANGUAGES.includes(nextLanguage as never)) {
+                setRemoteLanguage(nextLanguage);
             }
-            if (remoteCurrency && /^[A-Z]{3}$/.test(remoteCurrency)) {
-                setCurrencyOverrideState(remoteCurrency);
+            if (nextCurrency && /^[A-Z]{3}$/.test(nextCurrency)) {
+                setRemoteCurrency(nextCurrency);
             }
         },
         [],
     );
+
+    /**
+     * Drop adopted account preferences so explicit or device values apply
+     * again after logout or account switching.
+     */
+    const clearRemotePreferences = useCallback(() => {
+        setRemoteLanguage(null);
+        setRemoteCurrency(null);
+    }, []);
 
     const value: LocaleContextValue = {
         language,
@@ -147,6 +161,7 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
         followDeviceLanguage,
         followDeviceCurrency,
         applyRemotePreferences,
+        clearRemotePreferences,
     };
 
     return (

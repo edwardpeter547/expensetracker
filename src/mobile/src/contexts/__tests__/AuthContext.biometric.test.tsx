@@ -44,7 +44,9 @@ jest.mock('@/contexts/LocaleContext', () => ({
     useLocale: jest.fn(() => ({
         language: 'en',
         currency: 'USD',
+        isLanguageOverridden: false,
         applyRemotePreferences: mockApplyRemotePreferences,
+        clearRemotePreferences: jest.fn(),
     })),
 }));
 

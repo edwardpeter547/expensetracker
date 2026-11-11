@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { getBaseUrl } from './config';
 import { createSingleFlight } from './singleFlight';
+import { getApiLanguage } from './api-language';
 
 interface RetryableAxiosRequestConfig {
     _retry?: boolean;
@@ -24,6 +25,14 @@ export const apiClient = createAxios({
         'Content-Type': 'application/json',
         Accept: 'application/json',
     },
+});
+
+apiClient.interceptors.request.use((config) => {
+    const headers = config.headers as Record<string, string> | undefined;
+    if (headers) {
+        headers['Accept-Language'] = getApiLanguage();
+    }
+    return config;
 });
 
 /**
