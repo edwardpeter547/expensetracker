@@ -58,7 +58,7 @@ describe('normalizeApiError', () => {
         });
 
         assert.equal(error.code, 'BUDGET_LIMIT_EXCEEDED');
-        assert.equal(error.translationKey, 'errors.budget.limitExceeded');
+        assert.equal(error.translationKey, 'budget.limitExceeded');
     });
 
     test('preserves field-level validation errors with sanitized params', () => {
@@ -79,7 +79,7 @@ describe('normalizeApiError', () => {
         assert.equal(error.kind, 'validation');
         assert.equal(error.fieldErrors?.length, 1);
         assert.equal(error.fieldErrors?.[0].field, 'name');
-        assert.equal(error.fieldErrors?.[0].translationKey, 'errors.validation.tooShort');
+        assert.equal(error.fieldErrors?.[0].translationKey, 'validation.tooShort');
         assert.deepEqual(error.fieldErrors?.[0].params, {limit: 3});
     });
 
