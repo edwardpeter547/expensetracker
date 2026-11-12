@@ -42,9 +42,9 @@ of writing.
   `expo-localization`, AsyncStorage persistence, and
   `src/mobile/src/localization/{detect,format,storage,systemCategories}.ts`.
 - **Mobile UI.** `i18next` / `react-i18next` provide source-as-key feature
-  catalogues for `auth`, `dashboard`, `transactions`, and `planning`. The
-  `teams`, `profile`, and `notifications` namespaces are placeholders pending
-  task #193. Money/date formatting and system-category labels are localised.
+  catalogues for `common`, `auth`, `dashboard`, `transactions`, `planning`,
+  `teams`, `profile`, and `notifications`. Money/date formatting and
+  system-category labels are localised.
 
 ## 3. Target architecture
 
