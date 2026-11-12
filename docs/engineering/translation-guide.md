@@ -5,9 +5,8 @@ and use them across the backend and the Expo mobile application.
 
 The backend uses `i18n-node` with generated JSON catalogues. The mobile app
 uses `i18next` / `react-i18next` with TypeScript catalogues. The mobile
-`auth`, `dashboard`, `transactions`, and `planning` namespaces are
-implemented; `teams`, `profile`, and `notifications` are implemented in a
-follow-up task (#193).
+`common`, `auth`, `dashboard`, `transactions`, `planning`, `teams`, `profile`,
+and `notifications` namespaces are implemented.
 
 ## Backend translation files
 
@@ -69,6 +68,9 @@ src/mobile/src/i18n/
       dashboard.ts
       transactions.ts
       planning.ts
+      teams.ts
+      profile.ts
+      notifications.ts
       errors.ts
       index.ts
     fr/
@@ -76,6 +78,9 @@ src/mobile/src/i18n/
       dashboard.ts
       transactions.ts
       planning.ts
+      teams.ts
+      profile.ts
+      notifications.ts
       errors.ts
       index.ts
   messages/
@@ -83,8 +88,12 @@ src/mobile/src/i18n/
     dashboard.ts                          # generated
     transactions.ts                       # generated
     planning.ts                           # generated
+    teams.ts                              # generated
+    profile.ts                            # generated
+    notifications.ts                      # generated
     common.ts                             # hand-maintained
     planningPlurals.ts                    # hand-maintained
+    teamsPlurals.ts                       # hand-maintained
     types.ts
     build.ts
 scripts/
@@ -134,9 +143,10 @@ const messages: MessageCatalogue = {
 
 Components therefore call `t('Sign in')` rather than `t('login.title')`.
 
-`messages/common.ts` and `messages/planningPlurals.ts` are hand-maintained
-because they contain shared strings and i18next plural forms respectively.
-They are not overwritten by the generator.
+`messages/common.ts`, `messages/planningPlurals.ts`, and
+`messages/teamsPlurals.ts` are hand-maintained because they contain shared
+strings and i18next plural forms respectively. They are not overwritten by
+the generator.
 
 ## Generating mobile catalogues
 
@@ -157,7 +167,8 @@ The script takes no command-line arguments. It:
 1. Reads `SUPPORTED_LANGUAGES` from
    `src/mobile/src/localization/registry.ts`.
 2. Loads every `locales/<language>/<namespace>.ts` file for the namespaces
-   `auth`, `dashboard`, `transactions`, and `planning`.
+   `auth`, `dashboard`, `transactions`, `planning`, `teams`, `profile`, and
+   `notifications`.
 3. Uses the English file as the source of runtime keys.
 4. Looks up the same key path in every other language.
 5. Writes the per-language source-as-key catalogues to `messages/`.
@@ -210,7 +221,8 @@ t('We sent a 6-digit code to {{channel}}', { channel });
 
 i18next plural forms use `_one` and `_other` suffixes. Shared plurals live in
 `messages/common.ts`; planning-specific plurals live in
-`messages/planningPlurals.ts`:
+`messages/planningPlurals.ts`; team-specific plurals live in
+`messages/teamsPlurals.ts`:
 
 ```ts
 // messages/planningPlurals.ts
@@ -270,6 +282,9 @@ Mounted `useTranslation` consumers re-render without a restart.
    src/mobile/src/i18n/locales/<code>/dashboard.ts
    src/mobile/src/i18n/locales/<code>/transactions.ts
    src/mobile/src/i18n/locales/<code>/planning.ts
+   src/mobile/src/i18n/locales/<code>/teams.ts
+   src/mobile/src/i18n/locales/<code>/profile.ts
+   src/mobile/src/i18n/locales/<code>/notifications.ts
    src/mobile/src/i18n/locales/<code>/errors.ts
    src/mobile/src/i18n/locales/<code>/index.ts
    ```
@@ -278,6 +293,7 @@ Mounted `useTranslation` consumers re-render without a restart.
 
    - `src/mobile/src/i18n/messages/common.ts`
    - `src/mobile/src/i18n/messages/planningPlurals.ts`
+   - `src/mobile/src/i18n/messages/teamsPlurals.ts`
 
 5. Register the new language's keyed resources in
    `src/mobile/src/i18n/index.ts`.
