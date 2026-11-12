@@ -10,6 +10,7 @@ import type { PlanningAllocation } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningCard,
     PlanningIconTile,
@@ -19,7 +20,7 @@ import {
     PlanningStat,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /**
  * Render the Monthly Plan screen.
@@ -62,9 +63,12 @@ const MonthlyPlanScreen = ({
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                     <View>
                         <Text style={planningStyles.muted}>{t('Planned Monthly Income')}</Text>
-                        <Text style={planningStyles.large}>
-                            {formatPlanningMoney(income, language, currency)}
-                        </Text>
+                        <MoneyText
+                            value={income}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.large}
+                        />
                     </View>
                     <PlanningIconTile
                         icon="wallet"
@@ -73,10 +77,27 @@ const MonthlyPlanScreen = ({
                     />
                 </View>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <PlanningStat label={t('Allocated')} value={formatPlanningMoney(allocated, language, currency)} />
+                    <PlanningStat
+                        label={t('Allocated')}
+                        value={(
+                            <MoneyText
+                                value={allocated}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.heading}
+                            />
+                        )}
+                    />
                     <PlanningStat
                         label={t('Unallocated')}
-                        value={formatPlanningMoney(unallocated, language, currency)}
+                        value={(
+                            <MoneyText
+                                value={unallocated}
+                                currency={currency}
+                                language={language}
+                                style={[planningStyles.heading, { color: planningColors.emerald }]}
+                            />
+                        )}
                         color={planningColors.emerald}
                     />
                 </View>
@@ -98,9 +119,12 @@ const MonthlyPlanScreen = ({
                             size={42}
                         />
                         <Text style={[planningStyles.body, { flex: 1 }]}>{allocation.name}</Text>
-                        <Text style={planningStyles.body}>
-                            {formatPlanningMoney(allocation.amount, language, currency)}
-                        </Text>
+                        <MoneyText
+                            value={allocation.amount}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.body}
+                        />
                     </View>
                 ))}
             </PlanningCard>
@@ -108,8 +132,14 @@ const MonthlyPlanScreen = ({
             <PlanningCard style={{ backgroundColor: planningColors.emeraldLight }}>
                 <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>✓ Room in your plan</Text>
                 <Text style={planningStyles.muted}>
-                    You still have {formatPlanningMoney(unallocated, language, currency)} available to
-                    allocate this month.
+                    {t('youStillHave')}{' '}
+                    <MoneyText
+                        value={unallocated}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.muted}
+                    />
+                    {' '}{t('availableToAllocateMonth')}
                 </Text>
             </PlanningCard>
 

@@ -9,7 +9,7 @@ import {
     transactionTypography,
 } from '@/constants/transactionsTheme';
 import type { RecurringSchedule } from '@/types/recurring';
-import { formatSignedAmount } from '@/utils/transactions';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -37,11 +37,6 @@ const RecurringScheduleListItem = ({
     onPress,
 }: RecurringScheduleListItemProps) => {
     const { t } = useTranslation('transactions');
-    const amount = schedule.amount
-        ? formatSignedAmount(schedule.amount, schedule.type, language, currency)
-        : schedule.type === 'INCOME'
-            ? t('Variable income')
-            : t('Variable amount');
     const frequency = schedule.frequency === 'BIWEEKLY' ? t('Every two weeks') : t(schedule.repeatDay);
 
     return (
@@ -64,15 +59,29 @@ const RecurringScheduleListItem = ({
                     <Text numberOfLines={1} style={styles.name}>
                         {schedule.name}
                     </Text>
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.amount,
-                            schedule.type === 'INCOME' && styles.amountIncome,
-                        ]}
-                    >
-                        {amount}
-                    </Text>
+                    {schedule.amount ? (
+                        <MoneyText
+                            value={schedule.amount}
+                            currency={currency}
+                            language={language}
+                            sign={schedule.type === 'INCOME' ? '+' : '-'}
+                            numberOfLines={1}
+                            style={[
+                                styles.amount,
+                                schedule.type === 'INCOME' && styles.amountIncome,
+                            ]}
+                        />
+                    ) : (
+                        <Text
+                            numberOfLines={1}
+                            style={[
+                                styles.amount,
+                                schedule.type === 'INCOME' && styles.amountIncome,
+                            ]}
+                        >
+                            {schedule.type === 'INCOME' ? t('Variable income') : t('Variable amount')}
+                        </Text>
+                    )}
                 </View>
                 <Text numberOfLines={1} style={styles.meta}>
                     {schedule.categoryName} · {frequency}

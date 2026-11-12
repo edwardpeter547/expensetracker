@@ -12,6 +12,7 @@ import { getFeatureDefinition } from '@/constants/featureCatalog';
 import { premiumColors, premiumRadius } from '@/constants/premiumTheme';
 import type { FeatureKey, GatePresentation } from '@/types/featureAccess';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import {
     Alert,
     Image,
@@ -50,11 +51,19 @@ const PremiumFeatureGate = ({
     plansUrl,
     onOpenPlans,
 }: PremiumFeatureGateProps) => {
+    const { t } = useTranslation('profile');
+    const { t: tTeams } = useTranslation('teams');
     const content = getFeatureDefinition(feature);
     const resolvedUrl = plansUrl ?? getAuditWalletPlansUrl();
     const hasOpener = Boolean(onOpenPlans);
     const canOpen = hasOpener || Boolean(resolvedUrl);
     const isFull = presentation === 'full';
+    const translateFeatureCopy = content.category === 'teams';
+    const headline = translateFeatureCopy ? tTeams(content.headline) : content.headline;
+    const description = translateFeatureCopy ? tTeams(content.description) : content.description;
+    const benefits = content.benefits.map((benefit) =>
+        translateFeatureCopy ? tTeams(benefit) : benefit,
+    );
 
     /**
      * Open the configured plans page or the custom opener.
@@ -77,8 +86,8 @@ const PremiumFeatureGate = ({
             }
         } catch {
             Alert.alert(
-                'Could not open plans',
-                'Please check the plan comparison link and try again.',
+                t('Could not open plans'),
+                t('Please check the plan comparison link and try again.'),
             );
         }
     };
@@ -94,7 +103,7 @@ const PremiumFeatureGate = ({
                     <View style={styles.header}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Close"
+                            accessibilityLabel={t('Close')}
                             onPress={onDismiss}
                             style={styles.close}
                         >
@@ -110,12 +119,12 @@ const PremiumFeatureGate = ({
                             </View>
                             <Text style={styles.brandText}>AuditWallet</Text>
                         </View>
-                        <Text style={styles.pill}>PREMIUM ACCESS</Text>
+                        <Text style={styles.pill}>{t('PREMIUM ACCESS')}</Text>
                     </View>
                 ) : (
                     <View style={styles.compactEyebrow}>
                         <Ionicons name="lock-closed" size={13} color={premiumColors.emerald} />
-                        <Text style={styles.compactEyebrowText}>PREMIUM FEATURE</Text>
+                        <Text style={styles.compactEyebrowText}>{t('PREMIUM FEATURE')}</Text>
                     </View>
                 )}
 
@@ -123,15 +132,15 @@ const PremiumFeatureGate = ({
                     {isFull ? <PremiumIllustration /> : null}
 
                     <View style={styles.sparkle}>
-                        <Text style={styles.sparkleText}>✦  UNLOCK MORE WITH PREMIUM</Text>
+                        <Text style={styles.sparkleText}>{t('✦  UNLOCK MORE WITH PREMIUM')}</Text>
                     </View>
 
-                    <Text style={styles.title}>{content.headline}</Text>
-                    <Text style={styles.description}>{content.description}</Text>
+                    <Text style={styles.title}>{headline}</Text>
+                    <Text style={styles.description}>{description}</Text>
 
                     <View style={styles.benefits}>
-                        <Text style={styles.benefitTitle}>What you&apos;ll unlock</Text>
-                        {content.benefits.map((benefit) => (
+                        <Text style={styles.benefitTitle}>{t("What you'll unlock")}</Text>
+                        {benefits.map((benefit) => (
                             <View key={benefit} style={styles.benefitRow}>
                                 <View style={styles.tick}>
                                     <Ionicons name="checkmark" size={15} color={premiumColors.emerald} />
@@ -146,11 +155,11 @@ const PremiumFeatureGate = ({
             <View style={styles.footer}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Explore Premium Plans"
+                    accessibilityLabel={t('Explore Premium Plans')}
                     accessibilityHint={
                         canOpen
-                            ? 'Opens the AuditWallet plan comparison page'
-                            : 'Plan comparison is not configured yet'
+                            ? t('Opens the AuditWallet plan comparison page')
+                            : t('Plan comparison is not configured yet')
                     }
                     disabled={!canOpen}
                     onPress={() => {
@@ -158,24 +167,24 @@ const PremiumFeatureGate = ({
                     }}
                     style={[styles.cta, !canOpen && styles.disabled]}
                 >
-                    <Text style={styles.ctaText}>Explore Premium Plans</Text>
+                    <Text style={styles.ctaText}>{t('Explore Premium Plans')}</Text>
                     <Ionicons name="open-outline" size={18} color="#FFFFFF" />
                 </Pressable>
 
                 <Text style={styles.note}>
                     {canOpen
-                        ? 'Compare plans and choose what works for you.'
-                        : 'Plan comparison is not available yet.'}
+                        ? t('Compare plans and choose what works for you.')
+                        : t('Plan comparison is not available yet.')}
                 </Text>
 
                 {onDismiss ? (
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Maybe Later"
+                        accessibilityLabel={t('Maybe Later')}
                         onPress={onDismiss}
                         style={styles.dismiss}
                     >
-                        <Text style={styles.dismissText}>Maybe Later</Text>
+                        <Text style={styles.dismissText}>{t('Maybe Later')}</Text>
                     </Pressable>
                 ) : null}
             </View>

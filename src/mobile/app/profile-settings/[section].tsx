@@ -9,6 +9,7 @@
 import ProfileSettings, { type ProfileSection } from '@/components/profile/ProfileSettings';
 import { profileTheme as t } from '@/constants/profileTheme';
 import { useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 /** Sections reachable from the Profile home menu. */
@@ -29,12 +30,13 @@ const ALLOWED_SECTIONS: readonly ProfileSection[] = [
  * @returns {JSX.Element} The settings screen or a not-found fallback.
  */
 const ProfileSettingsRoute = () => {
+    const { t: tt } = useTranslation('profile');
     const { section } = useLocalSearchParams<{ section: string }>();
 
     if (!section || !ALLOWED_SECTIONS.includes(section as ProfileSection)) {
         return (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: t.background }}>
-                <Text style={{ color: t.text, fontSize: 15 }}>Settings page not found.</Text>
+                <Text style={{ color: t.text, fontSize: 15 }}>{tt('Settings page not found.')}</Text>
             </View>
         );
     }

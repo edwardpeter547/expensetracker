@@ -14,6 +14,7 @@ export default {
     teamFinance: 'FINANCES D\'ÉQUIPE',
     totalSpending: 'Dépenses totales',
     openChat: 'Ouvrir le chat IA',
+    creditScoreLabel: 'Pointage de crédit',
     selectPeriod: 'Sélectionner une période',
     closePeriod: 'Fermer le sélecteur de période',
     quickRanges: 'Périodes rapides',

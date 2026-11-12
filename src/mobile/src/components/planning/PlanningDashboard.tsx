@@ -15,6 +15,7 @@ import type {
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningCard,
     PlanningIcon,
@@ -23,7 +24,7 @@ import {
     PlanningScreen,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /** Period selector entries shown above the dashboard summary. */
 const PERIOD_OPTIONS: readonly [PlanningPeriodKey, string][] = [
@@ -149,22 +150,34 @@ const PlanningDashboard = ({
                 <View style={[planningStyles.row, { justifyContent: 'space-between', alignItems: 'flex-end' }]}>
                     <View>
                         <Text style={planningStyles.muted}>{t('Total spent')}</Text>
-                        <Text style={planningStyles.large}>
-                            {formatPlanningMoney(summary.spent, language, currency)}
-                        </Text>
+                        <MoneyText
+                            value={summary.spent}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.large}
+                        />
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                         <Text style={planningStyles.muted}>{t('Budget limit')}</Text>
-                        <Text style={planningStyles.body}>
-                            {formatPlanningMoney(summary.budget, language, currency)}
-                        </Text>
+                        <MoneyText
+                            value={summary.budget}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.body}
+                        />
                     </View>
                 </View>
                 <PlanningProgress value={spentPercent} />
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                     <Text style={planningStyles.muted}>{t('{{percent}}% used', {percent: spentPercent})}</Text>
                     <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>
-                        {t('{{amount}} remaining', {amount: formatPlanningMoney(summary.budget - summary.spent, language, currency)})}
+                        <MoneyText
+                            value={summary.budget - summary.spent}
+                            currency={currency}
+                            language={language}
+                            style={{ color: planningColors.emerald, fontWeight: '700', fontSize: 14 }}
+                        />
+                        {' '}{t('remainingLabel')}
                     </Text>
                 </View>
             </PlanningCard>
@@ -182,9 +195,12 @@ const PlanningDashboard = ({
                             {t('Goals Saved')}
                         </Text>
                     </View>
-                    <Text style={planningStyles.large}>
-                        {formatPlanningMoney(summary.saved, language, currency)}
-                    </Text>
+                    <MoneyText
+                        value={summary.saved}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.large}
+                    />
                     <PlanningProgress value={goalsPercent} color={SUMMARY_GOALS_COLOR} />
                     <Text style={planningStyles.muted}>{t('{{percent}}% of targets', {percent: goalsPercent})}</Text>
                 </PlanningCard>

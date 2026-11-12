@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMembership } from '@/hooks/useMembership';
 import type { UserProfile } from '@/types/profile';
 import { router, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 
@@ -34,8 +35,8 @@ const DEMO_IDENTITY: ProfileIdentity = {
 const identityFromUser = (user: UserProfile | null): ProfileIdentity => {
     if (!user) {
         return {
-            displayName: 'Your Profile',
-            email: 'Account details from your session',
+            displayName: '',
+            email: '',
             username: '',
             firstname: '',
             lastname: '',
@@ -49,7 +50,7 @@ const identityFromUser = (user: UserProfile | null): ProfileIdentity => {
         || user.email;
 
     return {
-        displayName: displayName || 'Your Profile',
+        displayName: displayName || '',
         email: user.email,
         username: user.username,
         firstname: user.firstname,
@@ -64,6 +65,8 @@ const identityFromUser = (user: UserProfile | null): ProfileIdentity => {
  * @returns {JSX.Element} The profile screen.
  */
 const ProfileScreen = () => {
+    const { t: tt } = useTranslation('profile');
+    const { t: tc } = useTranslation('common');
     const { user, isLoading, logout, refreshProfile } = useAuth();
     const { membership } = useMembership();
     const accessToken = getAccessToken();
@@ -92,12 +95,12 @@ const ProfileScreen = () => {
      */
     const confirmSignOut = () => {
         Alert.alert(
-            'Sign Out',
-            'You will need your password to sign back in, and biometric sign-in will need to be enabled again.',
+            tt('Sign Out'),
+            tt('You will need your password to sign back in, and biometric sign-in will need to be enabled again.'),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: tc('Cancel'), style: 'cancel' },
                 {
-                    text: 'Sign Out',
+                    text: tt('Sign Out'),
                     style: 'destructive',
                     onPress: () => {
                         void logout().finally(() => {

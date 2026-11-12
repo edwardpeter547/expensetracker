@@ -5,6 +5,7 @@ import {
     formatMoney,
     parseMoneyInput,
     resolveMoneyLocale,
+    splitFormattedMoney,
 } from '../format.ts';
 
 describe('resolveMoneyLocale', () => {
@@ -85,11 +86,51 @@ describe('formatMoney', () => {
         assert.equal(dollarsFrench.includes('US$'), false);
         assert.equal(dollarsFrench.includes('$'), true);
     });
+
+    test('uses the naira glyph instead of the NGN code', () => {
+        const naira = formatMoney('1234.5', 'en', 'NGN', 2);
+
+        assert.equal(naira.includes('NGN'), false);
+        assert.equal(naira.includes('₦'), true);
+    });
 });
 
 describe('decimalSeparatorForLocale', () => {
     test('returns comma for fr-FR and point for en-US', () => {
         assert.equal(decimalSeparatorForLocale('fr-FR'), ',');
         assert.equal(decimalSeparatorForLocale('en-US'), '.');
+    });
+});
+
+describe('splitFormattedMoney', () => {
+    test('splits an English pound amount around the decimal point', () => {
+        const parts = splitFormattedMoney('2180.5', 'en', 'GBP');
+
+        assert.equal(parts.prefix, '£2,180');
+        assert.equal(parts.fraction, '.50');
+        assert.equal(parts.suffix, '');
+    });
+
+    test('pads trailing zeroes to two decimal places', () => {
+        const parts = splitFormattedMoney('42', 'en', 'USD');
+
+        assert.equal(parts.prefix, '$42');
+        assert.equal(parts.fraction, '.00');
+        assert.equal(parts.suffix, '');
+    });
+
+    test('keeps a postfixed currency symbol in the suffix for French', () => {
+        const parts = splitFormattedMoney('2180.5', 'fr', 'EUR');
+
+        assert.equal(parts.fraction, ',50');
+        assert.equal(parts.suffix.endsWith('€'), true);
+        assert.equal(parts.prefix.startsWith('2'), true);
+    });
+
+    test('uses the naira glyph in the split prefix for Nigerian Naira', () => {
+        const parts = splitFormattedMoney('1234.5', 'en', 'NGN');
+
+        assert.equal(parts.prefix.startsWith('₦'), true);
+        assert.equal(parts.fraction, '.50');
     });
 });

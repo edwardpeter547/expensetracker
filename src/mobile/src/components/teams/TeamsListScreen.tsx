@@ -14,10 +14,12 @@ import {
     PlanningScreen,
     planningStyles,
 } from '@/components/planning/PlanningUI';
-import { formatPlanningMoney, planningColors } from '@/components/planning/planningTheme';
+import { planningColors } from '@/components/planning/planningTheme';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { teamKindIcon, teamModeLabel } from '@/components/teams/teamPresentation';
 import { ModeBadge, TeamCard, TeamSectionHeading } from '@/components/teams/teamsPrimitives';
 import type { Team } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 /** Props for the Teams list screen. */
@@ -46,19 +48,22 @@ const TeamsListScreen = ({
     onOpenTeam,
     onRestoreTeam,
 }: TeamsListScreenProps) => {
+    const { t } = useTranslation('teams');
     const activeTeams = teams.filter((team) => team.status !== 'archived');
     const archivedTeams = teams.filter((team) => team.status === 'archived');
 
     return (
         <PlanningScreen
-            title="Teams"
-            subtitle="Your shared financial spaces"
+            title={t('Teams')}
+            subtitle={t('Your shared financial spaces')}
             onBack={onBack}
         >
         <TeamCard>
-            <Text style={planningStyles.muted}>Your Shared Spaces</Text>
+            <Text style={planningStyles.muted}>{t('Your Shared Spaces')}</Text>
             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                <Text style={planningStyles.large}>{teams.length} Teams</Text>
+                <Text style={planningStyles.large}>
+                    {t('teamCount', { count: teams.length })}
+                </Text>
                 <PlanningIconTile
                     icon="users"
                     color={planningColors.emerald}
@@ -66,16 +71,16 @@ const TeamsListScreen = ({
                     size={40}
                 />
             </View>
-            <Text style={planningStyles.muted}>Plan and track money together, privately.</Text>
+            <Text style={planningStyles.muted}>{t('Plan and track money together, privately.')}</Text>
         </TeamCard>
 
-        <TeamSectionHeading title="My Teams" subtitle="Tap a team to open its workspace" />
+        <TeamSectionHeading title={t('My Teams')} subtitle={t('Tap a team to open its workspace')} />
 
         {activeTeams.length === 0 ? (
             <TeamCard>
-                <Text style={planningStyles.body}>No teams yet.</Text>
+                <Text style={planningStyles.body}>{t('No teams yet.')}</Text>
                 <Text style={planningStyles.muted}>
-                    Create a team to start planning shared finances.
+                    {t('Create a team to start planning shared finances.')}
                 </Text>
             </TeamCard>
         ) : (
@@ -88,7 +93,7 @@ const TeamsListScreen = ({
                     <Pressable
                         key={team.id}
                         accessibilityRole="button"
-                        accessibilityLabel={`Open ${team.name}`}
+                        accessibilityLabel={t('Open {{name}}', { name: team.name })}
                         onPress={() => onOpenTeam(team.id)}
                     >
                         <TeamCard>
@@ -102,23 +107,35 @@ const TeamsListScreen = ({
                                 <View style={{ flex: 1, gap: 4 }}>
                                     <Text style={planningStyles.body}>{team.name}</Text>
                                     <Text style={planningStyles.muted}>
-                                        {team.memberCount} members · {team.kind}
+                                        {t('memberCount', { count: team.memberCount })} · {t(team.kind)}
                                     </Text>
                                 </View>
                                 <PlanningIcon name="chevron-right" color={planningColors.muted} />
                             </View>
 
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                                <Text style={planningStyles.muted}>{teamModeLabel(team.mode)}</Text>
+                                <Text style={planningStyles.muted}>{t(teamModeLabel(team.mode))}</Text>
                                 <ModeBadge mode={team.mode} />
                             </View>
 
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                                 <Text style={planningStyles.muted}>
-                                    Spent {formatPlanningMoney(team.spent, language, currency)}
+                                    {t('spentLabel')}{' '}
+                                    <MoneyText
+                                        value={team.spent}
+                                        currency={currency}
+                                        language={language}
+                                        style={planningStyles.muted}
+                                    />
                                 </Text>
                                 <Text style={planningStyles.muted}>
-                                    Target {formatPlanningMoney(team.budgetTarget, language, currency)}
+                                    {t('targetLabel')}{' '}
+                                    <MoneyText
+                                        value={team.budgetTarget}
+                                        currency={currency}
+                                        language={language}
+                                        style={planningStyles.muted}
+                                    />
                                 </Text>
                             </View>
                             <PlanningProgress value={progress} color={pooled ? planningColors.emerald : planningColors.blue} />
@@ -131,8 +148,8 @@ const TeamsListScreen = ({
         {archivedTeams.length > 0 ? (
             <>
                 <TeamSectionHeading
-                    title="Archived"
-                    subtitle="Archived teams keep their history"
+                    title={t('Archived')}
+                    subtitle={t('Archived teams keep their history')}
                 />
                 {archivedTeams.map((team) => (
                     <TeamCard key={team.id}>
@@ -146,13 +163,13 @@ const TeamsListScreen = ({
                             <View style={{ flex: 1, gap: 4 }}>
                                 <Text style={planningStyles.body}>{team.name}</Text>
                                 <Text style={planningStyles.muted}>
-                                    {team.memberCount} members · {team.kind}
+                                    {t('memberCount', { count: team.memberCount })} · {t(team.kind)}
                                 </Text>
                             </View>
-                            <Text style={styles.archivedBadge}>Archived</Text>
+                            <Text style={styles.archivedBadge}>{t('Archived')}</Text>
                         </View>
                         <PlanningButton
-                            label="Restore Team"
+                            label={t('Restore Team')}
                             outline
                             onPress={() => onRestoreTeam(team.id)}
                         />
@@ -163,16 +180,16 @@ const TeamsListScreen = ({
 
         <TeamCard style={styles.privacyCard}>
             <PlanningIcon name="shield-check" color="#315D75" size={20} />
-            <Text style={styles.privacyTitle}>Your personal finances stay private</Text>
+            <Text style={styles.privacyTitle}>{t('Your personal finances stay private')}</Text>
             <Text style={styles.privacyText}>
-                Only transactions deliberately assigned to a team are visible to its members.
+                {t('Only transactions deliberately assigned to a team are visible to its members.')}
             </Text>
         </TeamCard>
 
-        <PlanningButton label="Create New Team" onPress={onCreate} />
+        <PlanningButton label={t('Create New Team')} onPress={onCreate} />
 
         <Text style={styles.demoNote}>
-            Preview data only — team records are kept in memory and are not persisted.
+            {t('Preview data only — team records are kept in memory and are not persisted.')}
         </Text>
     </PlanningScreen>
     );

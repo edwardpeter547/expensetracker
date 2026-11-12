@@ -16,6 +16,7 @@ import { planningColors } from '@/components/planning/planningTheme';
 import { teamModeLabel } from '@/components/teams/teamPresentation';
 import { ModeBadge, TeamCard } from '@/components/teams/teamsPrimitives';
 import type { FinanceMode, TeamRole } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 /** Props for the invitation recipient screen. */
@@ -41,29 +42,32 @@ const InvitationScreen = ({
     onBack,
     onAccept,
     onDecline,
-}: InvitationScreenProps) => (
-    <PlanningScreen title="Team Invitation" subtitle="Review and respond" onBack={onBack}>
+}: InvitationScreenProps) => {
+    const { t } = useTranslation('teams');
+    return (
+    <PlanningScreen title={t('Team Invitation')} subtitle={t('Review and respond')} onBack={onBack}>
         <TeamCard style={styles.card}>
             <PlanningIcon name="home" color={planningColors.emerald} size={48} />
-            <Text style={planningStyles.large}>You&apos;re invited to {teamName}</Text>
+            <Text style={planningStyles.large}>{t("You're invited to {{name}}", { name: teamName })}</Text>
             <Text style={planningStyles.muted}>
-                Join a shared finance workspace on AuditWallet.
+                {t('Join a shared finance workspace on AuditWallet.')}
             </Text>
             <ModeBadge mode={mode} />
             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                <Text style={planningStyles.muted}>Finance model</Text>
-                <Text style={planningStyles.body}>{teamModeLabel(mode)}</Text>
+                <Text style={planningStyles.muted}>{t('Finance model')}</Text>
+                <Text style={planningStyles.body}>{t(teamModeLabel(mode))}</Text>
             </View>
             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                <Text style={planningStyles.muted}>Your role</Text>
-                <Text style={planningStyles.body}>{role}</Text>
+                <Text style={planningStyles.muted}>{t('Your role')}</Text>
+                <Text style={planningStyles.body}>{t(role)}</Text>
             </View>
-            <PlanningButton label="Accept Invitation" onPress={onAccept} />
-            <PlanningButton label="Decline" outline onPress={onDecline} />
-            <Text style={styles.note}>Demonstration only; no membership changes are made.</Text>
+            <PlanningButton label={t('Accept Invitation')} onPress={onAccept} />
+            <PlanningButton label={t('Decline')} outline onPress={onDecline} />
+            <Text style={styles.note}>{t('Demonstration only; no membership changes are made.')}</Text>
         </TeamCard>
     </PlanningScreen>
-);
+    );
+};
 
 /** Invitation screen styles. */
 const styles = StyleSheet.create({

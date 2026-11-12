@@ -11,7 +11,8 @@ import { getAuditWalletPlansUrl } from '@/api/plans';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { profileTheme as t } from '@/constants/profileTheme';
-import type { MembershipSummary } from '@/types/membership';
+import type { MembershipStatus, MembershipSummary } from '@/types/membership';
+import { useTranslation } from 'react-i18next';
 import {
     Alert,
     Linking,
@@ -60,11 +61,32 @@ const MembershipBillingScreen = ({
     loading = false,
     error,
 }: MembershipBillingScreenProps) => {
+    const { t: tt } = useTranslation('profile');
+    const { t: tc } = useTranslation('common');
     const insets = useSafeAreaInsets();
     const plansUrl = getAuditWalletPlansUrl();
     const isFree = membership?.tier === 'free';
     const isPaid = membership != null && !isFree;
-    const planName = loading ? 'Loading…' : membership?.displayName ?? 'Unavailable';
+    const planName = loading ? tc('Loading…') : membership?.displayName ?? tt('Unavailable');
+
+    /**
+     * Resolve a localised label for a known membership status.
+     *
+     * @param {MembershipSummary['status']} status The membership status.
+     * @returns {string} The localised status label.
+     */
+    const statusLabel = (status: MembershipSummary['status']): string => {
+        if (!status) return '';
+        const labels: Partial<Record<MembershipStatus, string>> = {
+            active: tt('Active'),
+            trialing: tt('Trial'),
+            past_due: tt('Past due'),
+            canceled: tt('Canceled'),
+            expired: tt('Expired'),
+            unknown: tt('Unknown'),
+        };
+        return labels[status] ?? status.replace('_', ' ');
+    };
 
     /**
      * Open the product website for plan comparison, or explain that the
@@ -78,8 +100,8 @@ const MembershipBillingScreen = ({
             return;
         }
         Alert.alert(
-            'Not available yet',
-            'Plan comparison will be available on the product website soon.',
+            tt('Not available yet'),
+            tt('Plan comparison will be available on the product website soon.'),
         );
     };
 
@@ -92,19 +114,19 @@ const MembershipBillingScreen = ({
                 <View style={styles.nav}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Back to Profile"
+                        accessibilityLabel={tt('Back to Profile')}
                         onPress={onBack}
                         style={styles.back}
                     >
                         <Ionicons name="chevron-back" color="white" size={22} />
                     </Pressable>
-                    <Text style={styles.heading}>Membership & Billing</Text>
+                    <Text style={styles.heading}>{tt('Membership & Billing')}</Text>
                 </View>
 
                 <View style={styles.heroCard}>
                     <View style={styles.heroRow}>
                         <View style={styles.heroCopy}>
-                            <Text style={styles.eyebrow}>YOUR CURRENT PLAN</Text>
+                            <Text style={styles.eyebrow}>{tt('YOUR CURRENT PLAN')}</Text>
                             <Text style={styles.plan}>{planName}</Text>
                         </View>
                         <View style={styles.crown}>
@@ -121,13 +143,13 @@ const MembershipBillingScreen = ({
                     ) : (
                         <Text style={styles.heroDescription}>
                             {isFree
-                                ? 'Your personal finance essentials'
-                                : 'View your membership information'}
+                                ? tt('Your personal finance essentials')
+                                : tt('View your membership information')}
                         </Text>
                     )}
                     {membership?.status && membership.status !== 'unknown' ? (
                         <Text style={styles.heroDescription}>
-                            Subscription status: {membership.status.replace('_', ' ')}
+                            {tt('Subscription status: {{status}}', { status: statusLabel(membership.status) })}
                         </Text>
                     ) : null}
                 </View>
@@ -141,7 +163,7 @@ const MembershipBillingScreen = ({
                 ) : null}
 
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Included in your plan</Text>
+                    <Text style={styles.cardTitle}>{tt('Included in your plan')}</Text>
                     {membership?.benefits?.length ? (
                         membership.benefits.map((benefit, index) => (
                             <View key={`${index}-${benefit}`} style={styles.benefit}>
@@ -150,40 +172,40 @@ const MembershipBillingScreen = ({
                             </View>
                         ))
                     ) : (
-                        <Text style={styles.muted}>Plan benefits are not available yet.</Text>
+                        <Text style={styles.muted}>{tt('Plan benefits are not available yet.')}</Text>
                     )}
                 </View>
 
                 {isPaid ? (
                     <View style={styles.card}>
-                        <Text style={styles.cardTitle}>Subscription</Text>
+                        <Text style={styles.cardTitle}>{tt('Subscription')}</Text>
                         {membership?.status ? (
                             <Info
-                                label="Status"
-                                value={membership.status.replace('_', ' ')}
+                                label={tt('Status')}
+                                value={statusLabel(membership.status)}
                             />
                         ) : null}
                         {membership?.billingCycleLabel ? (
-                            <Info label="Billing cycle" value={membership.billingCycleLabel} />
+                            <Info label={tt('Billing cycle')} value={membership.billingCycleLabel} />
                         ) : null}
                         {membership?.renewalDateLabel ? (
-                            <Info label="Next billing / renewal" value={membership.renewalDateLabel} />
+                            <Info label={tt('Next billing / renewal')} value={membership.renewalDateLabel} />
                         ) : null}
                         {membership?.billingProviderLabel ? (
-                            <Info label="Billing provider" value={membership.billingProviderLabel} />
+                            <Info label={tt('Billing provider')} value={membership.billingProviderLabel} />
                         ) : null}
                         {onManageSubscription ? (
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Manage Subscription"
+                                accessibilityLabel={tt('Manage Subscription')}
                                 onPress={onManageSubscription}
                                 style={styles.outline}
                             >
-                                <Text style={styles.outlineText}>Manage Subscription</Text>
+                                <Text style={styles.outlineText}>{tt('Manage Subscription')}</Text>
                             </Pressable>
                         ) : (
                             <Text style={styles.muted}>
-                                Subscription management is not yet available here.
+                                {tt('Subscription management is not yet available here.')}
                             </Text>
                         )}
                     </View>
@@ -191,22 +213,22 @@ const MembershipBillingScreen = ({
 
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>
-                        {isFree ? 'Explore Premium' : 'Explore Membership Plans'}
+                        {isFree ? tt('Explore Premium') : tt('Explore Membership Plans')}
                     </Text>
                     <Text style={styles.muted}>
-                        Compare membership plans and benefits on our website.
+                        {tt('Compare membership plans and benefits on our website.')}
                     </Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Compare Plans"
+                        accessibilityLabel={tt('Compare Plans')}
                         onPress={openComparePlans}
                         style={styles.primary}
                     >
-                        <Text style={styles.primaryText}>Compare Plans</Text>
+                        <Text style={styles.primaryText}>{tt('Compare Plans')}</Text>
                     </Pressable>
                     {!plansUrl ? (
                         <Text style={[styles.muted, styles.planUnavailable]}>
-                            The product website isn&apos;t available yet.
+                            {tt("The product website isn't available yet.")}
                         </Text>
                     ) : null}
                 </View>

@@ -13,6 +13,7 @@ import SpendingTrend from '@/components/dashboard/SpendingTrend';
 import FloatingChatButton from '@/components/dashboard/FloatingChatButton';
 import { teamKindIcon, teamModeShort } from '@/components/teams/teamPresentation';
 import { formatMoney } from '@/localization/format';
+import { MoneyText } from '@/components/ui/MoneyText';
 import type {
     CategorySpend,
     DashboardData,
@@ -102,14 +103,14 @@ export interface ExpenseDashboardProps {
  * @param {string|number} amount The canonical amount.
  * @param {string} currency The ISO 4217 currency.
  * @param {string} language The display locale.
- * @param {number} [decimals=0] Displayed fraction digits.
+ * @param {number} [decimals=2] Displayed fraction digits.
  * @returns {string} The formatted currency string.
  */
 const formatAmount = (
     amount: string | number,
     currency: string,
     language: string,
-    decimals = 0,
+    decimals = 2,
 ): string => formatMoney(amount, language, currency, decimals);
 
 /**
@@ -221,23 +222,21 @@ const buildDonutSegments = (
 };
 
 /**
- * Render the donut chart and its category legend.
+ * Render the Spending by Category card: a full-width donut chart on top and an
+ * interactive category breakdown beneath it.
  *
  * @param {object} props Donut props.
  * @param {CategorySpend[]} props.categories Positive category totals.
- * @param {string} props.total Period expense total for the center value.
  * @param {string} props.currency The display currency.
  * @param {string} props.language The display locale.
- * @returns {JSX.Element} The donut and legend row.
+ * @returns {JSX.Element} The donut and category breakdown card.
  */
 const SpendingDonut = ({
     categories,
-    total,
     currency,
     language,
 }: {
     categories: CategorySpend[];
-    total: string;
     currency: string;
     language: string;
 }) => {
@@ -252,75 +251,131 @@ const SpendingDonut = ({
     );
 
     const selectedItem = segments.positive.find((item) => item.name === selected);
-    const centerValue = selectedItem ? selectedItem.amount : total;
+    const focusedItem = selectedItem ?? segments.positive[0] ?? null;
+    const focusedPercent = focusedItem && segments.donutTotal > 0n
+        ? Math.round((Number(focusedItem.scaled) / Number(segments.donutTotal)) * 100)
+        : 0;
 
     return (
-        <View style={styles.chartRow}>
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('Reset spending category selection')}
-                onPress={() => setSelected(null)}
-                style={styles.donutWrap}
-            >
-                <Svg width={160} height={160} viewBox="0 0 137 137">
-                    <G rotation={-90} origin="68.5,68.5">
-                        {segments.donutTotal === 0n ? (
-                            <Circle
-                                cx={68.5}
-                                cy={68.5}
-                                r={radius}
-                                stroke="#EEF1F6"
-                                strokeWidth={23}
-                                fill="none"
-                            />
-                        ) : (
-                            segments.segments.map((segment) => (
+        <View style={styles.spendingBreakdownCard}>
+            <Text style={styles.spendingCardTitle}>{t('Spending by Category')}</Text>
+
+            <View style={styles.donutStage}>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Reset spending category selection')}
+                    onPress={() => setSelected(null)}
+                    style={styles.donutWrap}
+                >
+                    <Svg width={272} height={272} viewBox="0 0 137 137">
+                        <G rotation={-90} origin="68.5,68.5">
+                            {segments.donutTotal === 0n ? (
                                 <Circle
-                                    key={segment.name}
                                     cx={68.5}
                                     cy={68.5}
                                     r={radius}
-                                    stroke={segment.color}
-                                    strokeWidth={23}
+                                    stroke="#EEF1F6"
+                                    strokeWidth={15}
                                     fill="none"
-                                    strokeDasharray={`${segment.dash} ${circumference}`}
-                                    strokeDashoffset={-segment.offset}
                                 />
-                            ))
-                        )}
-                    </G>
-                </Svg>
-                <Text style={styles.donutValue}>
-                    {formatAmount(centerValue, currency, language)}
-                </Text>
-            </Pressable>
-
-            <View style={styles.legend}>
-                {segments.positive.length === 0 ? (
-                    <Text style={styles.legendEmpty}>{t('No spending this period')}</Text>
-                ) : (
-                    segments.positive.map((item) => (
-                        <Pressable
-                            key={item.name}
-                            onPress={() => setSelected(item.name)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${item.name}, ${formatAmount(item.amount, currency, language)}`}
-                            style={styles.legendRow}
-                        >
-                            <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                            <Text numberOfLines={1} style={styles.legendName}>{item.name}</Text>
-                            <Text style={styles.legendAmount}>
-                                {formatAmount(item.amount, currency, language)}
+                            ) : (
+                                segments.segments.map((segment) => (
+                                    <Circle
+                                        key={segment.name}
+                                        cx={68.5}
+                                        cy={68.5}
+                                        r={radius}
+                                        stroke={segment.color}
+                                        strokeWidth={15}
+                                        fill="none"
+                                        strokeDasharray={`${segment.dash} ${circumference}`}
+                                        strokeDashoffset={-segment.offset}
+                                    />
+                                ))
+                            )}
+                        </G>
+                    </Svg>
+                    {focusedItem ? (
+                        <View style={styles.donutCenter} pointerEvents="none">
+                            <Text style={[styles.donutCenterPercent, { color: focusedItem.color }]}>
+                                {focusedPercent}%
                             </Text>
-                            <Text style={styles.legendPercent}>
-                                {segments.donutTotal > 0n
-                                    ? `${Math.round((Number(item.scaled) / Number(segments.donutTotal)) * 100)}%`
-                                    : '0%'}
+                            <View style={styles.donutCenterDivider} />
+                            <Text numberOfLines={1} style={styles.donutCenterName}>
+                                {focusedItem.name}
                             </Text>
-                        </Pressable>
-                    ))
-                )}
+                        </View>
+                    ) : null}
+                </Pressable>
             </View>
+
+            {segments.positive.length === 0 ? (
+                <Text style={styles.legendEmpty}>{t('No spending this period')}</Text>
+            ) : (
+                <>
+                    {focusedItem ? (
+                        <View style={styles.donutSummaryCard}>
+                            <View
+                                style={[
+                                    styles.donutSummaryAccent,
+                                    { backgroundColor: focusedItem.color },
+                                ]}
+                            />
+                            <View style={styles.donutSummaryCopy}>
+                                <Text numberOfLines={1} style={styles.donutSummaryLabel}>
+                                    {focusedItem.name}
+                                </Text>
+                                <MoneyText
+                                    value={focusedItem.amount}
+                                    currency={currency}
+                                    language={language}
+                                    style={styles.donutSummaryAmount}
+                                />
+                            </View>
+                        </View>
+                    ) : null}
+
+                    <View style={styles.categoryList}>
+                        {segments.positive.map((item) => {
+                            const active = item.name === focusedItem?.name;
+                            const percent = segments.donutTotal > 0n
+                                ? `${Math.round((Number(item.scaled) / Number(segments.donutTotal)) * 100)}%`
+                                : '0%';
+                            return (
+                                <Pressable
+                                    key={item.name}
+                                    onPress={() => setSelected(item.name)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${item.name}, ${formatAmount(item.amount, currency, language)}`}
+                                    accessibilityState={{ selected: active }}
+                                    style={({ pressed }) => [
+                                        styles.categoryRow,
+                                        active && styles.categoryRowSelected,
+                                        pressed && styles.categoryRowPressed,
+                                    ]}
+                                >
+                                    <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                                    <Text numberOfLines={1} style={styles.categoryName}>{item.name}</Text>
+                                    <View style={styles.categoryMeta}>
+                                        <MoneyText
+                                            value={item.amount}
+                                            currency={currency}
+                                            language={language}
+                                            style={styles.categoryAmount}
+                                        />
+                                        <Text style={styles.categoryPercent}>{percent}</Text>
+                                    </View>
+                                    <Ionicons
+                                        name="chevron-forward"
+                                        size={18}
+                                        color={active ? C.green : '#A5B3C1'}
+                                    />
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                </>
+            )}
         </View>
     );
 };
@@ -396,8 +451,9 @@ const SpendingGoalProgress = ({
                 </View>
             </View>
             <Text style={styles.goalMeta}>
-                {formatAmount(spent, currency, language)} spent of{' '}
-                {formatAmount(goal, currency, language)}
+                <MoneyText value={spent} currency={currency} language={language} style={styles.goalMeta} />
+                {' spent of '}
+                <MoneyText value={goal} currency={currency} language={language} style={styles.goalMeta} />
                 {progress.isOverGoal ? ' · over goal' : ''}
             </Text>
         </View>
@@ -474,15 +530,21 @@ const TeamFinanceCard = ({ team, currency, language, onPress }: TeamFinanceCardP
             <View style={styles.teamStats}>
                 <View>
                     <Text style={styles.teamStatLabel}>{headlineLabel}</Text>
-                    <Text style={styles.teamStatValue}>
-                        {formatAmount(headline, currency, language)}
-                    </Text>
+                    <MoneyText
+                        value={headline}
+                        currency={currency}
+                        language={language}
+                        style={styles.teamStatValue}
+                    />
                 </View>
                 <View style={styles.teamStatRight}>
                     <Text style={styles.teamStatLabel}>{targetLabel}</Text>
-                    <Text style={styles.teamStatValue}>
-                        {formatAmount(team.budgetTarget, currency, language)}
-                    </Text>
+                    <MoneyText
+                        value={team.budgetTarget}
+                        currency={currency}
+                        language={language}
+                        style={styles.teamStatValue}
+                    />
                 </View>
             </View>
 
@@ -595,19 +657,31 @@ export default function ExpenseDashboard({
                     </Pressable>
                 </View>
 
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Period: {{label}}', {label: periodLabel})}
-                    onPress={() => {
-                        setNotificationOpen(false);
-                        setPickerOpen(true);
-                    }}
-                    style={styles.month}
-                >
-                    <Ionicons name="calendar-outline" size={18} color="#52647C" />
-                    <Text numberOfLines={1} style={styles.monthText}>{periodLabel}</Text>
-                    <Ionicons name="chevron-down" size={15} color="#52647C" />
-                </Pressable>
+                <View style={styles.headerActions}>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Period: {{label}}', {label: periodLabel})}
+                        onPress={() => {
+                            setNotificationOpen(false);
+                            setPickerOpen(true);
+                        }}
+                        style={styles.month}
+                    >
+                        <Ionicons name="calendar-outline" size={18} color="#52647C" />
+                        <Text numberOfLines={1} style={styles.monthText}>{periodLabel}</Text>
+                        <Ionicons name="chevron-down" size={15} color="#52647C" />
+                    </Pressable>
+                    <View
+                        accessibilityLabel={t('Credit Score')}
+                        style={styles.creditScorePanel}
+                    >
+                        <Text style={styles.creditScoreLabel}>{t('Credit Score')}</Text>
+                        <View style={styles.creditScoreValueGroup}>
+                            <Text style={styles.creditScoreSeparator}>|</Text>
+                            <Text style={styles.creditScoreValue}>5.0</Text>
+                        </View>
+                    </View>
+                </View>
 
                 {notificationOpen ? (
                     <View style={[styles.notificationsPopup, { top: insets.top + 70 }]}>
@@ -656,36 +730,39 @@ export default function ExpenseDashboard({
                             <View style={styles.stats}>
                                 <View style={styles.stat}>
                                     <Text style={[styles.statLabel, { color: '#498DE5' }]}>{t('Income')}</Text>
-                                    <Text
+                                    <MoneyText
+                                        value={data?.income ?? '0'}
+                                        currency={currency}
+                                        language={language}
+                                        style={styles.statValue}
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
                                         minimumFontScale={0.7}
-                                        style={styles.statValue}
-                                    >
-                                        {formatAmount(data?.income ?? '0', currency, language)}
-                                    </Text>
+                                    />
                                 </View>
                                 <View style={styles.stat}>
                                     <Text style={[styles.statLabel, { color: '#E8666C' }]}>{t('Expenses')}</Text>
-                                    <Text
+                                    <MoneyText
+                                        value={data?.expenses ?? '0'}
+                                        currency={currency}
+                                        language={language}
+                                        style={styles.statValue}
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
                                         minimumFontScale={0.7}
-                                        style={styles.statValue}
-                                    >
-                                        {formatAmount(data?.expenses ?? '0', currency, language)}
-                                    </Text>
+                                    />
                                 </View>
                                 <View style={styles.stat}>
                                     <Text style={[styles.statLabel, { color: '#4CBF7E' }]}>{t('Balance')}</Text>
-                                    <Text
+                                    <MoneyText
+                                        value={data?.remaining ?? '0'}
+                                        currency={currency}
+                                        language={language}
+                                        style={styles.statValue}
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
                                         minimumFontScale={0.7}
-                                        style={styles.statValue}
-                                    >
-                                        {formatAmount(data?.remaining ?? '0', currency, language)}
-                                    </Text>
+                                    />
                                 </View>
                             </View>
 
@@ -696,10 +773,8 @@ export default function ExpenseDashboard({
                                 language={language}
                             />
 
-                            <Text style={styles.sectionTitle}>{t('Spending by Category')}</Text>
                             <SpendingDonut
                                 categories={data?.categories ?? []}
-                                total={data?.totalSpending ?? '0'}
                                 currency={currency}
                                 language={language}
                             />
@@ -830,8 +905,56 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    creditScorePanel: {
+        flex: 1,
+        height: 42,
+        borderRadius: 11,
+        borderWidth: 1,
+        borderColor: '#2F7A5B',
+        backgroundColor: '#0C2019',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 12,
+        shadowColor: '#56E39F',
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 3,
+        overflow: 'hidden',
+    },
+    creditScoreLabel: {
+        color: '#79D8A9',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.4,
+        textTransform: 'uppercase',
+    },
+    creditScoreValueGroup: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 5,
+    },
+    creditScoreSeparator: {
+        color: '#79D8A9',
+        fontSize: 14,
+        fontWeight: '700',
+        opacity: 0.6,
+    },
+    creditScoreValue: {
+        color: '#5BF0A6',
+        fontSize: 20,
+        fontWeight: '900',
+        letterSpacing: 0.3,
+        lineHeight: 22,
+    },
     month: {
-        width: 190,
+        width: 150,
         height: 42,
         borderWidth: 1,
         borderColor: '#D5E0E8',
@@ -839,8 +962,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#F4F7FA',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 14,
+        gap: 6,
+        paddingHorizontal: 10,
     },
     monthText: {
         flex: 1,
@@ -1048,14 +1171,6 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         backgroundColor: '#F0F3F7',
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: C.ink,
-        marginTop: 30,
-        marginBottom: 20,
-        letterSpacing: -0.3,
-    },
     teamSection: {
         marginTop: 28,
     },
@@ -1144,54 +1259,148 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 99,
     },
-    chartRow: {
-        flexDirection: 'row',
+    spendingBreakdownCard: {
+        marginTop: 28,
+        backgroundColor: C.white,
+        borderWidth: 1,
+        borderColor: C.border,
+        borderRadius: 20,
+        padding: 20,
+        elevation: 2,
+        shadowColor: '#1E375B',
+        shadowOpacity: 0.07,
+        shadowRadius: 10,
+    },
+    spendingCardTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: C.ink,
+        letterSpacing: -0.3,
+        marginBottom: 20,
+    },
+    donutStage: {
         alignItems: 'center',
-        gap: 16,
     },
     donutWrap: {
-        width: 160,
-        height: 160,
+        width: 272,
+        height: 272,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    donutValue: {
+    donutCenter: {
         position: 'absolute',
-        fontSize: 22,
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+    },
+    donutCenterName: {
+        fontSize: 17,
         fontWeight: '800',
         color: C.ink,
-        letterSpacing: -0.4,
+        textAlign: 'center',
     },
-    legend: {
+    donutCenterDivider: {
+        width: 150,
+        height: 0,
+        borderTopWidth: 3,
+        borderStyle: 'dashed',
+        borderColor: '#9AA9BC',
+        marginVertical: 8,
+    },
+    donutCenterPercent: {
+        fontSize: 44,
+        fontWeight: '900',
+        color: C.ink,
+        letterSpacing: -1,
+    },
+    donutSummaryCard: {
+        marginTop: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        backgroundColor: '#F7FAFC',
+        borderWidth: 1,
+        borderColor: '#EDF2F7',
+    },
+    donutSummaryAccent: {
+        width: 4,
+        alignSelf: 'stretch',
+        borderRadius: 2,
+    },
+    donutSummaryCopy: {
         flex: 1,
-        gap: 14,
+        minWidth: 0,
+    },
+    donutSummaryLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: C.muted,
+        marginBottom: 4,
+    },
+    donutSummaryAmount: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: C.ink,
+        letterSpacing: -0.5,
     },
     legendEmpty: {
         fontSize: 14,
         color: C.muted,
-    },
-    legendRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 7,
+        marginTop: 20,
+        textAlign: 'center',
     },
     legendDot: {
-        width: 9,
-        height: 9,
+        width: 10,
+        height: 10,
         borderRadius: 5,
     },
-    legendName: {
+    categoryList: {
+        marginTop: 20,
+        gap: 8,
+    },
+    categoryRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 13,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#EDF2F7',
+        backgroundColor: '#FAFCFF',
+    },
+    categoryRowSelected: {
+        borderColor: '#A9D9C3',
+        backgroundColor: '#EAF6F0',
+    },
+    categoryRowPressed: {
+        opacity: 0.72,
+    },
+    categoryName: {
         flex: 1,
-        fontSize: 13,
+        fontSize: 14,
+        fontWeight: '600',
         color: C.ink,
     },
-    legendAmount: {
-        fontSize: 13,
+    categoryMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    categoryAmount: {
+        fontSize: 14,
         fontWeight: '700',
         color: C.ink,
     },
-    legendPercent: {
-        width: 36,
+    categoryPercent: {
+        width: 40,
         textAlign: 'right',
         color: C.muted,
         fontSize: 13,

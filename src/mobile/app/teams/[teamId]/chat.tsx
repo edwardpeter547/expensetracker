@@ -9,6 +9,7 @@ import TeamChatScreen from '@/components/teams/TeamChatScreen';
 import { teamDataSource } from '@/contracts';
 import type { Team, TeamChatMessage } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -17,6 +18,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The chat screen or a not-found state.
  */
 const TeamChatRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const [team, setTeam] = useState<Team | null>(null);
     const [messages, setMessages] = useState<TeamChatMessage[]>([]);
@@ -52,7 +54,7 @@ const TeamChatRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Team Chat" subtitle="Group messages" onBack={handleBack}>
+            <PlanningScreen title={t('Team Chat')} subtitle={t('Group messages')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

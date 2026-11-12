@@ -7,6 +7,7 @@
  */
 
 import { membershipDataSource } from '@/contracts';
+import i18n from '@/i18n';
 import type { MembershipSummary } from '@/types/membership';
 import { useEffect, useState } from 'react';
 
@@ -35,7 +36,7 @@ export const useMembership = (): UseMembershipResult => {
                 if (active) setMembership(value);
             })
             .catch(() => {
-                if (active) setError('Membership is unavailable right now.');
+                if (active) setError(i18n.t('Membership is unavailable right now.', { ns: 'profile' }));
             })
             .finally(() => {
                 if (active) setLoading(false);

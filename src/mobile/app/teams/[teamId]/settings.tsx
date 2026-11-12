@@ -10,6 +10,7 @@ import TeamSettingsScreen from '@/components/teams/TeamSettingsScreen';
 import { teamDataSource } from '@/contracts';
 import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { planningColors } from '@/components/planning/planningTheme';
@@ -20,6 +21,7 @@ import { planningColors } from '@/components/planning/planningTheme';
  * @returns {JSX.Element} The settings screen or a not-found state.
  */
 const TeamSettingsRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const [team, setTeam] = useState<Team | null>(null);
     const [loading, setLoading] = useState(true);
@@ -60,9 +62,9 @@ const TeamSettingsRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Team Settings" subtitle="Settings" onBack={goBack}>
+            <PlanningScreen title={t('Team Settings')} subtitle={t('Settings')} onBack={goBack}>
                 <View style={styles.centered}>
-                    <Text style={styles.notFound}>Team not found.</Text>
+                    <Text style={styles.notFound}>{t('Team not found.')}</Text>
                 </View>
             </PlanningScreen>
         );

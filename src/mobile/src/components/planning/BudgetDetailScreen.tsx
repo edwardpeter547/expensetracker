@@ -9,6 +9,7 @@ import type { PlanningBudget } from '@/types/planning';
 import type { PlanningTransactionItem } from '@/utils/planning';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningBarChart,
     PlanningButton,
@@ -18,7 +19,7 @@ import {
     PlanningScreen,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /** Labels for the four weekly spending buckets. */
 const WEEK_LABELS = ['W1', 'W2', 'W3', 'W4'];
@@ -61,8 +62,19 @@ const BudgetDetailScreen = ({
                     <View style={{ flex: 1, gap: 6 }}>
                         <Text style={planningStyles.muted}>{t('Monthly budget')}</Text>
                         <Text style={planningStyles.heading}>
-                            {formatPlanningMoney(budget.spent, language, currency)} /{' '}
-                            {formatPlanningMoney(budget.limit, language, currency)}
+                            <MoneyText
+                                value={budget.spent}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.heading}
+                            />
+                            {' / '}
+                            <MoneyText
+                                value={budget.limit}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.heading}
+                            />
                         </Text>
                     </View>
                 </View>
@@ -70,7 +82,13 @@ const BudgetDetailScreen = ({
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                     <Text style={planningStyles.muted}>{t('{{percent}}% used', {percent: usedPercent})}</Text>
                     <Text style={{ color: planningColors.emerald, fontWeight: '700' }}>
-                        {t('{{amount}} remaining', {amount: formatPlanningMoney(budget.limit - budget.spent, language, currency)})}
+                        <MoneyText
+                            value={budget.limit - budget.spent}
+                            currency={currency}
+                            language={language}
+                            style={{ color: planningColors.emerald, fontWeight: '700', fontSize: 14 }}
+                        />
+                        {' '}{t('remainingLabel')}
                     </Text>
                 </View>
             </PlanningCard>
@@ -98,7 +116,12 @@ const BudgetDetailScreen = ({
                                 <Text style={planningStyles.muted}>{transaction.dateLabel}</Text>
                             </View>
                             <Text style={planningStyles.body}>
-                                −{formatPlanningMoney(transaction.amount, language, currency, 2)}
+                                −<MoneyText
+                                    value={transaction.amount}
+                                    currency={currency}
+                                    language={language}
+                                    style={planningStyles.body}
+                                />
                             </Text>
                         </View>
                     ))

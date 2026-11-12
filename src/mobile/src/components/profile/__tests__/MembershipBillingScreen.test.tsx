@@ -11,6 +11,7 @@ import { Alert, Text } from 'react-native';
 import type { ReactElement } from 'react';
 import type { MembershipSummary } from '@/types/membership';
 import MembershipBillingScreen from '../MembershipBillingScreen';
+import '@/i18n';
 
 jest.mock('@expo/vector-icons', () => {
     const Ionicons = () => null;

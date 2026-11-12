@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
 import { calendarDayDifference } from '@/localization/relative-date';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     ActivityIndicator,
     FlatList,
@@ -58,7 +59,7 @@ export type TransactionItem = {
     categoryName: string;
     kind: TransactionKind;
     amount: string;
-    currencySymbol: string;
+    currency: string;
     occurredAt: string;
     iconName?: keyof typeof Ionicons.glyphMap;
     iconColor?: string;
@@ -417,14 +418,16 @@ export function TransactionsScreen({
                                         </Text>
                                     </View>
                                     <View style={styles.txRight}>
-                                        <Text
+                                        <MoneyText
+                                            value={item.amount}
+                                            currency={item.currency}
+                                            language={i18n.language}
+                                            sign={item.kind === 'income' ? '+' : '-'}
                                             style={[
                                                 styles.txAmount,
                                                 item.kind === 'income' && { color: '#0c9c69' },
                                             ]}
-                                        >
-                                            {`${item.kind === 'income' ? '+' : '-'}${item.currencySymbol}${item.amount}`}
-                                        </Text>
+                                        />
                                         <Text style={styles.txTime}>
                                             {new Date(item.occurredAt).toLocaleTimeString(undefined, {
                                                 hour: 'numeric',

@@ -12,6 +12,7 @@ import type { ReactElement } from 'react';
 import type { MembershipSummary } from '@/types/membership';
 import ProfileHome from '../ProfileHome';
 import { MembershipHeaderBadge } from '../MembershipProfileAdditions';
+import '@/i18n';
 
 jest.mock('@expo/vector-icons', () => {
     const Ionicons = () => null;

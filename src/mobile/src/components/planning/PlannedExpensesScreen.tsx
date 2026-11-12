@@ -10,6 +10,7 @@ import type { PlannedExpense, PlannedExpenseStatus } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningButton,
     PlanningCard,
@@ -20,7 +21,7 @@ import {
     PlanningScreen,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /** Planned-expense filter options, including the supported statuses. */
 type ExpenseFilter = 'All' | PlannedExpenseStatus;
@@ -90,9 +91,12 @@ const PlannedExpensesScreen = ({
                         />
                         <View>
                             <Text style={planningStyles.muted}>{t('Total Planned Expenses')}</Text>
-                            <Text style={planningStyles.large}>
-                                {formatPlanningMoney(total, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={total}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.large}
+                            />
                         </View>
                     </View>
                     <Text style={planningStyles.muted}>{t('upcomingItems', {count: items.length})}</Text>
@@ -147,9 +151,12 @@ const PlannedExpensesScreen = ({
                                 </View>
                             </View>
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                                <Text style={planningStyles.heading}>
-                                    {formatPlanningMoney(item.amount, language, currency)}
-                                </Text>
+                                <MoneyText
+                                    value={item.amount}
+                                    currency={currency}
+                                    language={language}
+                                    style={planningStyles.heading}
+                                />
                                 <Text
                                     style={{
                                         color: item.status === 'Saving'

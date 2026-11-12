@@ -13,9 +13,11 @@ import {
     PlanningScreen,
     planningStyles,
 } from '@/components/planning/PlanningUI';
-import { formatPlanningMoney, planningColors } from '@/components/planning/planningTheme';
+import { planningColors } from '@/components/planning/planningTheme';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { TeamCard } from '@/components/teams/teamsPrimitives';
 import type { Team, TeamPlannedRequest } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -38,6 +40,7 @@ export interface TeamNewRequestScreenProps {
  * @returns {JSX.Element} The new request screen.
  */
 export const TeamNewRequestScreen = ({ team, onBack, onSubmit }: TeamNewRequestScreenProps) => {
+    const { t } = useTranslation('teams');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
@@ -55,36 +58,36 @@ export const TeamNewRequestScreen = ({ team, onBack, onSubmit }: TeamNewRequestS
     };
 
     return (
-        <PlanningScreen title="New Expense Request" subtitle={`${team.name} · pooled`} onBack={onBack}>
+        <PlanningScreen title={t('New Expense Request')} subtitle={t('{{name}} · pooled', { name: team.name })} onBack={onBack}>
             <TeamCard>
                 <PlanningField
-                    label="What do you need to purchase?"
+                    label={t('What do you need to purchase?')}
                     value={name}
                     onChange={setName}
-                    placeholder="e.g. Washing Machine"
+                    placeholder={t('e.g. Washing Machine')}
                 />
                 <PlanningField
-                    label="Description (optional)"
+                    label={t('Description (optional)')}
                     value={description}
                     onChange={setDescription}
-                    placeholder="Why is this needed?"
+                    placeholder={t('Why is this needed?')}
                 />
                 <PlanningField
-                    label="Estimated amount"
+                    label={t('Estimated amount')}
                     value={amount}
                     onChange={setAmount}
                     keyboardType="numeric"
                     placeholder="650"
                 />
                 <PlanningField
-                    label="Planned date (optional)"
+                    label={t('Planned date (optional)')}
                     value={plannedDate}
                     onChange={setPlannedDate}
                     placeholder="YYYY-MM-DD"
                 />
-                <Text style={styles.note}>Submitting a request does not spend team money.</Text>
+                <Text style={styles.note}>{t('Submitting a request does not spend team money.')}</Text>
             </TeamCard>
-            <PlanningButton label="Submit for Approval" onPress={submit} />
+            <PlanningButton label={t('Submit for Approval')} onPress={submit} />
         </PlanningScreen>
     );
 };
@@ -115,17 +118,18 @@ export const TeamRequestDetailScreen = ({
     onReject,
     onComplete,
 }: TeamRequestDetailScreenProps) => {
+    const { t } = useTranslation('teams');
     const [actualAmount, setActualAmount] = useState(
         request.actualAmount !== undefined ? String(request.actualAmount) : String(request.estimatedAmount),
     );
 
     return (
-        <PlanningScreen title="Expense Request" subtitle={request.status} onBack={onBack}>
+        <PlanningScreen title={t('Expense Request')} subtitle={t(request.status)} onBack={onBack}>
             <TeamCard>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                     <Text style={planningStyles.large}>{request.name}</Text>
                     <Text style={[styles.status, { color: statusColor(request.status) }]}>
-                        {request.status}
+                        {t(request.status)}
                     </Text>
                 </View>
 
@@ -134,64 +138,69 @@ export const TeamRequestDetailScreen = ({
                 ) : null}
 
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>Requested by</Text>
+                    <Text style={planningStyles.muted}>{t('Requested by')}</Text>
                     <Text style={planningStyles.body}>{request.requesterName}</Text>
                 </View>
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>Estimated cost</Text>
-                    <Text style={planningStyles.body}>
-                        {formatPlanningMoney(request.estimatedAmount, language, currency)}
-                    </Text>
+                    <Text style={planningStyles.muted}>{t('Estimated cost')}</Text>
+                    <MoneyText
+                        value={request.estimatedAmount}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.body}
+                    />
                 </View>
 
                 {request.status === 'Pending' ? (
                     <>
                         <Text style={styles.note}>
-                            An authorized approver can approve or reject this request.
+                            {t('An authorized approver can approve or reject this request.')}
                         </Text>
-                        <PlanningButton label="Approve" onPress={onApprove} />
-                        <PlanningButton label="Reject" outline onPress={onReject} />
+                        <PlanningButton label={t('Approve')} onPress={onApprove} />
+                        <PlanningButton label={t('Reject')} outline onPress={onReject} />
                     </>
                 ) : null}
 
                 {request.status === 'Approved' ? (
                     <>
                         <Text style={styles.approvedNote}>
-                            Approved; no team money has been deducted.
+                            {t('Approved; no team money has been deducted.')}
                         </Text>
                         <PlanningField
-                            label="Actual amount spent"
+                            label={t('Actual amount spent')}
                             value={actualAmount}
                             onChange={setActualAmount}
                             keyboardType="numeric"
-                            placeholder="Actual amount"
+                            placeholder={t('Actual amount')}
                         />
                         <PlanningButton
-                            label="Mark as Completed"
+                            label={t('Mark as Completed')}
                             onPress={() => {
                                 const numeric = Number(actualAmount);
                                 if (Number.isFinite(numeric) && numeric > 0) onComplete(numeric);
                             }}
                         />
                         <Text style={styles.note}>
-                            Production: requester or an explicitly authorized delegate only.
-                            Attach a receipt through the shared expense flow.
+                            {t('Production: requester or an explicitly authorized delegate only. Attach a receipt through the shared expense flow.')}
                         </Text>
                     </>
                 ) : null}
 
                 {request.status === 'Completed' ? (
                     <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                        <Text style={planningStyles.muted}>Recorded expenditure</Text>
-                        <Text style={planningStyles.body}>
-                            {formatPlanningMoney(request.actualAmount ?? 0, language, currency)}
-                        </Text>
+                        <Text style={planningStyles.muted}>{t('Recorded expenditure')}</Text>
+                        <MoneyText
+                            value={request.actualAmount ?? 0}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.body}
+                        />
                     </View>
                 ) : null}
 
                 {request.status === 'Rejected' || request.status === 'Canceled' ? (
                     <Text style={styles.note}>
-                        Kept in history without recording any expenditure.
+                        {t('Kept in history without recording any expenditure.')}
                     </Text>
                 ) : null}
             </TeamCard>
@@ -199,8 +208,7 @@ export const TeamRequestDetailScreen = ({
             <TeamCard style={styles.infoCard}>
                 <PlanningIcon name="shield-check" color="#315D75" size={20} />
                 <Text style={styles.infoText}>
-                    Approval is not payment. Only completion creates or links an actual team expense,
-                    exactly once.
+                    {t('Approval is not payment. Only completion creates or links an actual team expense, exactly once.')}
                 </Text>
             </TeamCard>
         </PlanningScreen>

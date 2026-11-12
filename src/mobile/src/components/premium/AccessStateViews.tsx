@@ -7,6 +7,7 @@
 
 import { premiumColors } from '@/constants/premiumTheme';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Pressable,
@@ -26,23 +27,26 @@ export interface FeatureAccessLoadingProps {
  * @param {FeatureAccessLoadingProps} props Component props.
  * @returns {JSX.Element} The pending view.
  */
-export const FeatureAccessLoading = ({ onBack }: FeatureAccessLoadingProps) => (
-    <View style={styles.root}>
-        {onBack ? (
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-                onPress={onBack}
-                style={styles.back}
-            >
-                <Ionicons name="chevron-back" size={24} color={premiumColors.text} />
-            </Pressable>
-        ) : null}
-        <ActivityIndicator size="large" color={premiumColors.emerald} />
-        <Text style={styles.title}>Checking access…</Text>
-        <Text style={styles.body}>We&apos;re confirming what is included in your plan.</Text>
-    </View>
-);
+export const FeatureAccessLoading = ({ onBack }: FeatureAccessLoadingProps) => {
+    const { t } = useTranslation('profile');
+    return (
+        <View style={styles.root}>
+            {onBack ? (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Back')}
+                    onPress={onBack}
+                    style={styles.back}
+                >
+                    <Ionicons name="chevron-back" size={24} color={premiumColors.text} />
+                </Pressable>
+            ) : null}
+            <ActivityIndicator size="large" color={premiumColors.emerald} />
+            <Text style={styles.title}>{t('Checking access…')}</Text>
+            <Text style={styles.body}>{t("We're confirming what is included in your plan.")}</Text>
+        </View>
+    );
+};
 
 /** Props for the unavailable state. */
 export interface FeatureAccessUnavailableProps {
@@ -63,35 +67,38 @@ export const FeatureAccessUnavailable = ({
     onRetry,
     onBack,
     reason,
-}: FeatureAccessUnavailableProps) => (
-    <View style={styles.root}>
-        {onBack ? (
+}: FeatureAccessUnavailableProps) => {
+    const { t } = useTranslation('profile');
+    return (
+        <View style={styles.root}>
+            {onBack ? (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Back')}
+                    onPress={onBack}
+                    style={styles.back}
+                >
+                    <Ionicons name="chevron-back" size={24} color={premiumColors.text} />
+                </Pressable>
+            ) : null}
+            <View style={styles.badge}>
+                <Ionicons name="cloud-offline-outline" size={24} color={premiumColors.textSecondary} />
+            </View>
+            <Text style={styles.title}>{t("We couldn't check access")}</Text>
+            <Text style={styles.body}>
+                {reason ?? t('Please check your connection and try again.')}
+            </Text>
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Back"
-                onPress={onBack}
-                style={styles.back}
+                accessibilityLabel={t('Retry')}
+                onPress={onRetry}
+                style={styles.retry}
             >
-                <Ionicons name="chevron-back" size={24} color={premiumColors.text} />
+                <Text style={styles.retryText}>{t('Try Again')}</Text>
             </Pressable>
-        ) : null}
-        <View style={styles.badge}>
-            <Ionicons name="cloud-offline-outline" size={24} color={premiumColors.textSecondary} />
         </View>
-        <Text style={styles.title}>We couldn&apos;t check access</Text>
-        <Text style={styles.body}>
-            {reason ?? 'Please check your connection and try again.'}
-        </Text>
-        <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Retry"
-            onPress={onRetry}
-            style={styles.retry}
-        >
-            <Text style={styles.retryText}>Try Again</Text>
-        </Pressable>
-    </View>
-);
+    );
+};
 
 /** Shared pending/unavailable styles. */
 const styles = StyleSheet.create({

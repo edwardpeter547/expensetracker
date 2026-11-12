@@ -19,6 +19,7 @@ const messages: MessageCatalogue = {
     "TEAM FINANCE": { "en": "TEAM FINANCE", "fr": "FINANCES D'ÉQUIPE" },
     "Total Spending": { "en": "Total Spending", "fr": "Dépenses totales" },
     "Open AI chat": { "en": "Open AI chat", "fr": "Ouvrir le chat IA" },
+    "Credit Score": { "en": "Credit Score", "fr": "Pointage de crédit" },
     "Select period": { "en": "Select period", "fr": "Sélectionner une période" },
     "Close period picker": { "en": "Close period picker", "fr": "Fermer le sélecteur de période" },
     "Quick ranges": { "en": "Quick ranges", "fr": "Périodes rapides" },

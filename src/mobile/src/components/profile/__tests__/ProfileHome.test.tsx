@@ -10,6 +10,7 @@ import { act, create } from 'react-test-renderer';
 import { ActivityIndicator, Text } from 'react-native';
 import type { ReactElement } from 'react';
 import ProfileHome, { type ProfileIdentity } from '../ProfileHome';
+import '@/i18n';
 
 jest.mock('@expo/vector-icons', () => {
     const Ionicons = () => null;

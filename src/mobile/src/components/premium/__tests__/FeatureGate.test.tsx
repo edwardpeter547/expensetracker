@@ -14,6 +14,7 @@ import {
 import type { FeatureKey } from '@/types/featureAccess';
 import { act, create } from 'react-test-renderer';
 import { Pressable, Text, View } from 'react-native';
+import '@/i18n';
 
 jest.mock('expo-constants', () => ({
     __esModule: true,

@@ -236,7 +236,7 @@ export const PlanningStat = ({
     color = planningColors.text,
 }: {
     label: string;
-    value: string;
+    value: React.ReactNode;
     color?: string;
 }) => (
     <View style={styles.stat}>

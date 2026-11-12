@@ -7,6 +7,7 @@ import { TeamActivityScreen } from '@/components/teams/TeamActivityAndBreakdown'
 import { teamDataSource } from '@/contracts';
 import type { Team, TeamActivity } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -15,6 +16,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The activity screen or a not-found state.
  */
 const TeamActivityRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const [team, setTeam] = useState<Team | null>(null);
     const [activity, setActivity] = useState<TeamActivity[]>([]);
@@ -50,7 +52,7 @@ const TeamActivityRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Team Activity" subtitle="Audit history" onBack={handleBack}>
+            <PlanningScreen title={t('Team Activity')} subtitle={t('Audit history')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

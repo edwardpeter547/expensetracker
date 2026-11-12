@@ -10,6 +10,7 @@ import type { PlanningCashFlowSeries, PlanningCashMovement } from '@/types/plann
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import PlanningDualLineChart from './PlanningDualLineChart';
 import {
     PlanningCard,
@@ -18,7 +19,7 @@ import {
     PlanningScreen,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /**
  * Render the Cash Flow screen.
@@ -72,9 +73,12 @@ const CashFlowScreen = ({
                         size={38}
                     />
                 </View>
-                <Text style={planningStyles.large}>
-                    {formatPlanningMoney(2840, language, currency, 2)}
-                </Text>
+                <MoneyText
+                    value={2840}
+                    currency={currency}
+                    language={language}
+                    style={planningStyles.large}
+                />
                 <Text style={{ color: planningColors.emerald, fontSize: 12, fontWeight: '700' }}>
                     {t('Estimated end-of-month balance')}
                 </Text>
@@ -95,9 +99,12 @@ const CashFlowScreen = ({
                         size={38}
                     />
                     <Text style={planningStyles.muted}>{t('Expected Inflows')}</Text>
-                    <Text style={planningStyles.heading}>
-                        {formatPlanningMoney(inflows, language, currency)}
-                    </Text>
+                    <MoneyText
+                        value={inflows}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.heading}
+                    />
                 </PlanningCard>
                 <PlanningCard style={{ flex: 1 }}>
                     <PlanningIconTile
@@ -107,9 +114,12 @@ const CashFlowScreen = ({
                         size={38}
                     />
                     <Text style={planningStyles.muted}>{t('Expected Outflows')}</Text>
-                    <Text style={planningStyles.heading}>
-                        {formatPlanningMoney(Math.abs(outflows), language, currency)}
-                    </Text>
+                    <MoneyText
+                        value={Math.abs(outflows)}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.heading}
+                    />
                 </PlanningCard>
             </View>
 
@@ -127,15 +137,16 @@ const CashFlowScreen = ({
                             <Text style={planningStyles.body}>{movement.name}</Text>
                             <Text style={planningStyles.muted}>{movement.date}</Text>
                         </View>
-                        <Text
+                        <MoneyText
+                            value={Math.abs(movement.amount)}
+                            currency={currency}
+                            language={language}
+                            sign={movement.amount >= 0 ? '+' : '−'}
                             style={[
                                 planningStyles.body,
                                 { color: movement.amount >= 0 ? planningColors.emerald : planningColors.text },
                             ]}
-                        >
-                            {movement.amount >= 0 ? '+' : '−'}
-                            {formatPlanningMoney(Math.abs(movement.amount), language, currency)}
-                        </Text>
+                        />
                     </View>
                 ))}
             </PlanningCard>

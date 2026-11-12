@@ -14,9 +14,11 @@ import {
     PlanningScreen,
     planningStyles,
 } from '@/components/planning/PlanningUI';
-import { formatPlanningMoney, planningColors } from '@/components/planning/planningTheme';
+import { planningColors } from '@/components/planning/planningTheme';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { TeamCard, TeamSelectChips } from '@/components/teams/teamsPrimitives';
 import type { Team, TeamPlannedRequest } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -61,6 +63,7 @@ const TeamPlannedExpensesScreen = ({
     onOpenRequest,
     onRecordExpense,
 }: TeamPlannedExpensesScreenProps) => {
+    const { t } = useTranslation('teams');
     const [filter, setFilter] = useState<RequestFilter>('All');
     const pooled = team.mode === 'POOLED';
 
@@ -81,29 +84,36 @@ const TeamPlannedExpensesScreen = ({
         .reduce((sum, request) => sum + request.estimatedAmount, 0);
 
     return (
-        <PlanningScreen title="Planned Expenses" subtitle={`${team.name} · ${team.kind}`} onBack={onBack}>
+        <PlanningScreen title={t('Planned Expenses')} subtitle={t('{{name}} · {{kind}}', { name: team.name, kind: t(team.kind) })} onBack={onBack}>
             {pooled ? (
                 <>
                     <View style={styles.summaryRow}>
                         <TeamCard style={styles.summaryCard}>
-                            <Text style={planningStyles.muted}>Awaiting Approval</Text>
+                            <Text style={planningStyles.muted}>{t('Awaiting Approval')}</Text>
                             <Text style={planningStyles.large}>{pendingCount}</Text>
-                            <Text style={styles.warnText}>Needs review</Text>
+                            <Text style={styles.warnText}>{t('Needs review')}</Text>
                         </TeamCard>
                         <TeamCard style={styles.summaryCard}>
-                            <Text style={planningStyles.muted}>Approved, Not Spent</Text>
-                            <Text style={planningStyles.large}>
-                                {formatPlanningMoney(approvedNotSpent, language, currency)}
-                            </Text>
-                            <Text style={styles.blueText}>Pending completion</Text>
+                            <Text style={planningStyles.muted}>{t('Approved, Not Spent')}</Text>
+                            <MoneyText
+                                value={approvedNotSpent}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.large}
+                            />
+                            <Text style={styles.blueText}>{t('Pending completion')}</Text>
                         </TeamCard>
                     </View>
 
-                    <TeamSelectChips options={REQUEST_FILTERS} value={filter} onChange={setFilter} />
+                    <TeamSelectChips
+                        options={REQUEST_FILTERS.map((value) => ({ value, label: t(value) }))}
+                        value={filter}
+                        onChange={setFilter}
+                    />
 
                     {visibleRequests.length === 0 ? (
                         <TeamCard>
-                            <Text style={planningStyles.body}>No matching requests.</Text>
+                            <Text style={planningStyles.body}>{t('No matching requests.')}</Text>
                         </TeamCard>
                     ) : (
                         visibleRequests.map((request) => (
@@ -124,28 +134,29 @@ const TeamPlannedExpensesScreen = ({
                                         <View style={{ flex: 1, gap: 4 }}>
                                             <Text style={planningStyles.body}>{request.name}</Text>
                                             <Text style={planningStyles.muted}>
-                                                Requested by {request.requesterName}
+                                                {t('Requested by {{name}}', { name: request.requesterName })}
                                             </Text>
                                         </View>
                                         <PlanningIcon name="chevron-right" color={planningColors.muted} />
                                     </View>
                                     <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                                        <Text style={planningStyles.body}>
-                                            {formatPlanningMoney(
+                                        <MoneyText
+                                            value={
                                                 request.status === 'Completed'
                                                     ? (request.actualAmount ?? 0)
-                                                    : request.estimatedAmount,
-                                                language,
-                                                currency,
-                                            )}
-                                        </Text>
+                                                    : request.estimatedAmount
+                                            }
+                                            currency={currency}
+                                            language={language}
+                                            style={planningStyles.body}
+                                        />
                                         <Text
                                             style={[
                                                 styles.statusText,
                                                 { color: requestStatusColor(request.status) },
                                             ]}
                                         >
-                                            {request.status}
+                                            {t(request.status)}
                                         </Text>
                                     </View>
                                 </TeamCard>
@@ -153,56 +164,56 @@ const TeamPlannedExpensesScreen = ({
                         ))
                     )}
 
-                    <PlanningButton label="Request Planned Expense" onPress={onNewRequest} />
+                    <PlanningButton label={t('Request Planned Expense')} onPress={onNewRequest} />
 
                     <TeamCard style={styles.infoCard}>
                         <PlanningIcon name="shield-check" color="#315D75" size={20} />
-                        <Text style={styles.infoTitle}>Approval is not payment</Text>
+                        <Text style={styles.infoTitle}>{t('Approval is not payment')}</Text>
                         <Text style={styles.infoText}>
-                            Approved requests remain planned until the requester confirms actual
-                            expenditure. Only completion creates a recorded expense.
+                            {t('Approved requests remain planned until the requester confirms actual expenditure. Only completion creates a recorded expense.')}
                         </Text>
                     </TeamCard>
                 </>
             ) : (
                 <>
                     <TeamCard>
-                        <Text style={planningStyles.muted}>Upcoming Planned Purchases</Text>
-                        <Text style={planningStyles.large}>
-                            {formatPlanningMoney(
-                                INDEPENDENT_PLANS.reduce((sum, plan) => sum + plan.amount, 0),
-                                language,
-                                currency,
-                            )}
-                        </Text>
+                        <Text style={planningStyles.muted}>{t('Upcoming Planned Purchases')}</Text>
+                        <MoneyText
+                            value={INDEPENDENT_PLANS.reduce((sum, plan) => sum + plan.amount, 0)}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.large}
+                        />
                         {INDEPENDENT_PLANS.map((plan) => (
                             <View key={plan.id} style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                                 <View style={{ flex: 1 }}>
                                     <Text style={planningStyles.body}>{plan.name}</Text>
                                     <Text style={planningStyles.muted}>{plan.date}</Text>
                                 </View>
-                                <Text style={planningStyles.body}>
-                                    {formatPlanningMoney(plan.amount, language, currency)}
-                                </Text>
+                                <MoneyText
+                                    value={plan.amount}
+                                    currency={currency}
+                                    language={language}
+                                    style={planningStyles.body}
+                                />
                             </View>
                         ))}
                     </TeamCard>
 
                     <TeamCard style={styles.infoCard}>
                         <PlanningIcon name="shield-check" color="#315D75" size={20} />
-                        <Text style={styles.infoTitle}>No approval required</Text>
+                        <Text style={styles.infoTitle}>{t('No approval required')}</Text>
                         <Text style={styles.infoText}>
-                            Members may plan purchases or record expenses directly. Planned
-                            amounts are not money already spent.
+                            {t('Members may plan purchases or record expenses directly. Planned amounts are not money already spent.')}
                         </Text>
                     </TeamCard>
 
-                    <PlanningButton label="Record Team Expense" onPress={onRecordExpense} />
+                    <PlanningButton label={t('Record Team Expense')} onPress={onRecordExpense} />
                 </>
             )}
 
             <Text style={styles.note}>
-                Preview data only — requests and planned purchases are not persisted.
+                {t('Preview data only — requests and planned purchases are not persisted.')}
             </Text>
         </PlanningScreen>
     );

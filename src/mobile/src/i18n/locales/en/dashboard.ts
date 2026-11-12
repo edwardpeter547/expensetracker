@@ -14,6 +14,7 @@ export default {
     teamFinance: 'TEAM FINANCE',
     totalSpending: 'Total Spending',
     openChat: 'Open AI chat',
+    creditScoreLabel: 'Credit Score',
     selectPeriod: 'Select period',
     closePeriod: 'Close period picker',
     quickRanges: 'Quick ranges',

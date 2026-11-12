@@ -7,6 +7,7 @@ import { TeamNewRequestScreen } from '@/components/teams/TeamRequestScreens';
 import { teamDataSource } from '@/contracts';
 import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -15,6 +16,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The new request screen or a not-found state.
  */
 const TeamNewRequestRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const [team, setTeam] = useState<Team | null>(null);
 
@@ -46,7 +48,7 @@ const TeamNewRequestRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="New Expense Request" subtitle="Pooled planned expense" onBack={handleBack}>
+            <PlanningScreen title={t('New Expense Request')} subtitle={t('Pooled planned expense')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

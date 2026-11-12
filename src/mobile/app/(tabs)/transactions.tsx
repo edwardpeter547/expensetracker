@@ -24,7 +24,7 @@ import {
     transactionColors,
 } from '@/constants/transactionsTheme';
 import type { TransactionRecord } from '@/types/transaction';
-import { currencySymbol, transactionTitle } from '@/utils/transactions';
+import { transactionTitle } from '@/utils/transactions';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -60,7 +60,7 @@ const mapTransaction = (
         categoryName: record.category,
         kind,
         amount: String(record.amount).replace(/^-/, ''),
-        currencySymbol: currencySymbol(language, currency),
+        currency,
         occurredAt: record.transactionDate,
         iconName: categoryIconName(category, kind),
         iconColor: categoryIconColor(category, kind),

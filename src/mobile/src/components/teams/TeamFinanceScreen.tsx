@@ -13,9 +13,11 @@ import {
     PlanningScreen,
     planningStyles,
 } from '@/components/planning/PlanningUI';
-import { formatPlanningMoney, planningColors } from '@/components/planning/planningTheme';
+import { planningColors } from '@/components/planning/planningTheme';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { TeamCard } from '@/components/teams/teamsPrimitives';
 import type { Team } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 /** Supported team finance pages. */
@@ -65,19 +67,31 @@ const TeamFinanceScreen = ({
     language,
     onBack,
 }: TeamFinanceScreenProps) => {
+    const { t } = useTranslation('teams');
     const pooled = team.mode === 'POOLED';
     const pageTitle = PAGE_TITLES[page];
 
     return (
-        <PlanningScreen title={pageTitle} subtitle={`${team.name} only`} onBack={onBack}>
+        <PlanningScreen title={t(pageTitle)} subtitle={t('{{name}} only', { name: team.name })} onBack={onBack}>
             {page === 'budgets' ? (
                 <TeamCard>
                     <Text style={planningStyles.muted}>
-                        {pooled ? 'Pooled fund allocation' : 'Shared spending target'}
+                        {pooled ? t('Pooled fund allocation') : t('Shared spending target')}
                     </Text>
                     <Text style={planningStyles.large}>
-                        {formatPlanningMoney(team.spent, language, currency)} /{' '}
-                        {formatPlanningMoney(team.budgetTarget, language, currency)}
+                        <MoneyText
+                            value={team.spent}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.large}
+                        />
+                        {' / '}
+                        <MoneyText
+                            value={team.budgetTarget}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.large}
+                        />
                     </Text>
                     <PlanningProgress
                         value={team.budgetTarget > 0 ? Math.round((team.spent / team.budgetTarget) * 100) : 0}
@@ -88,8 +102,19 @@ const TeamFinanceScreen = ({
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                                 <Text style={planningStyles.body}>{row.name}</Text>
                                 <Text style={planningStyles.muted}>
-                                    {formatPlanningMoney(row.spent, language, currency)} /{' '}
-                                    {formatPlanningMoney(row.limit, language, currency)}
+                                    <MoneyText
+                                        value={row.spent}
+                                        currency={currency}
+                                        language={language}
+                                        style={planningStyles.muted}
+                                    />
+                                    {' / '}
+                                    <MoneyText
+                                        value={row.limit}
+                                        currency={currency}
+                                        language={language}
+                                        style={planningStyles.muted}
+                                    />
                                 </Text>
                             </View>
                             <PlanningProgress value={Math.round((row.spent / row.limit) * 100)} color={row.color} />
@@ -105,15 +130,26 @@ const TeamFinanceScreen = ({
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                                 <Text style={planningStyles.body}>{goal.name}</Text>
                                 <Text style={planningStyles.muted}>
-                                    {formatPlanningMoney(goal.saved, language, currency)} of{' '}
-                                    {formatPlanningMoney(goal.target, language, currency)}
+                                    <MoneyText
+                                        value={goal.saved}
+                                        currency={currency}
+                                        language={language}
+                                        style={planningStyles.muted}
+                                    />
+                                    {' '}{t('ofLabel')}{' '}
+                                    <MoneyText
+                                        value={goal.target}
+                                        currency={currency}
+                                        language={language}
+                                        style={planningStyles.muted}
+                                    />
                                 </Text>
                             </View>
                             <PlanningProgress value={Math.round((goal.saved / goal.target) * 100)} color={goal.color} />
                         </View>
                     ))}
                     <Text style={styles.note}>
-                        Team goals are tracked intentions. AuditWallet does not move or hold savings.
+                        {t('Team goals are tracked intentions. AuditWallet does not move or hold savings.')}
                     </Text>
                 </TeamCard>
             ) : null}
@@ -125,21 +161,26 @@ const TeamFinanceScreen = ({
                         color={planningColors.purple}
                         bg={planningColors.purpleLight}
                     />
-                    <Text style={planningStyles.large}>
-                        {formatPlanningMoney(team.spent, language, currency)}
-                    </Text>
-                    <Text style={planningStyles.muted}>Team spending this month</Text>
+                    <MoneyText
+                        value={team.spent}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.large}
+                    />
+                    <Text style={planningStyles.muted}>{t('Team spending this month')}</Text>
                     {DEMO_BUDGET_ROWS.map((row) => (
                         <View key={row.name} style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                             <Text style={planningStyles.body}>{row.name}</Text>
-                            <Text style={planningStyles.muted}>
-                                {formatPlanningMoney(row.spent, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={row.spent}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.muted}
+                            />
                         </View>
                     ))}
                     <Text style={styles.note}>
-                        Production insights will break down by category, period, and member using
-                        team-scoped records only.
+                        {t('Production insights will break down by category, period, and member using team-scoped records only.')}
                     </Text>
                 </TeamCard>
             ) : null}
@@ -147,21 +188,27 @@ const TeamFinanceScreen = ({
             {page === 'monthly-plan' ? (
                 <TeamCard>
                     <Text style={planningStyles.muted}>
-                        {pooled ? 'Team allocation for the month' : 'Shared spending target for the month'}
+                        {pooled ? t('Team allocation for the month') : t('Shared spending target for the month')}
                     </Text>
-                    <Text style={planningStyles.large}>
-                        {formatPlanningMoney(team.budgetTarget, language, currency)}
-                    </Text>
+                    <MoneyText
+                        value={team.budgetTarget}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.large}
+                    />
                     {DEMO_BUDGET_ROWS.map((row) => (
                         <View key={row.name} style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                             <Text style={planningStyles.body}>{row.name}</Text>
-                            <Text style={planningStyles.muted}>
-                                {formatPlanningMoney(row.limit, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={row.limit}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.muted}
+                            />
                         </View>
                     ))}
                     <Text style={styles.note}>
-                        Allocations are plans, not actual cash movement.
+                        {t('Allocations are plans, not actual cash movement.')}
                     </Text>
                 </TeamCard>
             ) : null}
@@ -170,28 +217,34 @@ const TeamFinanceScreen = ({
                 <TeamCard>
                     <Text style={planningStyles.muted}>
                         {pooled
-                            ? 'Recorded fund outflows and projected commitments'
-                            : 'Aggregate member spending activity'}
+                            ? t('Recorded fund outflows and projected commitments')
+                            : t('Aggregate member spending activity')}
                     </Text>
-                    <Text style={planningStyles.large}>
-                        {formatPlanningMoney(team.spent, language, currency)}
-                    </Text>
+                    <MoneyText
+                        value={team.spent}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.large}
+                    />
                     {DEMO_BUDGET_ROWS.map((row) => (
                         <View key={row.name} style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                             <Text style={planningStyles.body}>{row.name}</Text>
-                            <Text style={planningStyles.muted}>
-                                {formatPlanningMoney(row.spent, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={row.spent}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.muted}
+                            />
                         </View>
                     ))}
                     <Text style={styles.note}>
-                        Planned costs are shown separately from actual cash movement.
+                        {t('Planned costs are shown separately from actual cash movement.')}
                     </Text>
                 </TeamCard>
             ) : null}
 
             <Text style={styles.note}>
-                Preview data — not connected to the backend. Team records are demo-only.
+                {t('Preview data — not connected to the backend. Team records are demo-only.')}
             </Text>
         </PlanningScreen>
     );

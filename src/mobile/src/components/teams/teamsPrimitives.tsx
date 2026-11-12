@@ -10,6 +10,7 @@ import { PlanningCard } from '@/components/planning/PlanningUI';
 import { planningColors } from '@/components/planning/planningTheme';
 import { teamModeShort } from '@/components/teams/teamPresentation';
 import type { FinanceMode } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ReactNode } from 'react';
 
@@ -42,6 +43,7 @@ export interface ModeBadgeProps {
  * @returns {JSX.Element} The badge.
  */
 export const ModeBadge = ({ mode }: ModeBadgeProps) => {
+    const { t } = useTranslation('teams');
     const pooled = mode === 'POOLED';
     return (
         <View
@@ -56,15 +58,21 @@ export const ModeBadge = ({ mode }: ModeBadgeProps) => {
                     { color: pooled ? planningColors.emerald : planningColors.blue },
                 ]}
             >
-                {teamModeShort(mode)}
+                {t(teamModeShort(mode))}
             </Text>
         </View>
     );
 };
 
 /** Props for the single-select chip row. */
+export interface TeamSelectChipOption<T extends string> {
+    value: T;
+    label: string;
+}
+
+/** Props for the single-select chip row. */
 export interface TeamSelectChipsProps<T extends string> {
-    options: readonly T[];
+    options: readonly TeamSelectChipOption<T>[];
     value: T;
     onChange: (value: T) => void;
 }
@@ -83,13 +91,13 @@ export const TeamSelectChips = <T extends string>({
 }: TeamSelectChipsProps<T>) => (
     <View style={styles.chips}>
         {options.map((option) => {
-            const active = option === value;
+            const active = option.value === value;
             return (
                 <Pressable
-                    key={option}
+                    key={option.value}
                     accessibilityRole="button"
-                    accessibilityLabel={option}
-                    onPress={() => onChange(option)}
+                    accessibilityLabel={option.label}
+                    onPress={() => onChange(option.value)}
                     style={[styles.chip, active && styles.chipActive]}
                 >
                     <Text
@@ -99,7 +107,7 @@ export const TeamSelectChips = <T extends string>({
                             active && styles.chipTextActive,
                         ]}
                     >
-                        {option}
+                        {option.label}
                     </Text>
                 </Pressable>
             );

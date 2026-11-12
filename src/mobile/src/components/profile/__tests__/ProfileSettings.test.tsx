@@ -15,6 +15,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useAppLock } from '@/contexts/AppLockContext';
 import useTheme from '@/hooks/useTheme';
 import ProfileSettings, { type ProfileSection } from '../ProfileSettings';
+import i18n from '@/i18n';
 
 jest.mock('@/hooks/useAuth', () => ({ useAuth: jest.fn() }));
 jest.mock('@/hooks/useTheme', () => ({ __esModule: true, default: jest.fn() }));
@@ -165,7 +166,8 @@ const renderSection = (section: ProfileSection): ReturnType<typeof create> => {
 };
 
 describe('ProfileSettings', () => {
-    afterEach(() => {
+    afterEach(async () => {
+        await i18n.changeLanguage('en');
         jest.clearAllMocks();
     });
 
@@ -185,6 +187,17 @@ describe('ProfileSettings', () => {
         expect(text).toContain('Push Notifications');
         expect(text).toContain('Budget Alerts');
         expect(text).toContain('Switches are local UI previews and are not saved to your account.');
+    });
+
+    test('renders French notification preferences after switching language', async () => {
+        await i18n.changeLanguage('fr');
+        const tree = renderSection('notifications');
+        const text = allText(tree);
+
+        expect(text).toContain('Alertes financières');
+        expect(text).toContain('Notifications push');
+        expect(text).toContain('Alertes de budget');
+        expect(text).toContain('Les interrupteurs sont des aperçus locaux et ne sont pas enregistrés sur votre compte.');
     });
 
     test('renders biometric login, biometric app lock, and two-factor controls', () => {

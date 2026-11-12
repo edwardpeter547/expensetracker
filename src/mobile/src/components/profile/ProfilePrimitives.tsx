@@ -13,6 +13,7 @@ import { Image as ExpoImage } from 'expo-image';
 import type { ProfileAvatar as ProfileAvatarDto } from '@/types/profile';
 import { profileTheme as t } from '@/constants/profileTheme';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Pressable,
     StyleSheet,
@@ -160,17 +161,20 @@ export const PrimaryButton = ({
     onPress: () => void;
     disabled?: boolean;
     loading?: boolean;
-}) => (
-    <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={title}
-        disabled={disabled || loading}
-        onPress={onPress}
-        style={[styles.primary, (disabled || loading) && styles.primaryDisabled]}
-    >
-        <Text style={styles.primaryText}>{loading ? 'Working…' : title}</Text>
-    </Pressable>
-);
+}) => {
+    const { t: tt } = useTranslation('profile');
+    return (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={title}
+            disabled={disabled || loading}
+            onPress={onPress}
+            style={[styles.primary, (disabled || loading) && styles.primaryDisabled]}
+        >
+            <Text style={styles.primaryText}>{loading ? tt('Working…') : title}</Text>
+        </Pressable>
+    );
+};
 
 /**
  * Render a settings row ending in a switch.
@@ -239,7 +243,7 @@ export const EmptyState = ({
  * Render a segmented control with equal-width options.
  *
  * @param {object} props Component props.
- * @param {readonly string[]} props.options The segment labels.
+ * @param {readonly {value: string; label: string}[]} props.options The segments.
  * @param {string} props.value The selected option.
  * @param {(value: string) => void} props.onChange Selection handler.
  * @returns {JSX.Element} The segmented control.
@@ -249,23 +253,23 @@ export const SegmentedControl = ({
     value,
     onChange,
 }: {
-    options: readonly string[];
+    options: readonly { value: string; label: string }[];
     value: string;
     onChange: (value: string) => void;
 }) => (
     <View style={styles.segment}>
         {options.map((option) => {
-            const active = option === value;
+            const active = option.value === value;
             return (
                 <Pressable
-                    key={option}
+                    key={option.value}
                     accessibilityRole="button"
-                    accessibilityLabel={option}
-                    onPress={() => onChange(option)}
+                    accessibilityLabel={option.label}
+                    onPress={() => onChange(option.value)}
                     style={[styles.segmentItem, active && styles.segmentActive]}
                 >
                     <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                        {option}
+                        {option.label}
                     </Text>
                 </Pressable>
             );
@@ -299,6 +303,7 @@ export const ProfileAvatar = ({
     size?: number;
 }) => {
     const [imageFailed, setImageFailed] = React.useState(false);
+    const { t: tt } = useTranslation('profile');
     const dto = avatar && typeof avatar === 'object' ? avatar : null;
     const initials = dto?.initials
         || `${firstname?.charAt(0) ?? ''}${lastname?.charAt(0) ?? ''}`.toUpperCase()
@@ -314,7 +319,7 @@ export const ProfileAvatar = ({
         >
             {showImage ? (
                 <ExpoImage
-                    accessibilityLabel="Profile photo"
+                    accessibilityLabel={tt('Profile photo')}
                     source={{
                         uri: dto?.url ?? '',
                         headers: accessToken

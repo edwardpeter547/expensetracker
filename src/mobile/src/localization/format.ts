@@ -60,6 +60,27 @@ export const decimalSeparatorForLocale = (locale: string): string => {
 };
 
 /**
+ * Currency symbols that must be pinned to their common glyph even when a
+ * runtime's `Intl` implementation falls back to the ISO code.
+ */
+const CURRENCY_SYMBOL_OVERRIDES: Record<string, string> = {
+    NGN: '₦',
+};
+
+/**
+ * Replace an ISO currency code emitted by `Intl` with its preferred glyph.
+ *
+ * @param {string} formatted The currency-formatted string.
+ * @param {string} currency The ISO 4217 currency code.
+ * @returns {string} The formatted string with the preferred symbol.
+ */
+const applyCurrencySymbolOverride = (formatted: string, currency: string): string => {
+    const symbol = CURRENCY_SYMBOL_OVERRIDES[currency];
+    if (!symbol || !formatted.includes(currency)) return formatted;
+    return formatted.split(currency).join(symbol);
+};
+
+/**
  * Parse a user-entered money value into a canonical decimal string.
  *
  * @param {string} raw The raw input string.
@@ -125,11 +146,85 @@ export const formatMoney = (
     currency: string,
     maxFractionDigits = 2,
 ): string => {
-    return new Intl.NumberFormat(language, {
+    const formatted = new Intl.NumberFormat(language, {
         style: 'currency',
         currency,
         currencyDisplay: 'narrowSymbol',
         minimumFractionDigits: maxFractionDigits,
         maximumFractionDigits: maxFractionDigits,
     }).format(Number(amount));
+    return applyCurrencySymbolOverride(formatted, currency);
+};
+
+/**
+ * Parts of a formatted currency amount split around the decimal separator.
+ *
+ * `prefix` holds everything before the decimal separator (sign, symbol, and
+ * grouped integer), `fraction` holds the separator and following digits, and
+ * `suffix` holds any trailing parts such as a postfixed currency symbol.
+ */
+export interface SplitMoneyParts {
+    prefix: string;
+    fraction: string;
+    suffix: string;
+}
+
+/**
+ * Format and split a currency amount into prefix, fraction, and suffix parts.
+ *
+ * The split uses only `Intl.NumberFormat.format`, which is available on both
+ * Hermes iOS and Android. It derives the locale decimal separator from a
+ * decimal-only formatting of the same amount, then slices the currency string
+ * around that separator so the symbol position (prefix or suffix) is kept.
+ *
+ * @param {string|number} amount The canonical amount.
+ * @param {string} language The display language.
+ * @param {string} currency The ISO 4217 currency code.
+ * @param {number} [maxFractionDigits=2] Displayed fraction digits.
+ * @returns {SplitMoneyParts} The prefix, fraction, and suffix parts.
+ */
+export const splitFormattedMoney = (
+    amount: string | number,
+    language: string,
+    currency: string,
+    maxFractionDigits = 2,
+): SplitMoneyParts => {
+    const numeric = Number(amount);
+    const currencyFormat = new Intl.NumberFormat(language, {
+        style: 'currency',
+        currency,
+        currencyDisplay: 'narrowSymbol',
+        minimumFractionDigits: maxFractionDigits,
+        maximumFractionDigits: maxFractionDigits,
+    });
+    const full = applyCurrencySymbolOverride(currencyFormat.format(numeric), currency);
+
+    if (!Number.isFinite(maxFractionDigits) || maxFractionDigits <= 0) {
+        return { prefix: full, fraction: '', suffix: '' };
+    }
+
+    let fractionDigits: string;
+    try {
+        const decimalFormat = new Intl.NumberFormat(language, {
+            style: 'decimal',
+            minimumFractionDigits: maxFractionDigits,
+            maximumFractionDigits: maxFractionDigits,
+        }).format(numeric);
+        fractionDigits = decimalFormat.slice(-maxFractionDigits);
+    } catch {
+        // Hermes fallback: leave the amount whole rather than risk a crash.
+        return { prefix: full, fraction: '', suffix: '' };
+    }
+
+    const fractionStart = full.lastIndexOf(fractionDigits);
+    if (fractionStart < 0) {
+        return { prefix: full, fraction: '', suffix: '' };
+    }
+
+    const separatorStart = fractionStart - 1;
+    return {
+        prefix: full.slice(0, separatorStart),
+        fraction: full.slice(separatorStart, fractionStart + maxFractionDigits),
+        suffix: full.slice(fractionStart + maxFractionDigits),
+    };
 };

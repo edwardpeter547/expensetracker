@@ -6,7 +6,7 @@
  * savings rate) fills the right-hand column.
  */
 
-import { formatMoney } from '@/localization/format';
+import { MoneyText } from '@/components/ui/MoneyText';
 import type { SpendingTrendPoint } from '@/types/dashboard';
 import { fromScaledInteger, toScaledInteger } from '@/utils/money';
 import { StyleSheet, Text, View } from 'react-native';
@@ -180,14 +180,12 @@ const SpendingTrend = ({
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryCell}>
                             <Text style={styles.statLabel}>{t('Avg income')}</Text>
-                            <Text style={styles.statValue}>
-                                {formatMoney(
-                                    averageMoney(points.map((point) => point.income)),
-                                    language,
-                                    currency,
-                                    0,
-                                )}
-                            </Text>
+                            <MoneyText
+                                value={averageMoney(points.map((point) => point.income))}
+                                currency={currency}
+                                language={language}
+                                style={styles.statValue}
+                            />
                         </View>
                         <View style={[styles.summaryCell, styles.summaryCellRight]}>
                             <Text style={[styles.statLabel, styles.statTextRight]}>
@@ -215,14 +213,12 @@ const SpendingTrend = ({
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryCell}>
                             <Text style={styles.statLabel}>{t('Avg expenses')}</Text>
-                            <Text style={styles.statValue}>
-                                {formatMoney(
-                                    averageMoney(points.map((point) => point.expenses)),
-                                    language,
-                                    currency,
-                                    0,
-                                )}
-                            </Text>
+                            <MoneyText
+                                value={averageMoney(points.map((point) => point.expenses))}
+                                currency={currency}
+                                language={language}
+                                style={styles.statValue}
+                            />
                         </View>
                         <View style={[styles.summaryCell, styles.summaryCellRight]}>
                             <Text style={[styles.statLabel, styles.statTextRight]}>

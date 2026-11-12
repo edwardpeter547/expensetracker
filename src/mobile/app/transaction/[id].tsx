@@ -14,13 +14,13 @@ import {
     transactionTypography,
 } from '@/constants/transactionsTheme';
 import { useLocale } from '@/contexts/LocaleContext';
-import { formatMoney } from '@/localization/format';
+import { MoneyText } from '@/components/ui/MoneyText';
 import type { TransactionRecord } from '@/types/transaction';
 import {
     calculateItemTotal,
     reconcileItemization,
 } from '@/utils/itemization';
-import { formatSignedAmount, transactionTitle } from '@/utils/transactions';
+import { transactionTitle } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +44,7 @@ const T = transactionTypography;
  * @param {object} props Row props.
  * @returns {JSX.Element} The detail row.
  */
-const DetailRow = ({ label, value }: { label: string; value: string }) => (
+const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <View style={styles.detailRow}>
         <Text style={styles.detailLabel}>{label}</Text>
         <Text style={styles.detailValue}>{value}</Text>
@@ -126,7 +126,6 @@ const TransactionDetailsRoute = () => {
 
     const items = transaction.items ?? [];
     const reconciliation = items.length > 0 ? reconcileItemization(transaction.amount, items) : null;
-    const amount = formatSignedAmount(transaction.amount, transaction.transType, language, currency);
 
     return (
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
@@ -146,9 +145,13 @@ const TransactionDetailsRoute = () => {
                     <Text style={styles.summaryType}>
                         {transaction.transType === 'INCOME' ? t('Income') : t('Expenses')}
                     </Text>
-                    <Text style={[styles.summaryAmount, transaction.transType === 'INCOME' && styles.income]}>
-                        {amount}
-                    </Text>
+                    <MoneyText
+                        value={transaction.amount}
+                        currency={currency}
+                        language={language}
+                        sign={transaction.transType === 'INCOME' ? '+' : '-'}
+                        style={[styles.summaryAmount, transaction.transType === 'INCOME' && styles.income]}
+                    />
                     <Text style={styles.summaryName}>{transactionTitle(transaction)}</Text>
                 </View>
 
@@ -197,27 +200,45 @@ const TransactionDetailsRoute = () => {
                                         <View style={styles.itemCopy}>
                                             <Text style={styles.itemName}>{item.name}</Text>
                                             <Text style={styles.itemMeta}>
-                                                {item.quantity} × {formatMoney(item.unitPrice, language, currency)}
+                                                {item.quantity} × <MoneyText
+                                                    value={item.unitPrice}
+                                                    currency={currency}
+                                                    language={language}
+                                                    style={styles.itemMeta}
+                                                />
                                             </Text>
                                         </View>
-                                        <Text style={styles.itemTotal}>
-                                            {formatMoney(
-                                                calculateItemTotal(item.quantity, item.unitPrice),
-                                                language,
-                                                currency,
-                                            )}
-                                        </Text>
+                                        <MoneyText
+                                            value={calculateItemTotal(item.quantity, item.unitPrice)}
+                                            currency={currency}
+                                            language={language}
+                                            style={styles.itemTotal}
+                                        />
                                     </View>
                                 ))}
                                 {reconciliation ? (
                                     <View style={styles.reconciliation}>
                                         <DetailRow
                                             label={t('Item subtotal')}
-                                            value={formatMoney(reconciliation.subtotal, language, currency)}
+                                            value={(
+                                                <MoneyText
+                                                    value={reconciliation.subtotal}
+                                                    currency={currency}
+                                                    language={language}
+                                                    style={styles.detailValue}
+                                                />
+                                            )}
                                         />
                                         <DetailRow
                                             label={t('Difference')}
-                                            value={formatMoney(reconciliation.difference, language, currency)}
+                                            value={(
+                                                <MoneyText
+                                                    value={reconciliation.difference}
+                                                    currency={currency}
+                                                    language={language}
+                                                    style={styles.detailValue}
+                                                />
+                                            )}
                                         />
                                     </View>
                                 ) : null}
