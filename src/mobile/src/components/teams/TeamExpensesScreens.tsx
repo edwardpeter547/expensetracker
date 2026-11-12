@@ -22,7 +22,8 @@ import {
     PlanningScreen,
     planningStyles,
 } from '@/components/planning/PlanningUI';
-import { formatPlanningMoney, planningColors } from '@/components/planning/planningTheme';
+import { planningColors } from '@/components/planning/planningTheme';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { PREVIEW_SCAN_RESULT } from '@/constants/receiptPreviewFixtures';
 import { TeamCard, TeamSelectChips } from '@/components/teams/teamsPrimitives';
 import type { Team, TeamExpense, TeamMember } from '@/types/team';
@@ -33,6 +34,7 @@ import type {
     ReceiptRecognitionState,
     ReceiptUploadErrorKind,
 } from '@/types/receipt';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -59,12 +61,14 @@ export const TeamSharedExpensesScreen = ({
     language,
     onBack,
     onRecordExpense,
-}: TeamSharedExpensesScreenProps) => (
-    <PlanningScreen title="Shared Expenses" subtitle={`${team.name} · recorded purchases`} onBack={onBack}>
+}: TeamSharedExpensesScreenProps) => {
+    const { t } = useTranslation('teams');
+    return (
+    <PlanningScreen title={t('Shared Expenses')} subtitle={t('{{name}} · recorded purchases', { name: team.name })} onBack={onBack}>
         <TeamCard>
-            <Text style={planningStyles.muted}>Recorded by team members</Text>
+            <Text style={planningStyles.muted}>{t('Recorded by team members')}</Text>
             {expenses.length === 0 ? (
-                <Text style={planningStyles.muted}>No team expenses recorded yet.</Text>
+                <Text style={planningStyles.muted}>{t('No team expenses recorded yet.')}</Text>
             ) : (
                 expenses.map((expense) => (
                     <View key={expense.id} style={[planningStyles.row, { gap: 12 }]}>
@@ -72,23 +76,27 @@ export const TeamSharedExpensesScreen = ({
                         <View style={{ flex: 1 }}>
                             <Text style={planningStyles.body}>{expense.name}</Text>
                             <Text style={planningStyles.muted}>
-                                Paid by {expense.paidBy}
+                                {t('Paid by {{name}}', { name: expense.paidBy })}
                                 {expense.category ? ` · ${expense.category}` : ''}
                             </Text>
                         </View>
-                        <Text style={planningStyles.body}>
-                            {formatPlanningMoney(expense.amount, language, currency)}
-                        </Text>
+                        <MoneyText
+                            value={expense.amount}
+                            currency={currency}
+                            language={language}
+                            style={planningStyles.body}
+                        />
                     </View>
                 ))
             )}
         </TeamCard>
-        <PlanningButton label="Record Expense" onPress={onRecordExpense} />
+        <PlanningButton label={t('Record Expense')} onPress={onRecordExpense} />
         <Text style={styles.note}>
-            Production records will attach receipts and line items through the shared transaction flow.
+            {t('Production records will attach receipts and line items through the shared transaction flow.')}
         </Text>
     </PlanningScreen>
-);
+    );
+};
 
 /** Props for the Record Team Expense screen. */
 export interface TeamRecordExpenseScreenProps {
@@ -122,6 +130,7 @@ export const TeamRecordExpenseScreen = ({
     onBack,
     onSave,
 }: TeamRecordExpenseScreenProps) => {
+    const { t } = useTranslation('teams');
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -188,7 +197,7 @@ export const TeamRecordExpenseScreen = ({
 
     return (
         <>
-            <PlanningScreen title="Record Team Expense" subtitle={`${team.name} · payer attributed`} onBack={onBack}>
+            <PlanningScreen title={t('Record Team Expense')} subtitle={t('{{name}} · payer attributed', { name: team.name })} onBack={onBack}>
                 <ReceiptActionButtons
                     onScan={() => setScannerOpen(true)}
                     onUpload={() => setUploadOpen(true)}
@@ -211,22 +220,26 @@ export const TeamRecordExpenseScreen = ({
 
                 <TeamCard>
                     <PlanningField
-                        label="Expense description"
+                        label={t('Expense description')}
                         value={name}
                         onChange={setName}
-                        placeholder="e.g. Groceries"
+                        placeholder={t('e.g. Groceries')}
                     />
                     <PlanningField
-                        label="Amount"
+                        label={t('Amount')}
                         value={amount}
                         onChange={setAmount}
                         keyboardType="numeric"
                         placeholder="85"
                     />
-                    <PlanningField label="Date (YYYY-MM-DD)" value={date} onChange={setDate} placeholder="2026-11-01" />
-                    <PlanningField label="Category" value={category} onChange={setCategory} placeholder="Food" />
-                    <Text style={planningStyles.fieldLabel}>Paid by</Text>
-                    <TeamSelectChips options={payerOptions} value={paidBy} onChange={setPaidBy} />
+                    <PlanningField label={t('Date (YYYY-MM-DD)')} value={date} onChange={setDate} placeholder="2026-11-01" />
+                    <PlanningField label={t('Category')} value={category} onChange={setCategory} placeholder="Food" />
+                    <Text style={planningStyles.fieldLabel}>{t('Paid by')}</Text>
+                    <TeamSelectChips
+                        options={payerOptions.map((value) => ({ value, label: value }))}
+                        value={paidBy}
+                        onChange={setPaidBy}
+                    />
                     <PurchasedItemsEditor
                         items={items}
                         transactionAmount={amount || '0'}
@@ -235,12 +248,12 @@ export const TeamRecordExpenseScreen = ({
                         onChange={setItems}
                     />
                     <Text style={styles.note}>
-                        Receipt scanning and line items reuse the existing shared components.
+                        {t('Receipt scanning and line items reuse the existing shared components.')}
                     </Text>
                 </TeamCard>
-                <PlanningButton label="Save Team Expense" onPress={submit} />
+                <PlanningButton label={t('Save Team Expense')} onPress={submit} />
                 <Text style={styles.note}>
-                    Demo only — the expense is stored in memory and is not sent to the backend.
+                    {t('Demo only — the expense is stored in memory and is not sent to the backend.')}
                 </Text>
             </PlanningScreen>
 

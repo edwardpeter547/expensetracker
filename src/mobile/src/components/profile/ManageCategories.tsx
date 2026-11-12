@@ -18,6 +18,7 @@ import {
 import { categoryIconName } from '@/components/transactions/categoryPresentation';
 import type { Category } from '@/types/transaction';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Alert,
@@ -55,6 +56,8 @@ const categoryTypeOf = (
  * @returns {JSX.Element} The category management screen.
  */
 const ManageCategories = () => {
+    const { t: tt } = useTranslation('profile');
+    const { t: tc } = useTranslation('common');
     const { language } = useLocale();
     const { categories, loading, saving, error, reload, create, rename, remove } =
         useCategories();
@@ -99,25 +102,25 @@ const ManageCategories = () => {
             }
             closeEditor();
         } catch (cause) {
-            setEditorError(cause instanceof Error ? cause.message : 'Unable to save category.');
+            setEditorError(cause instanceof Error ? cause.message : tt('Unable to save category.'));
         }
     };
 
     /** Confirm and then delete a custom category. */
     const confirmDelete = (category: Category) => {
         Alert.alert(
-            'Delete Category',
-            `Delete "${category.name}"? This cannot be undone.`,
+            tt('Delete Category'),
+            tt('Delete "{{name}}"? This cannot be undone.', { name: category.name }),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: tc('Cancel'), style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: tt('Delete'),
                     style: 'destructive',
                     onPress: () => {
                         remove(category.id).catch((cause: unknown) => {
                             Alert.alert(
-                                'Cannot delete category',
-                                cause instanceof Error ? cause.message : 'Unable to delete category.',
+                                tt('Cannot delete category'),
+                                cause instanceof Error ? cause.message : tt('Unable to delete category.'),
                             );
                         });
                     },
@@ -138,9 +141,9 @@ const ManageCategories = () => {
                 <SettingsRow
                     key={category.id}
                     title={label}
-                    subtitle="Built-in category"
+                    subtitle={tt('Built-in category')}
                     icon={icon}
-                    trailing={<Text style={styles.systemTag}>SYSTEM</Text>}
+                    trailing={<Text style={styles.systemTag}>{tt('SYSTEM')}</Text>}
                 />
             );
         }
@@ -149,22 +152,22 @@ const ManageCategories = () => {
             <SettingsRow
                 key={category.id}
                 title={label}
-                subtitle="Custom category"
+                subtitle={tt('Custom category')}
                 icon={icon}
                 onPress={() => startEditing(category)}
                 trailing={
                     <View style={styles.rowActions}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel={`Edit ${category.name}`}
+                            accessibilityLabel={tt('Edit {{name}}', { name: category.name })}
                             onPress={() => startEditing(category)}
                             hitSlop={8}
                         >
-                            <Text style={styles.editCategory}>Edit</Text>
+                            <Text style={styles.editCategory}>{tt('Edit')}</Text>
                         </Pressable>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel={`Delete ${category.name}`}
+                            accessibilityLabel={tt('Delete {{name}}', { name: category.name })}
                             onPress={() => confirmDelete(category)}
                             hitSlop={8}
                         >
@@ -191,65 +194,81 @@ const ManageCategories = () => {
                     <Text style={styles.errorText}>{error}</Text>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Retry loading categories"
+                        accessibilityLabel={tt('Retry loading categories')}
                         onPress={() => void reload()}
                         style={styles.retry}
                     >
-                        <Text style={styles.retryText}>Retry</Text>
+                        <Text style={styles.retryText}>{tc('Retry')}</Text>
                     </Pressable>
                 </View>
             ) : null}
 
-            <SegmentedControl options={SEGMENTS} value={segment} onChange={(value) => {
+            <SegmentedControl
+                options={SEGMENTS.map((value) => ({ value, label: tt(value) }))}
+                value={segment}
+                onChange={(value) => {
                 setSegment(value as CategorySegment);
                 closeEditor();
-            }} />
+                }}
+            />
 
-            <SectionCard title={`${segment} Categories`}>
+            <SectionCard title={
+                segment === 'Expenses'
+                    ? tt('Expenses Categories')
+                    : segment === 'Income'
+                        ? tt('Income Categories')
+                        : tt('Custom Categories')
+            }>
                 {visibleCategories.length > 0 ? (
                     visibleCategories.map((category) => renderCategory(category))
                 ) : (
                     <EmptyState
                         icon={segment === 'Custom' ? 'pricetag-outline' : 'grid-outline'}
-                        title={`No ${segment.toLowerCase()} categories`}
+                        title={
+                            segment === 'Expenses'
+                                ? tt('No expense categories')
+                                : segment === 'Income'
+                                    ? tt('No income categories')
+                                    : tt('No custom categories')
+                        }
                         message={
                             segment === 'Custom'
-                                ? 'Custom categories you add will appear here.'
-                                : 'These built-in categories are managed by ExpenseTracker.'
+                                ? tt('Custom categories you add will appear here.')
+                                : tt('These built-in categories are managed by ExpenseTracker.')
                         }
                     />
                 )}
             </SectionCard>
 
             {editorOpen ? (
-                <SectionCard title={editingId ? 'Edit Category' : 'New Category'}>
+                <SectionCard title={editingId ? tt('Edit Category') : tt('New Category')}>
                     <FormField
-                        label="Category name"
+                        label={tt('Category name')}
                         value={categoryName}
                         onChangeText={setCategoryName}
                     />
                     <Text style={styles.note}>
-                        Custom categories apply to both income and expenses.
+                        {tt('Custom categories apply to both income and expenses.')}
                     </Text>
                     {editorError ? <Text style={styles.editorError}>{editorError}</Text> : null}
                     <PrimaryButton
-                        title={editingId ? 'Save Category' : 'Add Category'}
+                        title={editingId ? tt('Save Category') : tt('Add Category')}
                         onPress={() => void saveCategory()}
                         disabled={!categoryName.trim() || saving}
                         loading={saving}
                     />
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Cancel"
+                        accessibilityLabel={tc('Cancel')}
                         onPress={closeEditor}
                         style={styles.cancel}
                     >
-                        <Text style={styles.cancelText}>Cancel</Text>
+                        <Text style={styles.cancelText}>{tc('Cancel')}</Text>
                     </Pressable>
                 </SectionCard>
             ) : (
                 <PrimaryButton
-                    title="Add Custom Category"
+                    title={tt('Add Custom Category')}
                     onPress={() => startEditing()}
                 />
             )}

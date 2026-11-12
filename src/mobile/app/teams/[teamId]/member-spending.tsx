@@ -8,6 +8,7 @@ import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team, TeamMember } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -16,6 +17,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The member spending screen or a not-found state.
  */
 const TeamMemberSpendingRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
     const [team, setTeam] = useState<Team | null>(null);
@@ -52,7 +54,7 @@ const TeamMemberSpendingRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Member Spending" subtitle="Purchases by member" onBack={handleBack}>
+            <PlanningScreen title={t('Member Spending')} subtitle={t('Purchases by member')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

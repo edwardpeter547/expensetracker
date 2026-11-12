@@ -7,6 +7,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { premiumColors } from '@/constants/premiumTheme';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 /**
@@ -14,42 +15,45 @@ import { StyleSheet, View } from 'react-native';
  *
  * @returns {JSX.Element} The illustration.
  */
-const PremiumIllustration = () => (
-    <View
-        accessible
-        accessibilityLabel="Illustration of a premium finance dashboard with a secure lock"
-        style={styles.stage}
-    >
-        <View style={styles.halo} />
-        <View style={styles.sheet}>
-            <View style={styles.header} />
-            <View style={styles.caption} />
-            <View style={styles.bars}>
-                {[36, 25, 45, 31, 52].map((height, index) => (
-                    <View
-                        key={`${height}-${index}`}
-                        style={[
-                            styles.bar,
-                            {
-                                height,
-                                backgroundColor:
-                                    index === 2 || index === 4
-                                        ? premiumColors.emerald
-                                        : '#8FD2AA',
-                            },
-                        ]}
-                    />
-                ))}
+const PremiumIllustration = () => {
+    const { t } = useTranslation('profile');
+    return (
+        <View
+            accessible
+            accessibilityLabel={t('Illustration of a premium finance dashboard with a secure lock')}
+            style={styles.stage}
+        >
+            <View style={styles.halo} />
+            <View style={styles.sheet}>
+                <View style={styles.header} />
+                <View style={styles.caption} />
+                <View style={styles.bars}>
+                    {[36, 25, 45, 31, 52].map((height, index) => (
+                        <View
+                            key={`${height}-${index}`}
+                            style={[
+                                styles.bar,
+                                {
+                                    height,
+                                    backgroundColor:
+                                        index === 2 || index === 4
+                                            ? premiumColors.emerald
+                                            : '#8FD2AA',
+                                },
+                            ]}
+                        />
+                    ))}
+                </View>
+            </View>
+            <View style={styles.lock}>
+                <Ionicons name="lock-closed" size={23} color="#FFFFFF" />
+            </View>
+            <View style={styles.check}>
+                <Ionicons name="checkmark" size={21} color={premiumColors.emerald} />
             </View>
         </View>
-        <View style={styles.lock}>
-            <Ionicons name="lock-closed" size={23} color="#FFFFFF" />
-        </View>
-        <View style={styles.check}>
-            <Ionicons name="checkmark" size={21} color={premiumColors.emerald} />
-        </View>
-    </View>
-);
+    );
+};
 
 /** Illustration styles. */
 const styles = StyleSheet.create({

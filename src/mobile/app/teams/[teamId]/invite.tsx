@@ -10,6 +10,7 @@ import TeamInviteScreen from '@/components/teams/TeamInviteScreen';
 import { teamDataSource } from '@/contracts';
 import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -18,6 +19,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The invite screen or a not-found state.
  */
 const TeamInviteRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const [team, setTeam] = useState<Team | null>(null);
 
@@ -46,7 +48,7 @@ const TeamInviteRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Invite Member" subtitle="Invite someone to your team" onBack={handleBack}>
+            <PlanningScreen title={t('Invite Member')} subtitle={t('Invite someone to your team')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

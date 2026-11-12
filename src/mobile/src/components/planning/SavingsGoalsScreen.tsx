@@ -10,6 +10,7 @@ import type { PlanningGoal } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningButton,
     PlanningCard,
@@ -21,7 +22,7 @@ import {
     PlanningScreen,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /** Modal modes used by the create/contribute flow. */
 type GoalModal = 'new' | 'contribute' | null;
@@ -91,11 +92,21 @@ const SavingsGoalsScreen = ({
                     <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                         <View style={{ gap: 5 }}>
                             <Text style={planningStyles.muted}>{t('Total Savings Progress')}</Text>
-                            <Text style={planningStyles.large}>
-                                {formatPlanningMoney(saved, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={saved}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.large}
+                            />
                             <Text style={planningStyles.muted}>
-                                {t('of {{total}} combined targets', {total: formatPlanningMoney(total, language, currency)})}
+                                {t('ofCombinedTargetsPrefix')}{' '}
+                                <MoneyText
+                                    value={total}
+                                    currency={currency}
+                                    language={language}
+                                    style={planningStyles.muted}
+                                />
+                                {' '}{t('combinedTargetsSuffix')}
                             </Text>
                         </View>
                         <PlanningIconTile
@@ -139,8 +150,19 @@ const SavingsGoalsScreen = ({
                                 </View>
                                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                                     <Text style={planningStyles.body}>
-                                        {formatPlanningMoney(goal.saved, language, currency)} /{' '}
-                                        {formatPlanningMoney(goal.target, language, currency)}
+                                        <MoneyText
+                                            value={goal.saved}
+                                            currency={currency}
+                                            language={language}
+                                            style={planningStyles.body}
+                                        />
+                                        {' / '}
+                                        <MoneyText
+                                            value={goal.target}
+                                            currency={currency}
+                                            language={language}
+                                            style={planningStyles.body}
+                                        />
                                     </Text>
                                     <Text style={{ color: goal.color, fontWeight: '700' }}>{goalPercent}%</Text>
                                 </View>

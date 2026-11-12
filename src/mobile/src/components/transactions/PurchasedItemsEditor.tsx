@@ -10,7 +10,6 @@ import {
     transactionColors,
     transactionTypography,
 } from '@/constants/transactionsTheme';
-import { formatMoney } from '@/localization/format';
 import type { PurchasedItem } from '@/types/transaction';
 import {
     calculateItemTotal,
@@ -21,6 +20,7 @@ import {
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 
 const C = transactionColors;
 const T = transactionTypography;
@@ -121,16 +121,17 @@ const PurchasedItemsEditor = ({
                                         placeholderTextColor={C.muted}
                                         style={[styles.input, styles.price]}
                                     />
-                                    <Text style={styles.total}>
-                                        {formatMoney(
+                                    <MoneyText
+                                        value={
                                             isValidQuantity(item.quantity)
                                                 && isValidUnitPrice(item.unitPrice)
                                                 ? calculateItemTotal(item.quantity, item.unitPrice)
-                                                : '0',
-                                            language,
-                                            currency,
-                                        )}
-                                    </Text>
+                                                : '0'
+                                        }
+                                        currency={currency}
+                                        language={language}
+                                        style={styles.total}
+                                    />
                                 </View>
                             </View>
                         ))
@@ -149,15 +150,21 @@ const PurchasedItemsEditor = ({
                     <View style={styles.reconciliation}>
                         <View style={styles.reconciliationRow}>
                             <Text style={styles.reconciliationLabel}>{t('Item subtotal')}</Text>
-                            <Text style={styles.reconciliationValue}>
-                                {formatMoney(reconciliation.subtotal, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={reconciliation.subtotal}
+                                currency={currency}
+                                language={language}
+                                style={styles.reconciliationValue}
+                            />
                         </View>
                         <View style={styles.reconciliationRow}>
                             <Text style={styles.reconciliationLabel}>{t('Difference')}</Text>
-                            <Text style={styles.reconciliationValue}>
-                                {formatMoney(reconciliation.difference, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={reconciliation.difference}
+                                currency={currency}
+                                language={language}
+                                style={styles.reconciliationValue}
+                            />
                         </View>
                     </View>
                     <Text style={styles.hint}>

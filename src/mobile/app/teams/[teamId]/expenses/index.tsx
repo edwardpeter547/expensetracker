@@ -8,6 +8,7 @@ import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team, TeamExpense } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -16,6 +17,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The expenses screen or a not-found state.
  */
 const TeamExpensesRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
     const [team, setTeam] = useState<Team | null>(null);
@@ -52,7 +54,7 @@ const TeamExpensesRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Shared Expenses" subtitle="Recorded team purchases" onBack={handleBack}>
+            <PlanningScreen title={t('Shared Expenses')} subtitle={t('Recorded team purchases')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

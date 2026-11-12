@@ -9,6 +9,7 @@ import TeamMembersScreen from '@/components/teams/TeamMembersScreen';
 import { teamDataSource } from '@/contracts';
 import type { Team, TeamInvitation, TeamMember } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -17,6 +18,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The members screen or a not-found state.
  */
 const TeamMembersRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const [team, setTeam] = useState<Team | null>(null);
     const [members, setMembers] = useState<TeamMember[]>([]);
@@ -56,7 +58,7 @@ const TeamMembersRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Team Members" subtitle="People and roles" onBack={handleBack}>
+            <PlanningScreen title={t('Team Members')} subtitle={t('People & roles')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

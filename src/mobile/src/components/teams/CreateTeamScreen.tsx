@@ -17,6 +17,7 @@ import {
 import { planningColors } from '@/components/planning/planningTheme';
 import { TeamCard, TeamSelectChips } from '@/components/teams/teamsPrimitives';
 import type { FinanceMode, TeamKind } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -59,6 +60,7 @@ const FINANCE_MODELS: readonly {
  * @returns {JSX.Element} The create team screen.
  */
 const CreateTeamScreen = ({ onBack, onCreate }: CreateTeamScreenProps) => {
+    const { t } = useTranslation('teams');
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [kind, setKind] = useState<TeamKind>('Family');
@@ -73,7 +75,7 @@ const CreateTeamScreen = ({ onBack, onCreate }: CreateTeamScreenProps) => {
     };
 
     return (
-        <PlanningScreen title="Create Team" subtitle="Set up your shared space" onBack={onBack}>
+        <PlanningScreen title={t('Create Team')} subtitle={t('Set up your shared space')} onBack={onBack}>
             <View style={styles.stepper}>
                 {[1, 2, 3].map((index) => (
                     <View
@@ -85,26 +87,30 @@ const CreateTeamScreen = ({ onBack, onCreate }: CreateTeamScreenProps) => {
                     />
                 ))}
             </View>
-            <Text style={planningStyles.muted}>Step {step} of 3</Text>
+            <Text style={planningStyles.muted}>{t('Step {{current}} of {{total}}', { current: step, total: 3 })}</Text>
 
             {step === 1 ? (
                 <>
-                    <Text style={planningStyles.heading}>Tell us about your team</Text>
+                    <Text style={planningStyles.heading}>{t('Tell us about your team')}</Text>
                     <TeamCard>
                         <PlanningField
-                            label="Team name"
+                            label={t('Team name')}
                             value={name}
                             onChange={setName}
-                            placeholder="e.g. Our Family"
+                            placeholder={t('e.g. Our Family')}
                         />
-                        <Text style={planningStyles.fieldLabel}>Team type</Text>
-                        <TeamSelectChips options={TEAM_KINDS} value={kind} onChange={setKind} />
+                        <Text style={planningStyles.fieldLabel}>{t('Team type')}</Text>
+                        <TeamSelectChips
+                            options={TEAM_KINDS.map((value) => ({ value, label: t(value) }))}
+                            value={kind}
+                            onChange={setKind}
+                        />
                         <Text style={planningStyles.muted}>
-                            Create a space for people you want to plan and track money with.
+                            {t('Create a space for people you want to plan and track money with.')}
                         </Text>
                     </TeamCard>
                     <PlanningButton
-                        label="Continue"
+                        label={t('Continue')}
                         onPress={() => {
                             if (name.trim()) setStep(2);
                         }}
@@ -114,9 +120,9 @@ const CreateTeamScreen = ({ onBack, onCreate }: CreateTeamScreenProps) => {
 
             {step === 2 ? (
                 <>
-                    <Text style={planningStyles.heading}>How will your team manage money?</Text>
+                    <Text style={planningStyles.heading}>{t('How will your team manage money?')}</Text>
                     <Text style={planningStyles.muted}>
-                        Choose the financial model that fits your team.
+                        {t('Choose the financial model that fits your team.')}
                     </Text>
                     {FINANCE_MODELS.map((model) => {
                         const active = mode === model.id;
@@ -134,8 +140,8 @@ const CreateTeamScreen = ({ onBack, onCreate }: CreateTeamScreenProps) => {
                                     size={42}
                                 />
                                 <View style={{ flex: 1, gap: 5 }}>
-                                    <Text style={planningStyles.body}>{model.name}</Text>
-                                    <Text style={planningStyles.muted}>{model.description}</Text>
+                                    <Text style={planningStyles.body}>{t(model.name)}</Text>
+                                    <Text style={planningStyles.muted}>{t(model.description)}</Text>
                                 </View>
                                 <PlanningIcon
                                     name={active ? 'checkmark-circle' : 'ellipse-outline'}
@@ -145,35 +151,34 @@ const CreateTeamScreen = ({ onBack, onCreate }: CreateTeamScreenProps) => {
                             </PressableCard>
                         );
                     })}
-                    <PlanningButton label="Continue" onPress={() => setStep(3)} />
+                    <PlanningButton label={t('Continue')} onPress={() => setStep(3)} />
                 </>
             ) : null}
 
             {step === 3 ? (
                 <>
-                    <Text style={planningStyles.heading}>Review your team</Text>
+                    <Text style={planningStyles.heading}>{t('Review your team')}</Text>
                     <TeamCard>
-                        <ReviewRow label="Name" value={name || '—'} />
-                        <ReviewRow label="Type" value={kind} />
+                        <ReviewRow label={t('Name')} value={name || '—'} />
+                        <ReviewRow label={t('Type')} value={t(kind)} />
                         <ReviewRow
-                            label="Finance model"
-                            value={mode === 'POOLED' ? 'Pooled Funds' : 'Independent Spending'}
+                            label={t('Finance model')}
+                            value={t(mode === 'POOLED' ? 'Pooled Funds' : 'Independent Spending')}
                         />
                     </TeamCard>
                     <TeamCard style={styles.warningCard}>
                         <PlanningIcon name="shield-check" color="#315D75" size={20} />
                         <Text style={styles.warningText}>
-                            Changing the finance model after transactions exist will require a
-                            controlled process.
+                            {t('Changing the finance model after transactions exist will require a controlled process.')}
                         </Text>
                     </TeamCard>
-                    <PlanningButton label="Create Team" onPress={submit} />
+                    <PlanningButton label={t('Create Team')} onPress={submit} />
                 </>
             ) : null}
 
             {step > 1 ? (
                 <PlanningButton
-                    label="Previous Step"
+                    label={t('Previous Step')}
                     outline
                     onPress={() => setStep((current) => current - 1)}
                 />
@@ -195,20 +200,27 @@ interface PressableCardProps {
  * @param {PressableCardProps} props Component props.
  * @returns {JSX.Element} The card.
  */
-const PressableCard = ({ active, onPress, children }: PressableCardProps) => (
-    <TeamCard
-        style={
-            active
-                ? { borderWidth: 2, borderColor: planningColors.emerald }
-                : undefined
-        }
-    >
-        <View style={[planningStyles.row, { gap: 12, alignItems: 'flex-start' }]}>
-            {children}
-        </View>
-        <PlanningButton label={active ? 'Selected' : 'Choose this model'} outline={!active} onPress={onPress} />
-    </TeamCard>
-);
+const PressableCard = ({ active, onPress, children }: PressableCardProps) => {
+    const { t } = useTranslation('teams');
+    return (
+        <TeamCard
+            style={
+                active
+                    ? { borderWidth: 2, borderColor: planningColors.emerald }
+                    : undefined
+            }
+        >
+            <View style={[planningStyles.row, { gap: 12, alignItems: 'flex-start' }]}>
+                {children}
+            </View>
+            <PlanningButton
+                label={active ? t('Selected') : t('Choose this model')}
+                outline={!active}
+                onPress={onPress}
+            />
+        </TeamCard>
+    );
+};
 
 /** Props for a review row. */
 interface ReviewRowProps {

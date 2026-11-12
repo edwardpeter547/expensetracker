@@ -10,6 +10,7 @@ import type { PlanningInsightCategory } from '@/types/planning';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningCard,
     PlanningIconTile,
@@ -19,7 +20,7 @@ import {
     PlanningScreen,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /** Reporting periods offered by the Insights selector. */
 type InsightPeriod = 'Monthly' | 'Quarterly' | 'Yearly';
@@ -99,9 +100,12 @@ const InsightsScreen = ({
                         ))}
                     </View>
                 </View>
-                <Text style={planningStyles.large}>
-                    {formatPlanningMoney(PERIOD_TOTALS[period], language, currency)}
-                </Text>
+                <MoneyText
+                    value={PERIOD_TOTALS[period]}
+                    currency={currency}
+                    language={language}
+                    style={planningStyles.large}
+                />
                 <Text style={{ color: '#D47C45', fontSize: 12 }}>{t('↗ {{percent}}% more than previous period', {percent: 12})}</Text>
                 <PlanningLineChart values={TREND_VALUES} labels={TREND_LABELS} />
             </PlanningCard>
@@ -116,9 +120,12 @@ const InsightsScreen = ({
                     />
                     <Text style={planningStyles.muted}>{t('Highest Category')}</Text>
                     <Text style={planningStyles.body}>{t('Food & Drinks')}</Text>
-                    <Text style={{ color: planningColors.orange, fontWeight: '700' }}>
-                        {formatPlanningMoney(450, language, currency)}
-                    </Text>
+                    <MoneyText
+                        value={450}
+                        currency={currency}
+                        language={language}
+                        style={{ color: planningColors.orange, fontWeight: '700', fontSize: 14 }}
+                    />
                 </PlanningCard>
                 <PlanningCard style={{ flex: 1 }}>
                     <PlanningIconTile
@@ -145,9 +152,12 @@ const InsightsScreen = ({
                                 size={38}
                             />
                             <Text style={[planningStyles.body, { flex: 1 }]}>{category.name}</Text>
-                            <Text style={planningStyles.body}>
-                                {formatPlanningMoney(category.amount, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={category.amount}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.body}
+                            />
                         </View>
                         <PlanningProgress value={category.pct * 2.4} color={category.color} />
                     </View>

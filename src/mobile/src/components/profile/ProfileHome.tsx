@@ -13,6 +13,7 @@ import { profileTheme as t } from '@/constants/profileTheme';
 import type { ProfileAvatar as ProfileAvatarDto } from '@/types/profile';
 import type { MembershipSummary } from '@/types/membership';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Pressable,
@@ -107,9 +108,10 @@ const ProfileHome = ({
     onNavigate,
     onSignOut,
 }: ProfileHomeProps) => {
+    const { t: tt } = useTranslation('profile');
     const insets = useSafeAreaInsets();
-    const name = identity?.displayName || 'Your Profile';
-    const email = identity?.email || 'Account details from your session';
+    const name = identity?.displayName || tt('Your Profile');
+    const email = identity?.email || tt('Account details from your session');
 
     if (loading) {
         return (
@@ -126,7 +128,7 @@ const ProfileHome = ({
                     colors={[t.navyLight, t.navy, t.navyDeep]}
                     style={[styles.hero, { paddingTop: insets.top + 29 }]}
                 >
-                    <Text style={styles.eyebrow}>MY ACCOUNT</Text>
+                    <Text style={styles.eyebrow}>{tt('MY ACCOUNT')}</Text>
                     <View style={styles.identity}>
                         <ProfileAvatar
                             avatar={identity?.avatar}
@@ -140,12 +142,12 @@ const ProfileHome = ({
                             <MembershipHeaderBadge membership={membership} />
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Edit Profile"
+                                accessibilityLabel={tt('Edit Profile')}
                                 onPress={() => onNavigate('personal')}
                                 style={styles.edit}
                             >
                                 <Ionicons name="pencil-outline" color="white" size={14} />
-                                <Text style={styles.editText}>Edit Profile</Text>
+                                <Text style={styles.editText}>{tt('Edit Profile')}</Text>
                             </Pressable>
                         </View>
                     </View>
@@ -154,13 +156,13 @@ const ProfileHome = ({
                 <View style={styles.content}>
                     {GROUPS.map((group) => (
                         <View key={group.label}>
-                            <Text style={styles.groupLabel}>{group.label}</Text>
+                            <Text style={styles.groupLabel}>{tt(group.label)}</Text>
                             <View style={styles.group}>
                                 {group.items.map((item, index) => (
                                     <SettingsRow
                                         key={item.id}
-                                        title={item.title}
-                                        subtitle={item.subtitle}
+                                        title={tt(item.title)}
+                                        subtitle={tt(item.subtitle)}
                                         icon={item.icon}
                                         onPress={() => onNavigate(item.id)}
                                         last={index === group.items.length - 1}
@@ -172,12 +174,12 @@ const ProfileHome = ({
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Sign Out"
+                        accessibilityLabel={tt('Sign Out')}
                         onPress={onSignOut}
                         style={styles.signout}
                     >
                         <Ionicons name="log-out-outline" color={t.danger} size={21} />
-                        <Text style={styles.signoutText}>Sign Out</Text>
+                        <Text style={styles.signoutText}>{tt('Sign Out')}</Text>
                     </Pressable>
                 </View>
             </ScrollView>

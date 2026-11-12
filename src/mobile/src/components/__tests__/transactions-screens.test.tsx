@@ -107,7 +107,7 @@ const item = (overrides: Partial<TransactionItem> = {}): TransactionItem => ({
     categoryName: 'Food',
     kind: 'expense',
     amount: '4.50',
-    currencySymbol: '$',
+    currency: 'USD',
     occurredAt: '2026-10-27T08:25:00.000Z',
     iconName: 'restaurant-outline',
     iconColor: '#F06B3A',

@@ -14,6 +14,7 @@ import {
 import { teamModeLabel } from '@/components/teams/teamPresentation';
 import { ModeBadge, TeamCard, TeamSelectChips } from '@/components/teams/teamsPrimitives';
 import type { Team, TeamKind } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -42,52 +43,57 @@ const TeamSettingsScreen = ({
     onArchive,
     onRestore,
 }: TeamSettingsScreenProps) => {
+    const { t } = useTranslation('teams');
     const [name, setName] = useState(team.name);
     const [kind, setKind] = useState<TeamKind>(team.kind);
     const archived = team.status === 'archived';
 
     return (
         <PlanningScreen
-            title="Team Settings"
-            subtitle={`${team.name} · settings`}
+            title={t('Team Settings')}
+            subtitle={t('{{name}} · settings', { name: team.name })}
             onBack={onBack}
         >
             <TeamCard>
                 <PlanningField
-                    label="Team name"
+                    label={t('Team name')}
                     value={name}
                     onChange={setName}
-                    placeholder="e.g. Our Family"
+                    placeholder={t('e.g. Our Family')}
                 />
-                <Text style={planningStyles.fieldLabel}>Team type</Text>
-                <TeamSelectChips options={TEAM_KINDS} value={kind} onChange={setKind} />
+                <Text style={planningStyles.fieldLabel}>{t('Team type')}</Text>
+                <TeamSelectChips
+                    options={TEAM_KINDS.map((value) => ({ value, label: t(value) }))}
+                    value={kind}
+                    onChange={setKind}
+                />
             </TeamCard>
 
             <TeamCard>
-                <Text style={planningStyles.fieldLabel}>Finance model</Text>
+                <Text style={planningStyles.fieldLabel}>{t('Finance model')}</Text>
                 <View style={[planningStyles.row, { gap: 10 }]}>
                     <ModeBadge mode={team.mode} />
-                    <Text style={planningStyles.body}>{teamModeLabel(team.mode)}</Text>
+                    <Text style={planningStyles.body}>{t(teamModeLabel(team.mode))}</Text>
                 </View>
                 <Text style={planningStyles.muted}>
-                    The finance model cannot be changed after a team has financial history.
+                    {t('The finance model cannot be changed after a team has financial history.')}
                 </Text>
             </TeamCard>
 
             {archived ? (
                 <TeamCard style={styles.archivedCard}>
-                    <Text style={styles.archivedTitle}>Archived team</Text>
+                    <Text style={styles.archivedTitle}>{t('Archived team')}</Text>
                     <Text style={styles.archivedText}>
-                        Restoring makes the team active again. All history is kept.
+                        {t('Restoring makes the team active again. All history is kept.')}
                     </Text>
-                    <PlanningButton label="Restore Team" onPress={onRestore} />
+                    <PlanningButton label={t('Restore Team')} onPress={onRestore} />
                 </TeamCard>
             ) : (
-                <PlanningButton label="Archive Team" outline onPress={onArchive} />
+                <PlanningButton label={t('Archive Team')} outline onPress={onArchive} />
             )}
 
             <PlanningButton
-                label="Save Changes"
+                label={t('Save Changes')}
                 onPress={() => onSave({ name, kind })}
             />
         </PlanningScreen>

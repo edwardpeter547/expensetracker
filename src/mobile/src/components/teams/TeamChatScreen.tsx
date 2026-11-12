@@ -12,6 +12,7 @@ import {
 } from '@/components/planning/PlanningUI';
 import { planningColors } from '@/components/planning/planningTheme';
 import type { Team, TeamChatMessage } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -30,6 +31,7 @@ export interface TeamChatScreenProps {
  * @returns {JSX.Element} The chat screen.
  */
 const TeamChatScreen = ({ team, messages, onBack, onSend }: TeamChatScreenProps) => {
+    const { t } = useTranslation('teams');
     const [draft, setDraft] = useState('');
 
     /**
@@ -43,10 +45,10 @@ const TeamChatScreen = ({ team, messages, onBack, onSend }: TeamChatScreenProps)
     };
 
     return (
-        <PlanningScreen title={`${team.name} Chat`} subtitle="Group messages" onBack={onBack}>
+        <PlanningScreen title={t('{{name}} Chat', { name: team.name })} subtitle={t('Group messages')} onBack={onBack}>
             <View style={styles.chatHeader}>
                 <PlanningIcon name="users" color={planningColors.emerald} size={22} />
-                <Text style={planningStyles.body}>{team.memberCount} participants</Text>
+                <Text style={planningStyles.body}>{t('participantCount', { count: team.memberCount })}</Text>
             </View>
 
             <ScrollView
@@ -55,7 +57,7 @@ const TeamChatScreen = ({ team, messages, onBack, onSend }: TeamChatScreenProps)
                 showsVerticalScrollIndicator={false}
             >
                 {messages.length === 0 ? (
-                    <Text style={styles.empty}>No messages yet. Start the conversation.</Text>
+                    <Text style={styles.empty}>{t('No messages yet. Start the conversation.')}</Text>
                 ) : (
                     messages.map((message) => (
                         <View
@@ -86,13 +88,13 @@ const TeamChatScreen = ({ team, messages, onBack, onSend }: TeamChatScreenProps)
                     style={styles.input}
                     value={draft}
                     onChangeText={setDraft}
-                    placeholder="Message your team..."
+                    placeholder={t('Message your team...')}
                     placeholderTextColor="#A2ADBB"
-                    accessibilityLabel="Message your team"
+                    accessibilityLabel={t('Message your team')}
                 />
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Send message"
+                    accessibilityLabel={t('Send message')}
                     onPress={send}
                     disabled={!draft.trim()}
                     style={styles.send}
@@ -104,7 +106,7 @@ const TeamChatScreen = ({ team, messages, onBack, onSend }: TeamChatScreenProps)
                     />
                 </Pressable>
             </View>
-            <Text style={styles.note}>Preview chat — messages are not delivered or persisted.</Text>
+            <Text style={styles.note}>{t('Preview chat — messages are not delivered or persisted.')}</Text>
         </PlanningScreen>
     );
 };

@@ -18,7 +18,11 @@ import dashboardCatalogue from './messages/dashboard';
 import authCatalogue from './messages/auth';
 import transactionsCatalogue from './messages/transactions';
 import planningCatalogue from './messages/planning';
+import teamsCatalogue from './messages/teams';
+import profileCatalogue from './messages/profile';
+import notificationsCatalogue from './messages/notifications';
 import planningPlurals from './messages/planningPlurals';
+import teamsPlurals from './messages/teamsPlurals';
 import { buildLanguageResources } from './messages/build';
 
 const catalogues = {
@@ -27,10 +31,14 @@ const catalogues = {
     auth: authCatalogue,
     transactions: transactionsCatalogue,
     planning: planningCatalogue,
+    teams: teamsCatalogue,
+    profile: profileCatalogue,
+    notifications: notificationsCatalogue,
 };
 const plurals = {
     common: commonPlurals,
     planning: planningPlurals,
+    teams: teamsPlurals,
 };
 
 const sourceResources = buildLanguageResources(catalogues, plurals, SUPPORTED_LANGUAGES);
@@ -75,6 +83,9 @@ void i18nInstance
                     auth: sourceResources[language].auth,
                     transactions: sourceResources[language].transactions,
                     planning: sourceResources[language].planning,
+                    teams: sourceResources[language].teams,
+                    profile: sourceResources[language].profile,
+                    notifications: sourceResources[language].notifications,
                 },
             ]),
         ),

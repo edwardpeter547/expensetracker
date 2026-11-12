@@ -9,6 +9,7 @@ import PremiumFeatureGate from '@/components/premium/PremiumFeatureGate';
 import { act, create } from 'react-test-renderer';
 import { Linking, Text } from 'react-native';
 import type { ReactElement } from 'react';
+import '@/i18n';
 
 jest.mock('expo-constants', () => ({
     __esModule: true,

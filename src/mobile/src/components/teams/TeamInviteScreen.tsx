@@ -16,6 +16,7 @@ import {
 import { planningColors } from '@/components/planning/planningTheme';
 import { TeamCard, TeamSelectChips } from '@/components/teams/teamsPrimitives';
 import type { Team, TeamInvitation } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -42,39 +43,51 @@ const ROLES: readonly TeamInvitation['role'][] = ['Member', 'Admin'];
  * @returns {JSX.Element} The invite screen.
  */
 const TeamInviteScreen = ({ team, onBack, onSubmit }: TeamInviteScreenProps) => {
+    const { t } = useTranslation('teams');
     const [method, setMethod] = useState<TeamInvitation['method']>('Phone');
     const [contact, setContact] = useState('');
     const [role, setRole] = useState<TeamInvitation['role']>('Member');
 
     return (
-        <PlanningScreen title="Invite Member" subtitle={`Invite someone to ${team.name}`} onBack={onBack}>
+        <PlanningScreen
+            title={t('Invite Member')}
+            subtitle={t('Invite someone to {{name}}', { name: team.name })}
+            onBack={onBack}
+        >
             <TeamCard>
                 <PlanningIcon name="send" color={planningColors.emerald} size={30} />
                 <Text style={planningStyles.muted}>
-                    Invite an existing AuditWallet user or someone new.
+                    {t('Invite an existing AuditWallet user or someone new.')}
                 </Text>
 
-                <Text style={planningStyles.fieldLabel}>Contact method</Text>
-                <TeamSelectChips options={METHODS} value={method} onChange={setMethod} />
+                <Text style={planningStyles.fieldLabel}>{t('Contact method')}</Text>
+                <TeamSelectChips
+                    options={METHODS.map((value) => ({ value, label: t(value) }))}
+                    value={method}
+                    onChange={setMethod}
+                />
 
                 <PlanningField
-                    label={method === 'Phone' ? 'Phone number' : 'Email address'}
+                    label={method === 'Phone' ? t('Phone number') : t('Email address')}
                     value={contact}
                     onChange={setContact}
                     placeholder={method === 'Phone' ? '+44 7700 900000' : 'name@example.com'}
                 />
 
-                <Text style={planningStyles.fieldLabel}>Team role</Text>
-                <TeamSelectChips options={ROLES} value={role} onChange={setRole} />
+                <Text style={planningStyles.fieldLabel}>{t('Team role')}</Text>
+                <TeamSelectChips
+                    options={ROLES.map((value) => ({ value, label: t(value) }))}
+                    value={role}
+                    onChange={setRole}
+                />
 
                 <Text style={styles.hint}>
-                    Recipients open the invite in AuditWallet, or install the app and sign up
-                    before accepting. No message is sent in this preview.
+                    {t('Recipients open the invite in AuditWallet, or install the app and sign up before accepting. No message is sent in this preview.')}
                 </Text>
             </TeamCard>
 
             <PlanningButton
-                label="Send Invitation"
+                label={t('Send Invitation')}
                 onPress={() => {
                     if (contact.trim()) {
                         onSubmit({ contact: contact.trim(), method, role });

@@ -11,6 +11,7 @@ import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team } from '@/types/team';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 
 /** Finance tool keys that map to the generic team finance route. */
@@ -22,6 +23,7 @@ const FINANCE_KEYS = ['budgets', 'goals', 'insights', 'monthly-plan', 'cash-flow
  * @returns {JSX.Element} The team workspace or a not-found state.
  */
 const TeamWorkspaceRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
     const [team, setTeam] = useState<Team | null>(null);
@@ -68,7 +70,7 @@ const TeamWorkspaceRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Team" subtitle="Team workspace" onBack={handleBack}>
+            <PlanningScreen title={t('Team')} subtitle={t('Team workspace')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

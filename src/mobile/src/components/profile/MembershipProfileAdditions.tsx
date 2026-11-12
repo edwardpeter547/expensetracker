@@ -10,6 +10,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { MembershipSummary } from '@/types/membership';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 /**
@@ -27,12 +28,13 @@ export const MembershipHeaderBadge = ({
 }: {
     membership: MembershipSummary | null;
 }) => {
-    const label = membership?.displayName ?? 'Membership unavailable';
+    const { t } = useTranslation('profile');
+    const label = membership?.displayName ?? t('Membership unavailable');
     const premium = membership != null && membership.tier !== 'free';
 
     return (
         <View
-            accessibilityLabel={`Membership: ${label}`}
+            accessibilityLabel={t('Membership: {{label}}', { label })}
             style={[styles.badge, premium && styles.badgePremium]}
         >
             <Ionicons

@@ -15,8 +15,8 @@ import {
     transactionTypography,
 } from '@/constants/transactionsTheme';
 import { useLocale } from '@/contexts/LocaleContext';
+import { MoneyText } from '@/components/ui/MoneyText';
 import type { RecurringSchedule, RecurringStatus } from '@/types/recurring';
-import { formatSignedAmount } from '@/utils/transactions';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -103,10 +103,6 @@ const RecurringTransactionDetailsRoute = () => {
         );
     }
 
-    const amount = fixture.amount
-        ? formatSignedAmount(fixture.amount, fixture.type, language, currency)
-        : `${t('Variable amount')}${fixture.estimatedAmount ? ` · ~${fixture.estimatedAmount}` : ''}`;
-
     return (
         <View style={[styles.screen, { marginTop: -insets.top, paddingTop: insets.top }]}>
             <RecurringScreenHeader title={t('Recurring Transaction')} onBack={() => router.back()} />
@@ -128,9 +124,20 @@ const RecurringTransactionDetailsRoute = () => {
                             <Text style={styles.name}>{fixture.name}</Text>
                             <Text style={styles.type}>{fixture.type === 'INCOME' ? t('Income') : t('Expense')}</Text>
                         </View>
-                        <Text style={[styles.amount, fixture.type === 'INCOME' && styles.amountIncome]}>
-                            {amount}
-                        </Text>
+                        {fixture.amount ? (
+                            <MoneyText
+                                value={fixture.amount}
+                                currency={currency}
+                                language={language}
+                                sign={fixture.type === 'INCOME' ? '+' : '-'}
+                                style={[styles.amount, fixture.type === 'INCOME' && styles.amountIncome]}
+                            />
+                        ) : (
+                            <Text style={[styles.amount, fixture.type === 'INCOME' && styles.amountIncome]}>
+                                {t('Variable amount')}
+                                {fixture.estimatedAmount ? ` · ~${fixture.estimatedAmount}` : ''}
+                            </Text>
+                        )}
                     </View>
 
                     {status ? <RecurringStatusBadge status={status} /> : null}

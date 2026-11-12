@@ -14,10 +14,12 @@ import {
     PlanningScreen,
     planningStyles,
 } from '@/components/planning/PlanningUI';
-import { formatPlanningMoney, planningColors } from '@/components/planning/planningTheme';
+import { planningColors } from '@/components/planning/planningTheme';
+import { MoneyText } from '@/components/ui/MoneyText';
 import { teamKindIcon } from '@/components/teams/teamPresentation';
 import { ModeBadge, TeamCard, TeamSectionHeading } from '@/components/teams/teamsPrimitives';
 import type { Team } from '@/types/team';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 /** A team finance tool entry. */
@@ -81,6 +83,7 @@ const TeamWorkspaceScreen = ({
     onSettings,
     onRestore,
 }: TeamWorkspaceScreenProps) => {
+    const { t } = useTranslation('teams');
     const pooled = team.mode === 'POOLED';
     const progress = team.budgetTarget > 0
         ? Math.round((team.spent / team.budgetTarget) * 100)
@@ -94,7 +97,7 @@ const TeamWorkspaceScreen = ({
         : 'Shared spending target';
 
     return (
-        <PlanningScreen title={team.name} subtitle="Team workspace" onBack={onBack}>
+        <PlanningScreen title={team.name} subtitle={t('Team workspace')} onBack={onBack}>
             <TeamCard>
                 <View style={[planningStyles.row, { gap: 12 }]}>
                     <PlanningIconTile
@@ -105,44 +108,52 @@ const TeamWorkspaceScreen = ({
                     />
                     <View style={{ flex: 1, gap: 4 }}>
                         <Text style={planningStyles.body}>{team.name}</Text>
-                        <Text style={planningStyles.muted}>{team.memberCount} members</Text>
+                        <Text style={planningStyles.muted}>
+                            {t('memberCount', { count: team.memberCount })}
+                        </Text>
                     </View>
                     <ModeBadge mode={team.mode} />
                 </View>
 
-                <Text style={planningStyles.muted}>{headlineLabel}</Text>
-                <Text style={planningStyles.large}>
-                    {formatPlanningMoney(headline, language, currency)}
-                </Text>
+                <Text style={planningStyles.muted}>{t(headlineLabel)}</Text>
+                <MoneyText
+                    value={headline}
+                    currency={currency}
+                    language={language}
+                    style={planningStyles.large}
+                />
                 <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                    <Text style={planningStyles.muted}>{secondaryLabel}</Text>
-                    <Text style={planningStyles.body}>
-                        {formatPlanningMoney(team.budgetTarget, language, currency)}
-                    </Text>
+                    <Text style={planningStyles.muted}>{t(secondaryLabel)}</Text>
+                    <MoneyText
+                        value={team.budgetTarget}
+                        currency={currency}
+                        language={language}
+                        style={planningStyles.body}
+                    />
                 </View>
                 <PlanningProgress value={progress} color={pooled ? planningColors.emerald : planningColors.blue} />
                 <Text style={planningStyles.muted}>
                     {pooled
-                        ? 'Tracked pool — AuditWallet does not hold funds.'
-                        : 'Each member keeps their own money; totals are recorded purchases.'}
+                        ? t('Tracked pool — AuditWallet does not hold funds.')
+                        : t('Each member keeps their own money; totals are recorded purchases.')}
                 </Text>
             </TeamCard>
 
             {team.status === 'archived' ? (
                 <TeamCard style={styles.archivedCard}>
                     <PlanningIcon name="archive-outline" color="#708296" size={20} />
-                    <Text style={styles.archivedTitle}>This team is archived</Text>
+                    <Text style={styles.archivedTitle}>{t('This team is archived')}</Text>
                     <Text style={styles.archivedText}>
-                        Financial history is retained. Restore the team to resume working in it.
+                        {t('Financial history is retained. Restore the team to resume working in it.')}
                     </Text>
-                    <PlanningButton label="Restore Team" onPress={onRestore} />
+                    <PlanningButton label={t('Restore Team')} onPress={onRestore} />
                 </TeamCard>
             ) : null}
 
             <View style={styles.tileRow}>
                 <ToolTile
-                    title="Members"
-                    subtitle="People & roles"
+                    title={t('Members')}
+                    subtitle={t('People & roles')}
                     icon="users"
                     color={planningColors.blue}
                     bg={planningColors.blueLight}
@@ -150,8 +161,8 @@ const TeamWorkspaceScreen = ({
                     onPress={onMembers}
                 />
                 <ToolTile
-                    title="Team Chat"
-                    subtitle="Group messages"
+                    title={t('Team Chat')}
+                    subtitle={t('Group messages')}
                     icon="chatbubbles"
                     color={planningColors.emerald}
                     bg={planningColors.emeraldLight}
@@ -161,14 +172,14 @@ const TeamWorkspaceScreen = ({
             </View>
 
             <TeamSectionHeading
-                title="Team Finance Tools"
-                subtitle="Custom tools to manage team finance"
+                title={t('Team Finance Tools')}
+                subtitle={t('Custom tools to manage team finance')}
             />
             <View style={styles.tileRow}>
                 {TEAM_TOOLS.map((tool) => (
                     <ToolTile
                         key={tool.key}
-                        title={tool.name}
+                        title={t(tool.name)}
                         icon={tool.icon}
                         color={tool.color}
                         bg={tool.bg}
@@ -184,7 +195,7 @@ const TeamWorkspaceScreen = ({
             <TeamCard>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={pooled ? 'Team contributions' : 'Member spending'}
+                    accessibilityLabel={pooled ? t('Team contributions') : t('Member spending')}
                     onPress={onBreakdown}
                     style={[planningStyles.row, { justifyContent: 'space-between' }]}
                 >
@@ -197,10 +208,10 @@ const TeamWorkspaceScreen = ({
                         />
                         <View>
                             <Text style={planningStyles.body}>
-                                {pooled ? 'Contributions' : 'Member Spending'}
+                                {pooled ? t('Contributions') : t('Member Spending')}
                             </Text>
                             <Text style={planningStyles.muted}>
-                                {pooled ? 'Shared inflows by member' : 'Purchases paid by member'}
+                                {pooled ? t('Shared inflows by member') : t('Purchases paid by member')}
                             </Text>
                         </View>
                     </View>
@@ -208,19 +219,19 @@ const TeamWorkspaceScreen = ({
                 </Pressable>
             </TeamCard>
 
-            <PlanningButton label="Invite Team Member" outline onPress={onInvite} />
+            <PlanningButton label={t('Invite Team Member')} outline onPress={onInvite} />
 
-            <PlanningButton label="Team Settings" outline onPress={onSettings} />
+            <PlanningButton label={t('Team Settings')} outline onPress={onSettings} />
 
             <TeamCard style={styles.personalCard}>
                 <PlanningIcon name="shield-check" color="#315D75" size={20} />
-                <Text style={styles.personalTitle}>Personal finance link</Text>
+                <Text style={styles.personalTitle}>{t('Personal finance link')}</Text>
                 <Text style={styles.personalText}>
                     {pooled
-                        ? 'In production, contributions will be recorded as an outflow in your personal team category and a linked inflow in this team ledger. Later team spending is not counted again as your personal spend.'
-                        : 'In production, your own team purchases will appear under your personal team category. Other members\u2019 purchases stay out of your personal spending.'}
+                        ? t('In production, contributions will be recorded as an outflow in your personal team category and a linked inflow in this team ledger. Later team spending is not counted again as your personal spend.')
+                        : t("In production, your own team purchases will appear under your personal team category. Other members' purchases stay out of your personal spending.")}
                     {' '}
-                    Automatic category linking is not connected yet.
+                    {t('Automatic category linking is not connected yet.')}
                 </Text>
             </TeamCard>
         </PlanningScreen>

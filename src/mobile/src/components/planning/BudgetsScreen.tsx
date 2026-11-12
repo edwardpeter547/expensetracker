@@ -9,6 +9,7 @@ import type { PlanningBudget } from '@/types/planning';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoneyText } from '@/components/ui/MoneyText';
 import {
     PlanningButton,
     PlanningCard,
@@ -21,7 +22,7 @@ import {
     PlanningStat,
     planningStyles,
 } from './PlanningUI';
-import { formatPlanningMoney, planningColors } from './planningTheme';
+import { planningColors } from './planningTheme';
 
 /**
  * Render the Budgets list screen.
@@ -101,14 +102,34 @@ const BudgetsScreen = ({
                                 </Text>
                             </View>
                             <Text style={planningStyles.muted}>{t('Total Monthly Budget')}</Text>
-                            <Text style={planningStyles.large}>
-                                {formatPlanningMoney(total, language, currency)}
-                            </Text>
+                            <MoneyText
+                                value={total}
+                                currency={currency}
+                                language={language}
+                                style={planningStyles.large}
+                            />
                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
-                                <PlanningStat label={t('Spent so far')} value={formatPlanningMoney(spent, language, currency)} />
+                                <PlanningStat
+                                    label={t('Spent so far')}
+                                    value={(
+                                        <MoneyText
+                                            value={spent}
+                                            currency={currency}
+                                            language={language}
+                                            style={planningStyles.heading}
+                                        />
+                                    )}
+                                />
                                 <PlanningStat
                                     label={t('Remaining')}
-                                    value={formatPlanningMoney(total - spent, language, currency)}
+                                    value={(
+                                        <MoneyText
+                                            value={total - spent}
+                                            currency={currency}
+                                            language={language}
+                                            style={[planningStyles.heading, { color: planningColors.emerald }]}
+                                        />
+                                    )}
                                     color={planningColors.emerald}
                                 />
                             </View>
@@ -146,10 +167,19 @@ const BudgetsScreen = ({
                                                 <View style={{ flex: 1, gap: 5 }}>
                                                     <Text style={planningStyles.body}>{item.name}</Text>
                                                     <Text style={planningStyles.muted}>
-                                                        {t('{{spent}} spent of {{limit}}', {
-                                                            spent: formatPlanningMoney(item.spent, language, currency),
-                                                            limit: formatPlanningMoney(item.limit, language, currency),
-                                                        })}
+                                                        <MoneyText
+                                                            value={item.spent}
+                                                            currency={currency}
+                                                            language={language}
+                                                            style={planningStyles.muted}
+                                                        />
+                                                        {' '}{t('spentOfLabel')}{' '}
+                                                        <MoneyText
+                                                            value={item.limit}
+                                                            currency={currency}
+                                                            language={language}
+                                                            style={planningStyles.muted}
+                                                        />
                                                     </Text>
                                                 </View>
                                                 <PlanningIcon name="chevron-right" color="#A1ADBD" />
@@ -158,7 +188,13 @@ const BudgetsScreen = ({
                                             <View style={[planningStyles.row, { justifyContent: 'space-between' }]}>
                                                 <Text style={planningStyles.muted}>{t('{{percent}}% used', {percent: itemPercent})}</Text>
                                                 <Text style={planningStyles.muted}>
-                                                    {t('{{amount}} left', {amount: formatPlanningMoney(item.limit - item.spent, language, currency)})}
+                                                    <MoneyText
+                                                        value={item.limit - item.spent}
+                                                        currency={currency}
+                                                        language={language}
+                                                        style={planningStyles.muted}
+                                                    />
+                                                    {' '}{t('leftLabel')}
                                                 </Text>
                                             </View>
                                         </PlanningCard>

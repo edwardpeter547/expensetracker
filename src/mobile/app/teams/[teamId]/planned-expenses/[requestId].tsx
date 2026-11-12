@@ -11,6 +11,7 @@ import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team, TeamPlannedRequest } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -19,6 +20,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The request detail screen or a not-found state.
  */
 const TeamRequestDetailRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId, requestId } = useLocalSearchParams<{ teamId: string; requestId: string }>();
     const { language, currency } = useLocale();
     const [team, setTeam] = useState<Team | null>(null);
@@ -60,7 +62,7 @@ const TeamRequestDetailRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Expense Request" subtitle="Request details" onBack={handleBack}>
+            <PlanningScreen title={t('Expense Request')} subtitle={t('Request details')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );
@@ -68,7 +70,7 @@ const TeamRequestDetailRoute = () => {
 
     if (!request) {
         return (
-            <PlanningScreen title="Expense Request" subtitle="Request not found" onBack={handleBack}>
+            <PlanningScreen title={t('Expense Request')} subtitle={t('Request not found')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

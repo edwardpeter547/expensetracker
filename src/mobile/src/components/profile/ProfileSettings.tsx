@@ -38,6 +38,7 @@ import {
 } from '@/security/biometrics';
 import type { AppLockTiming } from '@/security/appLock';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Alert,
     Modal,
@@ -104,20 +105,6 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 /**
- * Show a clearly-labelled preview alert for a capability that is not yet
- * connected to a real service.
- *
- * @param {string} feature The human-readable feature name.
- * @returns {void}
- */
-const preview = (feature: string): void => {
-    Alert.alert(
-        'Not available yet',
-        `${feature} needs to be connected to an existing app service. No changes have been saved.`,
-    );
-};
-
-/**
  * Render a set of selectable option chips.
  *
  * @param {object} props Chip props.
@@ -163,6 +150,9 @@ const OptionChips = ({
  */
 const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     const insets = useSafeAreaInsets();
+    const { t: tt } = useTranslation('profile');
+    const { t: tn } = useTranslation('notifications');
+    const { t: tc } = useTranslation('common');
     const {
         user,
         logout,
@@ -179,6 +169,20 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     } = useAppLock();
     const { language, currency, setLanguage, setCurrency, followDeviceLanguage, followDeviceCurrency } = useLocale();
     const { theme, setTheme } = useTheme();
+
+    /**
+     * Show a clearly-labelled preview alert for a capability that is not yet
+     * connected to a real service.
+     *
+     * @param {string} feature The human-readable feature name.
+     * @returns {void}
+     */
+    const preview = (feature: string): void => {
+        Alert.alert(
+            tt('Not available yet'),
+            tt('{{feature}} needs to be connected to an existing app service. No changes have been saved.', { feature }),
+        );
+    };
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -265,7 +269,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
         setProfileError(null);
         try {
             if (isDemoMode) {
-                preview('Profile updates');
+                preview(tt('Profile updates'));
                 return;
             }
             await updateProfile({
@@ -274,7 +278,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                 username: username.trim(),
             });
             await refreshProfile();
-            Alert.alert('Profile updated', 'Your personal information has been saved.');
+            Alert.alert(tt('Profile updated'), tt('Your personal information has been saved.'));
         } catch (cause) {
             setProfileError(normalizeApiError(cause).message);
         } finally {
@@ -300,7 +304,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             }
         } catch (cause) {
             setBiometricLoginError(
-                cause instanceof Error ? cause.message : 'Unable to update biometric login.',
+                cause instanceof Error ? cause.message : tt('Unable to update biometric login.'),
             );
         } finally {
             setBiometricLoginBusy(false);
@@ -319,7 +323,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             await setAppLockEnabled(value);
         } catch (cause) {
             setAppLockError(
-                cause instanceof Error ? cause.message : 'Unable to update app lock.',
+                cause instanceof Error ? cause.message : tt('Unable to update app lock.'),
             );
         }
     };
@@ -327,12 +331,12 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     /** Device-appropriate biometric terminology for the login control. */
     const biometricLoginSubtitle = (): string => {
         if (biometricCapability?.methods.includes('face-id')) {
-            return 'Sign in securely with Face ID.';
+            return tt('Sign in securely with Face ID.');
         }
         if (biometricCapability?.methods.includes('fingerprint')) {
-            return 'Sign in securely with your fingerprint.';
+            return tt('Sign in securely with your fingerprint.');
         }
-        return 'Sign in securely with your fingerprint or Face ID.';
+        return tt('Sign in securely with your fingerprint or Face ID.');
     };
 
     /**
@@ -343,25 +347,25 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     const submitPasswordChange = async () => {
         setPasswordError(null);
         if (newPassword.length < 8) {
-            setPasswordError('New password must be at least 8 characters.');
+            setPasswordError(tt('New password must be at least 8 characters.'));
             return;
         }
         if (newPassword !== confirmPassword) {
-            setPasswordError('New passwords do not match.');
+            setPasswordError(tt('New passwords do not match.'));
             return;
         }
 
         setPasswordBusy(true);
         try {
             if (isDemoMode) {
-                preview('Password changes');
+                preview(tt('Password changes'));
                 return;
             }
             await changePassword(currentPassword, newPassword);
             Alert.alert(
-                'Password changed',
-                'For security, please sign in again.',
-                [{ text: 'OK', onPress: () => void logout() }],
+                tt('Password changed'),
+                tt('For security, please sign in again.'),
+                [{ text: tt('OK'), onPress: () => void logout() }],
             );
         } catch (cause) {
             setPasswordError(normalizeApiError(cause).message);
@@ -378,14 +382,14 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     const signOutAllSessions = async () => {
         try {
             if (isDemoMode) {
-                preview('Session management');
+                preview(tt('Session management'));
                 return;
             }
             await revokeAllSessions();
             setSessions([]);
-            Alert.alert('Sessions signed out', 'All active sessions have been revoked.');
+            Alert.alert(tt('Sessions signed out'), tt('All active sessions have been revoked.'));
         } catch (cause) {
-            Alert.alert('Could not sign out sessions', normalizeApiError(cause).message);
+            Alert.alert(tt('Could not sign out sessions'), normalizeApiError(cause).message);
         }
     };
 
@@ -400,7 +404,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             await revokeSession(sessionId);
             setSessions((previous) => previous.filter((session) => session.id !== sessionId));
         } catch (cause) {
-            Alert.alert('Could not sign out session', normalizeApiError(cause).message);
+            Alert.alert(tt('Could not sign out session'), normalizeApiError(cause).message);
         }
     };
 
@@ -412,27 +416,27 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
     const submitDeletion = async () => {
         setDeleteError(null);
         if (deleteConfirmation !== 'DELETE') {
-            setDeleteError('Type DELETE to confirm.');
+            setDeleteError(tt('Type DELETE to confirm.'));
             return;
         }
         if (!deletePassword) {
-            setDeleteError('Enter your password to continue.');
+            setDeleteError(tt('Enter your password to continue.'));
             return;
         }
 
         setDeleting(true);
         try {
             if (isDemoMode) {
-                preview('Account deletion');
+                preview(tt('Account deletion'));
                 setDeleteOpen(false);
                 return;
             }
             await requestAccountDeletion(deletePassword, 'DELETE');
             setDeleteOpen(false);
             Alert.alert(
-                'Deletion requested',
-                'Your account is deactivated and will be permanently deleted after the recovery window.',
-                [{ text: 'OK', onPress: () => void logout() }],
+                tt('Deletion requested'),
+                tt('Your account is deactivated and will be permanently deleted after the recovery window.'),
+                [{ text: tt('OK'), onPress: () => void logout() }],
             );
         } catch (cause) {
             setDeleteError(normalizeApiError(cause).message);
@@ -451,29 +455,29 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             case 'personal':
                 return (
                     <>
-                        <SectionCard title="Your details">
-                            <FormField label="First name" value={firstName} onChangeText={setFirstName} />
-                            <FormField label="Last name" value={lastName} onChangeText={setLastName} />
-                            <FormField label="Username" value={username} onChangeText={setUsername} />
+                        <SectionCard title={tt('Your details')}>
+                            <FormField label={tt('First name')} value={firstName} onChangeText={setFirstName} />
+                            <FormField label={tt('Last name')} value={lastName} onChangeText={setLastName} />
+                            <FormField label={tt('Username')} value={username} onChangeText={setUsername} />
                             <FormField
-                                label="Email address"
+                                label={tt('Email address')}
                                 value={user?.email ?? ''}
                                 onChangeText={() => undefined}
                                 keyboardType="email-address"
                                 editable={false}
                             />
                         </SectionCard>
-                        <SectionCard title="Profile photo">
+                        <SectionCard title={tt('Profile photo')}>
                             <SettingsRow
-                                title="Change Photo"
-                                subtitle="Select a profile image"
+                                title={tt('Change Photo')}
+                                subtitle={tt('Select a profile image')}
                                 icon="camera-outline"
-                                onPress={() => preview('Profile photo picker')}
+                                onPress={() => preview(tt('Profile photo picker'))}
                             />
                         </SectionCard>
                         {profileError ? <Text style={styles.errorText}>{profileError}</Text> : null}
                         <PrimaryButton
-                            title="Save Changes"
+                            title={tt('Save Changes')}
                             onPress={() => void saveProfile()}
                             loading={savingProfile}
                             disabled={savingProfile}
@@ -483,10 +487,10 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             case 'security':
                 return (
                     <>
-                        <SectionCard title="Account protection">
+                        <SectionCard title={tt('Account protection')}>
                             <SettingsRow
-                                title="Password"
-                                subtitle="Update your sign-in password"
+                                title={tt('Password')}
+                                subtitle={tt('Update your sign-in password')}
                                 icon="lock-closed-outline"
                                 onPress={() => setPasswordOpen((open) => !open)}
                                 last={!passwordOpen}
@@ -494,19 +498,19 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                             {passwordOpen ? (
                                 <View style={styles.inlineForm}>
                                     <FormField
-                                        label="Current password"
+                                        label={tt('Current password')}
                                         value={currentPassword}
                                         onChangeText={setCurrentPassword}
                                         secureTextEntry
                                     />
                                     <FormField
-                                        label="New password"
+                                        label={tt('New password')}
                                         value={newPassword}
                                         onChangeText={setNewPassword}
                                         secureTextEntry
                                     />
                                     <FormField
-                                        label="Confirm new password"
+                                        label={tt('Confirm new password')}
                                         value={confirmPassword}
                                         onChangeText={setConfirmPassword}
                                         secureTextEntry
@@ -515,7 +519,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                                         <Text style={styles.errorText}>{passwordError}</Text>
                                     ) : null}
                                     <PrimaryButton
-                                        title="Change Password"
+                                        title={tt('Change Password')}
                                         onPress={() => void submitPasswordChange()}
                                         loading={passwordBusy}
                                         disabled={passwordBusy}
@@ -523,7 +527,7 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                                 </View>
                             ) : null}
                             <ToggleRow
-                                title="Biometric Login"
+                                title={tt('Biometric Login')}
                                 subtitle={biometricLoginSubtitle()}
                                 value={biometricLogin !== null}
                                 onValueChange={(value) => void handleBiometricLoginToggle(value)}
@@ -532,17 +536,17 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                                 <Text style={styles.errorText}>{biometricLoginError}</Text>
                             ) : null}
                             <SettingsRow
-                                title="Two-Factor Authentication"
-                                subtitle="Add an extra security step"
+                                title={tt('Two-Factor Authentication')}
+                                subtitle={tt('Add an extra security step')}
                                 icon="key-outline"
-                                onPress={() => preview('Two-factor authentication')}
+                                onPress={() => preview(tt('Two-factor authentication'))}
                                 last
                             />
                         </SectionCard>
-                        <SectionCard title="Biometric App Lock">
+                        <SectionCard title={tt('Biometric App Lock')}>
                             <ToggleRow
-                                title="Require Biometrics to Open App"
-                                subtitle="Protect your financial information when opening or returning to ExpenseTracker."
+                                title={tt('Require Biometrics to Open App')}
+                                subtitle={tt('Protect your financial information when opening or returning to ExpenseTracker.')}
                                 value={appLockEnabled}
                                 onValueChange={(value) => void handleAppLockToggle(value)}
                             />
@@ -551,12 +555,12 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                             ) : null}
                             {appLockEnabled ? (
                                 <>
-                                    <Text style={styles.fieldLabel}>Lock timing</Text>
+                                    <Text style={styles.fieldLabel}>{tt('Lock timing')}</Text>
                                     <OptionChips
                                         options={[
-                                            { value: 'immediate', label: 'Immediately' },
-                                            { value: '1m', label: 'After 1 minute' },
-                                            { value: '5m', label: 'After 5 minutes' },
+                                            { value: 'immediate', label: tt('Immediately') },
+                                            { value: '1m', label: tt('After 1 minute') },
+                                            { value: '5m', label: tt('After 5 minutes') },
                                         ]}
                                         value={appLockTiming}
                                         onSelect={(value) => void setAppLockTiming(value as AppLockTiming)}
@@ -564,32 +568,32 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                                 </>
                             ) : null}
                         </SectionCard>
-                        <SectionCard title="Device sessions">
+                        <SectionCard title={tt('Device sessions')}>
                             {isDemoMode ? (
                                 <Text style={styles.note}>
-                                    Session management requires a signed-in account.
+                                    {tt('Session management requires a signed-in account.')}
                                 </Text>
                             ) : sessionsLoading ? (
-                                <Text style={styles.note}>Loading sessions…</Text>
+                                <Text style={styles.note}>{tt('Loading sessions…')}</Text>
                             ) : sessionsError ? (
                                 <Text style={styles.errorText}>{sessionsError}</Text>
                             ) : sessions.length === 0 ? (
-                                <Text style={styles.note}>No other active sessions.</Text>
+                                <Text style={styles.note}>{tt('No other active sessions.')}</Text>
                             ) : (
                                 sessions.map((session) => (
                                     <SettingsRow
                                         key={session.id}
-                                        title={session.userAgent || 'Unknown device'}
-                                        subtitle={`Last used ${session.lastUsedAt ? new Date(session.lastUsedAt).toLocaleString(language) : '—'}`}
+                                        title={session.userAgent || tt('Unknown device')}
+                                        subtitle={tt('Last used {{date}}', { date: session.lastUsedAt ? new Date(session.lastUsedAt).toLocaleString(language) : '—' })}
                                         icon="phone-portrait-outline"
                                         trailing={
                                             <Pressable
                                                 accessibilityRole="button"
-                                                accessibilityLabel="Revoke session"
+                                                accessibilityLabel={tt('Revoke session')}
                                                 onPress={() => void signOutSession(session.id)}
                                                 hitSlop={8}
                                             >
-                                                <Text style={styles.dangerLink}>Revoke</Text>
+                                                <Text style={styles.dangerLink}>{tt('Revoke')}</Text>
                                             </Pressable>
                                         }
                                     />
@@ -598,20 +602,20 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                             {!isDemoMode && sessions.length > 0 ? (
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="Sign out all sessions"
+                                    accessibilityLabel={tt('Sign out all sessions')}
                                     onPress={() => {
                                         Alert.alert(
-                                            'Sign out all sessions',
-                                            'This will revoke every active session, including this one.',
+                                            tt('Sign out all sessions'),
+                                            tt('This will revoke every active session, including this one.'),
                                             [
-                                                { text: 'Cancel', style: 'cancel' },
-                                                { text: 'Sign Out All', style: 'destructive', onPress: () => void signOutAllSessions() },
+                                                { text: tc('Cancel'), style: 'cancel' },
+                                                { text: tt('Sign Out All'), style: 'destructive', onPress: () => void signOutAllSessions() },
                                             ],
                                         );
                                     }}
                                     style={styles.inlineAction}
                                 >
-                                    <Text style={styles.dangerLink}>Sign Out All Sessions</Text>
+                                    <Text style={styles.dangerLink}>{tt('Sign Out All Sessions')}</Text>
                                 </Pressable>
                             ) : null}
                         </SectionCard>
@@ -619,50 +623,50 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                 );
             case 'linked':
                 return (
-                    <SectionCard title="Your connected accounts">
+                    <SectionCard title={tt('Your connected accounts')}>
                         <EmptyState
                             icon="business-outline"
-                            title="No linked accounts yet"
-                            message="Connected accounts will appear here when integrations are available."
+                            title={tt('No linked accounts yet')}
+                            message={tt('Connected accounts will appear here when integrations are available.')}
                         />
                         <PrimaryButton
-                            title="Connect Account"
-                            onPress={() => preview('Financial account linking')}
+                            title={tt('Connect Account')}
+                            onPress={() => preview(tt('Financial account linking'))}
                         />
                     </SectionCard>
                 );
             case 'notifications':
                 return (
                     <>
-                        <SectionCard title="Financial alerts">
-                            <ToggleRow title="Push Notifications" subtitle="Notifications on your device" value={flags.push} onValueChange={() => toggle('push')} />
-                            <ToggleRow title="Budget Alerts" subtitle="Know when spending approaches a limit" value={flags.budget} onValueChange={() => toggle('budget')} />
-                            <ToggleRow title="Weekly Summary" subtitle="A digest of your financial activity" value={flags.weekly} onValueChange={() => toggle('weekly')} last />
+                        <SectionCard title={tn('Financial alerts')}>
+                            <ToggleRow title={tn('Push Notifications')} subtitle={tn('Notifications on your device')} value={flags.push} onValueChange={() => toggle('push')} />
+                            <ToggleRow title={tn('Budget Alerts')} subtitle={tn('Know when spending approaches a limit')} value={flags.budget} onValueChange={() => toggle('budget')} />
+                            <ToggleRow title={tn('Weekly Summary')} subtitle={tn('A digest of your financial activity')} value={flags.weekly} onValueChange={() => toggle('weekly')} last />
                         </SectionCard>
-                        <SectionCard title="Other updates">
-                            <ToggleRow title="Product News" subtitle="Updates about ExpenseTracker" value={flags.product} onValueChange={() => toggle('product')} last />
+                        <SectionCard title={tn('Other updates')}>
+                            <ToggleRow title={tn('Product News')} subtitle={tn('Updates about ExpenseTracker')} value={flags.product} onValueChange={() => toggle('product')} last />
                         </SectionCard>
                         <Text style={styles.note}>
-                            Switches are local UI previews and are not saved to your account.
+                            {tn('Switches are local UI previews and are not saved to your account.')}
                         </Text>
                     </>
                 );
             case 'preferences':
                 return (
                     <>
-                        <SectionCard title="Appearance">
-                            <Text style={styles.fieldLabel}>Theme</Text>
+                        <SectionCard title={tt('Appearance')}>
+                            <Text style={styles.fieldLabel}>{tt('Theme')}</Text>
                             <OptionChips
                                 options={(Object.keys(THEME_LABELS) as ThemeName[]).map((value) => ({
                                     value,
-                                    label: THEME_LABELS[value],
+                                    label: tt(THEME_LABELS[value]),
                                 }))}
                                 value={theme}
                                 onSelect={(value) => void setTheme(value as ThemeName)}
                             />
                         </SectionCard>
-                        <SectionCard title="Regional settings">
-                            <Text style={styles.fieldLabel}>Default currency</Text>
+                        <SectionCard title={tt('Regional settings')}>
+                            <Text style={styles.fieldLabel}>{tt('Default currency')}</Text>
                             <OptionChips
                                 options={SUPPORTED_CURRENCIES.map((value) => ({ value, label: value }))}
                                 value={currency}
@@ -670,29 +674,29 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                             />
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Follow device currency"
+                                accessibilityLabel={tt('Follow device currency')}
                                 onPress={() => void followDeviceCurrency()}
                                 style={styles.follow}
                             >
-                                <Text style={styles.followText}>Follow device</Text>
+                                <Text style={styles.followText}>{tt('Follow device')}</Text>
                             </Pressable>
 
-                            <Text style={styles.fieldLabel}>Language</Text>
+                            <Text style={styles.fieldLabel}>{tt('Language')}</Text>
                             <OptionChips
                                 options={SUPPORTED_LANGUAGES.map((value) => ({
                                     value,
-                                    label: LANGUAGE_LABELS[value] ?? value,
+                                    label: tt(LANGUAGE_LABELS[value] ?? value),
                                 }))}
                                 value={language}
                                 onSelect={(value) => void setLanguage(value)}
                             />
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Follow device language"
+                                accessibilityLabel={tt('Follow device language')}
                                 onPress={() => void followDeviceLanguage()}
                                 style={styles.follow}
                             >
-                                <Text style={styles.followText}>Follow device</Text>
+                                <Text style={styles.followText}>{tt('Follow device')}</Text>
                             </Pressable>
                         </SectionCard>
                     </>
@@ -702,10 +706,10 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             case 'export':
                 return (
                     <>
-                        <SectionCard title="Create an export">
-                            <SettingsRow title="What to export" subtitle="All Transactions" icon="list-outline" />
-                            <SettingsRow title="Date range" subtitle="All Time" icon="calendar-outline" />
-                            <Text style={styles.fieldLabel}>File format</Text>
+                        <SectionCard title={tt('Create an export')}>
+                            <SettingsRow title={tt('What to export')} subtitle={tt('All Transactions')} icon="list-outline" />
+                            <SettingsRow title={tt('Date range')} subtitle={tt('All Time')} icon="calendar-outline" />
+                            <Text style={styles.fieldLabel}>{tt('File format')}</Text>
                             <OptionChips
                                 options={[{ value: 'CSV', label: 'CSV' }, { value: 'PDF', label: 'PDF' }]}
                                 value={exportFormat}
@@ -713,44 +717,43 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                             />
                         </SectionCard>
                         <Text style={styles.note}>
-                            Export options are a preview. Saving an actual file requires a
-                            download/share integration that is not available yet.
+                            {tt('Export options are a preview. Saving an actual file requires a download/share integration that is not available yet.')}
                         </Text>
                         <PrimaryButton
-                            title="Export Data"
-                            onPress={() => preview('Data export')}
+                            title={tt('Export Data')}
+                            onPress={() => preview(tt('Data export'))}
                         />
                     </>
                 );
             case 'account':
                 return (
                     <>
-                        <SectionCard title="Account overview">
+                        <SectionCard title={tt('Account overview')}>
                             <SettingsRow
-                                title="Account Status"
-                                subtitle={user?.isEmailVerified ? 'Email verified' : 'Email not verified'}
+                                title={tt('Account Status')}
+                                subtitle={user?.isEmailVerified ? tt('Email verified') : tt('Email not verified')}
                                 icon="checkmark-circle-outline"
                             />
                             <SettingsRow
-                                title="Privacy & Data"
-                                subtitle="Review your privacy options"
+                                title={tt('Privacy & Data')}
+                                subtitle={tt('Review your privacy options')}
                                 icon="lock-closed-outline"
-                                onPress={() => preview('Privacy settings')}
+                                onPress={() => preview(tt('Privacy settings'))}
                             />
                         </SectionCard>
-                        <SectionCard title="Sensitive actions">
+                        <SectionCard title={tt('Sensitive actions')}>
                             <SettingsRow
-                                title="Deactivate Account"
-                                subtitle="Temporarily disable your account"
+                                title={tt('Deactivate Account')}
+                                subtitle={tt('Temporarily disable your account')}
                                 icon="pause-circle-outline"
                                 onPress={() => Alert.alert(
-                                    'Deactivate Account',
-                                    'Account deactivation happens as the first step of the deletion flow, with a recovery window to cancel.',
+                                    tt('Deactivate Account'),
+                                    tt('Account deactivation happens as the first step of the deletion flow, with a recovery window to cancel.'),
                                 )}
                             />
                             <SettingsRow
-                                title="Delete Account"
-                                subtitle="Permanently remove your account"
+                                title={tt('Delete Account')}
+                                subtitle={tt('Permanently remove your account')}
                                 icon="trash-outline"
                                 onPress={() => setDeleteOpen(true)}
                                 last
@@ -783,36 +786,36 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
             >
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Back to Profile"
+                    accessibilityLabel={tt('Back to Profile')}
                     onPress={goBack}
                     style={styles.back}
                 >
                     <Ionicons name="chevron-back" color="white" size={22} />
                 </Pressable>
-                <Text style={styles.headerTitle}>{TITLES[section]}</Text>
+                <Text style={styles.headerTitle}>{tt(TITLES[section])}</Text>
             </LinearGradient>
             <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <Text style={styles.intro}>{INTRO[section]}</Text>
+                <Text style={styles.intro}>
+                    {section === 'notifications' ? tn(INTRO[section]) : tt(INTRO[section])}
+                </Text>
                 {renderSection()}
             </ScrollView>
 
             <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => setDeleteOpen(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Delete Account</Text>
+                        <Text style={styles.modalTitle}>{tt('Delete Account')}</Text>
                         <Text style={styles.modalText}>
-                            This deactivates your account immediately and schedules permanent
-                            deletion after the recovery window. Type DELETE and enter your
-                            password to confirm.
+                            {tt('This deactivates your account immediately and schedules permanent deletion after the recovery window. Type DELETE and enter your password to confirm.')}
                         </Text>
                         <FormField
-                            label="Password"
+                            label={tt('Password')}
                             value={deletePassword}
                             onChangeText={setDeletePassword}
                             secureTextEntry
                         />
                         <FormField
-                            label="Type DELETE to confirm"
+                            label={tt('Type DELETE to confirm')}
                             value={deleteConfirmation}
                             onChangeText={setDeleteConfirmation}
                         />
@@ -820,21 +823,21 @@ const ProfileSettings = ({ section }: { section: ProfileSection }) => {
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Cancel delete account"
+                                accessibilityLabel={tt('Cancel delete account')}
                                 onPress={() => setDeleteOpen(false)}
                                 style={styles.modalCancel}
                             >
-                                <Text style={styles.modalCancelText}>Cancel</Text>
+                                <Text style={styles.modalCancelText}>{tc('Cancel')}</Text>
                             </Pressable>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Confirm delete account"
+                                accessibilityLabel={tt('Confirm delete account')}
                                 onPress={() => void submitDeletion()}
                                 style={[styles.modalDelete, deleting && styles.primaryDisabled]}
                                 disabled={deleting}
                             >
                                 <Text style={styles.modalDeleteText}>
-                                    {deleting ? 'Working…' : 'Delete Account'}
+                                    {deleting ? tt('Working…') : tt('Delete Account')}
                                 </Text>
                             </Pressable>
                         </View>

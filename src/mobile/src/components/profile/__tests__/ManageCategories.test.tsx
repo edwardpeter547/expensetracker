@@ -11,6 +11,7 @@ import { Alert, Text } from 'react-native';
 import type { ReactElement } from 'react';
 import { useCategories } from '@/hooks/useCategories';
 import ManageCategories from '../ManageCategories';
+import '@/i18n';
 
 jest.mock('@/hooks/useCategories', () => ({
     useCategories: jest.fn(),

@@ -13,6 +13,7 @@ import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /** Valid finance page values. */
@@ -24,6 +25,7 @@ const PAGES: readonly TeamFinancePage[] = ['budgets', 'goals', 'insights', 'mont
  * @returns {JSX.Element} The finance screen or a not-found state.
  */
 const TeamFinanceRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId, page } = useLocalSearchParams<{ teamId: string; page?: string }>();
     const { language, currency } = useLocale();
     const [team, setTeam] = useState<Team | null>(null);
@@ -56,7 +58,7 @@ const TeamFinanceRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Team Finance" subtitle="Team-scoped tools" onBack={handleBack}>
+            <PlanningScreen title={t('Team Finance')} subtitle={t('Team-scoped tools')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

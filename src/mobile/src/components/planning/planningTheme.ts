@@ -93,12 +93,12 @@ export type PlanningIconSource = PlanningIconName | PlanningGlyphName;
  * @param {number} amount The amount to format.
  * @param {string} language The display locale.
  * @param {string} currency The ISO 4217 currency code.
- * @param {number} [decimals=0] The displayed fraction digits.
+ * @param {number} [decimals=2] The displayed fraction digits.
  * @returns {string} The formatted currency string.
  */
 export const formatPlanningMoney = (
     amount: number,
     language: string,
     currency: string,
-    decimals = 0,
+    decimals = 2,
 ): string => formatMoney(amount, language, currency, decimals);

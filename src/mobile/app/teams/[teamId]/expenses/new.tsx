@@ -11,6 +11,7 @@ import { teamDataSource } from '@/contracts';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Team, TeamMember } from '@/types/team';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 /**
@@ -19,6 +20,7 @@ import { useEffect, useState } from 'react';
  * @returns {JSX.Element} The record expense screen or a not-found state.
  */
 const TeamRecordExpenseRoute = () => {
+    const { t } = useTranslation('teams');
     const { teamId } = useLocalSearchParams<{ teamId: string }>();
     const { language, currency } = useLocale();
     const [team, setTeam] = useState<Team | null>(null);
@@ -55,7 +57,7 @@ const TeamRecordExpenseRoute = () => {
 
     if (!team) {
         return (
-            <PlanningScreen title="Record Team Expense" subtitle="Team-scoped purchase" onBack={handleBack}>
+            <PlanningScreen title={t('Record Team Expense')} subtitle={t('Team-scoped purchase')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );

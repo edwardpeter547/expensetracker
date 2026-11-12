@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const locales = path.join(root, 'src', 'i18n', 'locales');
 const messages = path.join(root, 'src', 'i18n', 'messages');
 
-const namespaces = ['auth', 'dashboard', 'transactions', 'planning'];
+const namespaces = ['auth', 'dashboard', 'transactions', 'planning', 'teams', 'profile', 'notifications'];
 
 const { SUPPORTED_LANGUAGES } = await import(
     path.join(root, 'src', 'localization', 'registry.ts')

@@ -8,6 +8,7 @@
 import { PlanningScreen } from '@/components/planning/PlanningUI';
 import InvitationScreen from '@/components/teams/InvitationScreen';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Render the invitation recipient route.
@@ -15,6 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
  * @returns {JSX.Element} The invitation screen.
  */
 const InvitationRoute = () => {
+    const { t } = useTranslation('teams');
     const { token } = useLocalSearchParams<{ token: string }>();
 
     const handleBack = () => {
@@ -27,7 +29,7 @@ const InvitationRoute = () => {
 
     if (!token) {
         return (
-            <PlanningScreen title="Team Invitation" subtitle="Invitation not found" onBack={handleBack}>
+            <PlanningScreen title={t('Team Invitation')} subtitle={t('Invitation not found')} onBack={handleBack}>
                 <></>
             </PlanningScreen>
         );
