@@ -28,3 +28,46 @@ export const verifyEmail = async (email: string, code: string): Promise<void> =>
 export const resendVerificationEmail = async (email: string): Promise<void> => {
     await apiClient.post('/auth/resend-verification', { email });
 };
+
+/**
+ * Request a password-reset code for an account email address.
+ *
+ * The backend returns the same generic success response for known and unknown
+ * emails, so callers must not infer account existence from the result.
+ *
+ * @param {string} email The account email address.
+ * @returns {Promise<void>} Resolves once the request has been accepted.
+ */
+export const forgotPassword = async (email: string): Promise<void> => {
+    await apiClient.post('/auth/forgot-password', { email });
+};
+
+/**
+ * Verify a six-digit password-reset code without consuming it.
+ *
+ * Consumption happens on the subsequent password reset, keeping the verify
+ * step non-destructive so the reset code remains valid for the reset call.
+ *
+ * @param {string} email The account email address.
+ * @param {string} code The six-digit reset code.
+ * @returns {Promise<void>} Resolves when the code is valid and unexpired.
+ */
+export const verifyOtp = async (email: string, code: string): Promise<void> => {
+    await apiClient.post('/auth/verify-otp', { email, code });
+};
+
+/**
+ * Reset an account password using a verified reset code.
+ *
+ * @param {string} email The account email address.
+ * @param {string} code The verified six-digit reset code.
+ * @param {string} password The new password.
+ * @returns {Promise<void>} Resolves when the password has been changed.
+ */
+export const resetPassword = async (
+    email: string,
+    code: string,
+    password: string,
+): Promise<void> => {
+    await apiClient.post('/auth/reset-password', { email, code, password });
+};

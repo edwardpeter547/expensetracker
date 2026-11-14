@@ -193,7 +193,10 @@ paths:
         Returns the same generic success response whether or not an account
         exists for the email, so the endpoint does not reveal account
         existence or whether an email was delivered. The six-digit code is
-        generated with `crypto.randomInt` and stored as a SHA-256 digest.
+        generated with `crypto.randomInt` and stored as a keyed HMAC digest.
+        Repeat requests for an existing account are suppressed for a short
+        per-account cooldown and supersede any prior unused code once it has
+        elapsed.
       security: []
       requestBody:
         required: true
@@ -227,7 +230,8 @@ paths:
       description: |
         Checks that an unexpired, unused reset code exists for the email. This
         endpoint does not consume the code; consumption occurs on a successful
-        password reset.
+        password reset. Wrong-code attempts are counted per account and the
+        code is invalidated once the configured attempt limit is reached.
       security: []
       requestBody:
         required: true
@@ -247,7 +251,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserEnvelope"
         "401":
-          description: Invalid reset code
+          description: Invalid or expired reset code
           content:
             application/json:
               schema:
@@ -263,7 +267,8 @@ paths:
         Atomically consumes the unexpired reset code, updates the password
         hash, records password history, revokes all refresh-token sessions, and
         increments `User.tokenVersion` so previously issued access tokens are
-        rejected. A code is strictly single-use.
+        rejected. A code is strictly single-use and wrong-code attempts count
+        toward the same per-account limit enforced by the verify endpoint.
       security: []
       requestBody:
         required: true

@@ -37,7 +37,7 @@
 | Mobile login screen | Source only | `src/mobile/app/(auth)/login.tsx` |
 | Mobile register screen | Source only | `src/mobile/app/(auth)/register.tsx` |
 | Mobile verify-email | Source only | `src/mobile/app/(auth)/verify-email.tsx` — six-digit boxed input wired to `POST /auth/verify-email` |
-| Mobile forgot-password / reset-password | Placeholder | screens exist but are UI-only; no API calls |
+| Mobile forgot-password / OTP / reset-password | Source only | `src/mobile/app/(auth)/forgot-password.tsx`, `reset-code.tsx`, `reset-password.tsx` — wired to `POST /auth/forgot-password`, `/auth/verify-otp`, `/auth/reset-password` (email-only) |
 | Mobile token storage + refresh interceptor | Source only | `src/mobile/src/contexts/AuthContext.tsx`, `src/mobile/src/api/client.ts` |
 
 ## Transactions

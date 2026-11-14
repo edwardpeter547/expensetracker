@@ -5,6 +5,7 @@ import { AppLockProvider, useAppLock } from "@/contexts/AppLockContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FeatureAccessProvider } from "@/contexts/FeatureAccessContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
+import { PasswordRecoveryProvider } from "@/contexts/PasswordRecoveryContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useAuth } from "@/hooks/useAuth";
 import i18n from "@/i18n";
@@ -58,7 +59,9 @@ export default function RootLayout() {
                         <AuthProvider>
                             <AppLockProvider>
                                 <FeatureAccessProvider>
-                                    <RootLayoutContent />
+                                    <PasswordRecoveryProvider>
+                                        <RootLayoutContent />
+                                    </PasswordRecoveryProvider>
                                 </FeatureAccessProvider>
                             </AppLockProvider>
                         </AuthProvider>

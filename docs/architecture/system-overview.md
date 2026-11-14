@@ -62,7 +62,7 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 3. `POST /api/v1/auth/login` validates credentials, rejects unverified or inactive accounts with a generic 401, updates last login, and returns user + tokens.
 4. `POST /api/v1/auth/refresh-token` rotates refresh tokens (old token is revoked).
 5. `POST /api/v1/auth/logout` (protected) revokes the presented refresh token.
-6. `POST /api/v1/auth/forgot-password` creates an unbiased six-digit reset code, stores its SHA-256 digest, and emails the raw code; `POST /api/v1/auth/verify-otp` verifies an unexpired, unused code; `POST /api/v1/auth/reset-password` atomically consumes the code, updates the password, records password history, revokes all refresh sessions, and increments `tokenVersion`.
+6. `POST /api/v1/auth/forgot-password` creates an unbiased six-digit reset code, stores its keyed HMAC digest, and emails the raw code; repeat requests are suppressed by a per-account resend cooldown and later supersede prior unused codes. `POST /api/v1/auth/verify-otp` verifies an unexpired, unused code with an attempt limit; `POST /api/v1/auth/reset-password` atomically consumes the code, updates the password, records password history, revokes all refresh sessions, and increments `tokenVersion`.
 7. `GET /api/v1/auth/sessions` (protected) lists the caller's active refresh-token sessions with IP, user agent, creation, and expiry metadata.
 8. `DELETE /api/v1/auth/sessions/{id}` (protected) revokes one of the caller's sessions.
 9. `DELETE /api/v1/auth/sessions` (protected) atomically revokes all of the caller's refresh-token sessions and increments `tokenVersion`, immediately invalidating previously issued access tokens.
