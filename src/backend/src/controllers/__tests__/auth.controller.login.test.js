@@ -18,15 +18,14 @@ const servicesDirectory = path.resolve(
 );
 
 const mockAuthService = {
-    confirmVerification: jest.fn(),
     countRecentFailedLogins: jest.fn(),
     createUser: jest.fn(),
-    createVerificationToken: jest.fn(),
+    createVerificationCode: jest.fn(),
     getUser: jest.fn(),
-    getVerificationToken: jest.fn(),
-    removeVerificationToken: jest.fn(),
+    getLatestVerificationCode: jest.fn(),
     savePasswordResetToken: jest.fn(),
-    saveVerificationToken: jest.fn(),
+    saveVerificationCode: jest.fn(),
+    verifyEmailCode: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
     resetPasswordWithCode: jest.fn(),
     updateUserPassword: jest.fn(),
@@ -160,7 +159,7 @@ describe('auth login controller', () => {
 
     test('successful login resets failures and issues tokens', async () => {
         mockAuthService.getUser.mockResolvedValue({
-            id: 1, email: 'known@example.com', password: passwordHash, isActive: true,
+            id: 1, email: 'known@example.com', password: passwordHash, isActive: true, isEmailVerified: true,
         });
         mockAuthService.getSafeUser.mockResolvedValue({id: 1, email: 'known@example.com'});
         const response = makeResponse();
@@ -171,5 +170,23 @@ describe('auth login controller', () => {
         expect(mockAuthService.resetFailedLogins).toHaveBeenCalledWith('known@example.com');
         expect(mockAuthService.createRefreshToken).toHaveBeenCalled();
         expect(response.status).toHaveBeenCalledWith(StatusCodes.OK);
+    });
+
+    /**
+     * An unverified account must receive the same generic 401 as an unknown
+     * email or wrong password, so verification status is never disclosed.
+     */
+    test('unverified account returns 401 without revealing verification status', async () => {
+        mockAuthService.getUser.mockResolvedValue({
+            id: 1, email: 'known@example.com', password: passwordHash, isActive: true, isEmailVerified: false,
+        });
+        const next = jest.fn();
+
+        await login(makeRequest('known@example.com', 'CorrectPass123'), makeResponse(), next);
+        await flushAsync();
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next.mock.calls[0][0].statusCode).toBe(StatusCodes.UNAUTHORIZED);
+        expect(next.mock.calls[0][0].code).toBe('AUTH_INVALID_CREDENTIALS');
     });
 });

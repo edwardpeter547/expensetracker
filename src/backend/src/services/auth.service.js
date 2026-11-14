@@ -102,6 +102,25 @@ export const hashResetCode = (code) => {
 }
 
 /**
+ * Hash a six-digit email-verification code with a keyed HMAC digest.
+ *
+ * A six-digit code has only one million possible values, so a fast unsalted
+ * digest would be brute-forceable if the database leaked. The key is derived
+ * from the configured JWT secret and a purpose string, so offline guessing
+ * requires the server secret while per-account attempt limits protect the
+ * live endpoint.
+ *
+ * @param {string} code The raw numeric verification code.
+ * @returns {string} The hex-encoded HMAC-SHA256 digest.
+ */
+export const hashVerificationCode = (code) => {
+    const key = crypto.createHmac('sha256', Config.jwtSecret)
+        .update('expensetracker:email-verification-otp')
+        .digest();
+    return crypto.createHmac('sha256', key).update(String(code)).digest('hex');
+}
+
+/**
  * Persist a SHA-256 digest of a refresh token for a user.
  *
  * The raw token is never stored; only its digest is written. `familyId` links
@@ -284,9 +303,19 @@ export const rotateRefreshToken = async (presentedToken) => {
         throw new AppError('Refresh Token Expired', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_EXPIRED});
     }
 
-    if (!stored.user || !stored.user.isActive) {
+    if (!stored.user) {
         await revokeTokenFamily(stored.familyId);
         throw new AppError('Account deactivated', 401, null, {code: ERROR_CODES.AUTH_ACCOUNT_DEACTIVATED});
+    }
+
+    if (!stored.user.isActive) {
+        await revokeTokenFamily(stored.familyId);
+        throw new AppError('Account deactivated', 401, null, {code: ERROR_CODES.AUTH_ACCOUNT_DEACTIVATED});
+    }
+
+    if (!stored.user.isEmailVerified) {
+        await revokeTokenFamily(stored.familyId);
+        throw new AppError('Email not verified', 401, null, {code: ERROR_CODES.AUTH_EMAIL_NOT_VERIFIED});
     }
 
     const tokens = generateTokens(stored.user.id, stored.user.email, stored.user.tokenVersion);
@@ -299,7 +328,7 @@ export const rotateRefreshToken = async (presentedToken) => {
             // revocation cannot survive because the version check below sees
             // the committed bump or the global revocation sees the new row.
             const lockedRows = await tx.$queryRaw`
-                SELECT "tokenVersion", "isActive"
+                SELECT "tokenVersion", "isActive", "isEmailVerified"
                 FROM "user"
                 WHERE "id" = ${stored.user.id}
                 FOR UPDATE
@@ -309,6 +338,7 @@ export const rotateRefreshToken = async (presentedToken) => {
             if (
                 !lockedUser ||
                 !lockedUser.isActive ||
+                !lockedUser.isEmailVerified ||
                 Number(lockedUser.tokenVersion) !== stored.user.tokenVersion
             ) {
                 throw new AppError('Invalid Refresh Token', 401, null, {code: ERROR_CODES.REFRESH_TOKEN_INVALID});
@@ -448,94 +478,201 @@ export const resetFailedLogins = async (email) => {
 };
 
 /**
- * Persist an email-verification token for a user.
+ * Persist a hashed email-verification code for a user.
+ *
+ * The raw six-digit code is never stored; only its keyed HMAC digest is
+ * written. Codes are single-use (`usedAt`), expire after the configured
+ * window, and carry an attempt counter enforced by {@link verifyEmailCode}.
  *
  * @param {object} user The user to verify.
- * @param {string} token The raw verification token.
+ * @param {string} code The raw six-digit code.
+ * @param {string|null} [ipAddress=null] The issuing request IP.
  * @param {object} [tx=prisma] An optional Prisma transaction client.
- * @returns {Promise<void>}
+ * @returns {Promise<object>} The created verification-token record.
  */
-export const createVerificationToken = async (user, token, tx = prisma) => {
-    await tx.verificationToken.create({
+export const createVerificationCode = async (user, code, ipAddress = null, tx = prisma) => {
+    return tx.verificationToken.create({
         data: {
             userId: user.id,
-            token: token,
-            expiresAt: new Date(Date.now() + Config.verificationTokenExpiryMinutes * 60 * 1000)
+            tokenHash: hashVerificationCode(code),
+            expiresAt: new Date(Date.now() + Config.verificationTokenExpiryMinutes * 60 * 1000),
+            attempts: 0,
+            usedAt: null,
+            createdByIp: ipAddress,
         }
     });
 }
 
 /**
- * Load a verification token with its safe user projection.
+ * Invalidate every unused verification code for a user and persist a fresh one.
  *
- * The raw verification token is not returned in the result.
- *
- * @param {string} token The raw verification token.
- * @returns {Promise<object|null>} The token record (id, expiresAt, user).
- */
-export const getVerificationToken = async (token) => {
-    return await prisma.verificationToken.findUnique({
-        where: { token },
-        select: {
-            id: true,
-            expiresAt: true,
-            user: { select: USER_PUBLIC_SELECT }
-        }
-    });
-}
-
-/**
- * Delete a verification token by id.
- *
- * @param {string} tokenId The verification token id.
- * @returns {Promise<void>}
- */
-export const removeVerificationToken = async(tokenId) => {
-    await prisma.verificationToken.delete({where: {id: tokenId}});
-}
-
-/**
- * Mark a user verified and consume the verification token atomically.
- *
- * @param {string} verificationId The verification token id.
- * @param {number} userId The user to activate.
- * @returns {Promise<void>}
- */
-export const confirmVerification = async(verificationId, userId) => {
-    
-    await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-            where: { id: userId},
-            data: {emailVerifiedAt: new Date(), isActive: true, isEmailVerified: true}
-        });
-
-        await tx.verificationToken.delete({
-            where: {id: verificationId}
-        });
-    });
-}
-
-/**
- * Reset verification state and issue a new verification token atomically.
+ * Superseding prior codes on resend prevents an unbounded set of live
+ * credentials and guarantees only the most recently issued code is usable.
  *
  * @param {object} user The user to re-verify.
- * @param {string} verificationToken The new raw verification token.
+ * @param {string} code The new raw six-digit code.
+ * @param {string|null} [ipAddress=null] The issuing request IP.
  * @returns {Promise<void>}
  */
-export const saveVerificationToken = async(user, verificationToken) => {
+export const saveVerificationCode = async (user, code, ipAddress = null) => {
     await prisma.$transaction(async (tx) => {
-        await tx.verificationToken.deleteMany({
-            where: {userId: user.id}
+        await tx.verificationToken.updateMany({
+            where: {userId: user.id, usedAt: null},
+            data: {usedAt: new Date()},
         });
         await tx.user.update({
-            where: {email: user.email},
+            where: {id: user.id},
             data: {
                 isEmailVerified: false,
                 isActive: false,
-                emailVerifiedAt: null
+                emailVerifiedAt: null,
             }
         });
-        await createVerificationToken(user, verificationToken, tx)
+        await createVerificationCode(user, code, ipAddress, tx);
+    });
+}
+
+/**
+ * Load the most recently issued verification code for a user.
+ *
+ * Used by the resend path to enforce a per-account cooldown without relying
+ * on in-memory state.
+ *
+ * @param {number} userId The owning user id.
+ * @returns {Promise<object|null>} The latest code record, or null.
+ */
+export const getLatestVerificationCode = async (userId) => {
+    return prisma.verificationToken.findFirst({
+        where: {userId},
+        orderBy: {createdAt: 'desc'},
+        select: {
+            id: true,
+            createdAt: true,
+            expiresAt: true,
+            usedAt: true,
+            attempts: true,
+        },
+    });
+}
+
+/**
+ * Increment the attempt counter on a user's active verification code and
+ * invalidate it once the configured limit is reached.
+ *
+ * This runs inside the verification transaction while the user row is locked,
+ * so concurrent wrong-code attempts serialize and cannot race past the limit.
+ *
+ * @param {object} tx The Prisma transaction client.
+ * @param {number} userId The owning user id.
+ * @param {number} attemptLimit The configured attempt limit.
+ * @returns {Promise<void>}
+ */
+const registerFailedVerificationAttempt = async (tx, userId, attemptLimit) => {
+    const active = await tx.verificationToken.findFirst({
+        where: {userId, usedAt: null, expiresAt: {gt: new Date()}},
+        orderBy: {createdAt: 'desc'},
+        select: {id: true},
+    });
+
+    if (!active) {
+        return;
+    }
+
+    await tx.verificationToken.updateMany({
+        where: {id: active.id, usedAt: null},
+        data: {attempts: {increment: 1}},
+    });
+
+    const updated = await tx.verificationToken.findUnique({
+        where: {id: active.id},
+        select: {attempts: true},
+    });
+
+    if (updated && updated.attempts >= attemptLimit) {
+        await tx.verificationToken.updateMany({
+            where: {id: active.id, usedAt: null},
+            data: {usedAt: new Date()},
+        });
+    }
+}
+
+/**
+ * Verify a six-digit email code and activate the account atomically.
+ *
+ * The user row is locked first so concurrent verifications and resends
+ * serialize. A wrong code increments the account's active code counter; when
+ * the counter reaches the configured limit the code is invalidated and the
+ * caller must request a new one. Correct codes are strictly single-use.
+ *
+ * @param {object} params Verification parameters.
+ * @param {string} params.email The account email address.
+ * @param {string} params.code The raw six-digit code.
+ * @returns {Promise<{status: 'verified'|'invalid'|'expired', user?: object}>}
+ *   The verification outcome and, on success, a minimal safe user.
+ */
+export const verifyEmailCode = async ({email, code}) => {
+    const codeHash = hashVerificationCode(code);
+    const attemptLimit = Config.verificationAttemptLimit;
+
+    return prisma.$transaction(async (tx) => {
+        const lockedRows = await tx.$queryRaw`
+            SELECT "id", "email", "language", "isActive", "isEmailVerified"
+            FROM "user"
+            WHERE "email" = ${email}
+            FOR UPDATE
+        `;
+        const lockedUser = lockedRows[0];
+
+        if (!lockedUser) {
+            return {status: 'invalid'};
+        }
+
+        const token = await tx.verificationToken.findFirst({
+            where: {userId: lockedUser.id, tokenHash: codeHash, usedAt: null},
+            orderBy: {createdAt: 'desc'},
+            select: {id: true, expiresAt: true, attempts: true},
+        });
+
+        if (!token) {
+            await registerFailedVerificationAttempt(tx, lockedUser.id, attemptLimit);
+            return {status: 'invalid'};
+        }
+
+        if (token.expiresAt < new Date()) {
+            await tx.verificationToken.updateMany({
+                where: {id: token.id, usedAt: null},
+                data: {usedAt: new Date()},
+            });
+            return {status: 'expired'};
+        }
+
+        const consumed = await tx.verificationToken.updateMany({
+            where: {id: token.id, usedAt: null},
+            data: {usedAt: new Date()},
+        });
+
+        if (consumed.count !== 1) {
+            return {status: 'invalid'};
+        }
+
+        await tx.user.update({
+            where: {id: lockedUser.id},
+            data: {
+                isEmailVerified: true,
+                isActive: true,
+                emailVerifiedAt: new Date(),
+            },
+        });
+
+        await tx.verificationToken.updateMany({
+            where: {userId: lockedUser.id, usedAt: null},
+            data: {usedAt: new Date()},
+        });
+
+        return {
+            status: 'verified',
+            user: {id: lockedUser.id, email: lockedUser.email, language: lockedUser.language},
+        };
     });
 }
 

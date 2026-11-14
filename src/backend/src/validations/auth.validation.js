@@ -42,8 +42,12 @@ export const logoutSchema = Joi.object({
 });
 
 
-export const verificationTokenSchema = Joi.object({
-    token: token(),
+/**
+ * Validation schema for verifying an email address with a six-digit code.
+ */
+export const verifyEmailCodeSchema = Joi.object({
+    code: otpToken(6),
+    email: email(),
 });
 
 /**

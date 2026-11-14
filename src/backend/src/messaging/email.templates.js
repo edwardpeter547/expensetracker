@@ -199,7 +199,8 @@ class EmailTemplateService {
      * @example
      * const html = emailTemplates.render('welcome', {
      *     firstName: 'John',
-     *     verifyUrl: 'https://...',
+     *     verificationCode: '012345',
+     *     expiryMinutes: 10,
      *     unsubscribeToken: 'abc123'
      * }, 'en');
      */

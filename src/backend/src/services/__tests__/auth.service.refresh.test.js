@@ -31,7 +31,12 @@ const ACTIVE_USER = {
 };
 
 const INACTIVE_USER = { ...ACTIVE_USER, id: 2, email: 'inactive@example.com', isActive: false };
-const USERS = { [ACTIVE_USER.id]: ACTIVE_USER, [INACTIVE_USER.id]: INACTIVE_USER };
+const UNVERIFIED_USER = { ...ACTIVE_USER, id: 3, email: 'unverified@example.com', isEmailVerified: false, emailVerifiedAt: null };
+const USERS = {
+    [ACTIVE_USER.id]: ACTIVE_USER,
+    [INACTIVE_USER.id]: INACTIVE_USER,
+    [UNVERIFIED_USER.id]: UNVERIFIED_USER,
+};
 
 let store;
 let shouldFailCreate = false;
@@ -66,7 +71,7 @@ const makeTransactionClient = () => {
     const undoLog = [];
     return {
         undoLog,
-        $queryRaw: jest.fn(async () => [{ tokenVersion: 0, isActive: true }]),
+        $queryRaw: jest.fn(async () => [{ tokenVersion: 0, isActive: true, isEmailVerified: true }]),
         refreshToken: {
             create: async ({ data }) => {
                 if (shouldFailCreate) throw new Error('simulated database failure');
@@ -206,6 +211,21 @@ describe('refresh-token storage and rotation', () => {
         const token = seedToken({ userId: INACTIVE_USER.id });
 
         await expect(authService.rotateRefreshToken(token)).rejects.toMatchObject({ statusCode: 401 });
+        expect(store[0].isRevoked).toBe(true);
+    });
+
+    /**
+     * A refresh token issued to an unverified account must not obtain a new
+     * token pair, and the stale family must be revoked so it cannot be retried
+     * after the account is later verified elsewhere.
+     */
+    test('refresh rejects and revokes the family for unverified users', async () => {
+        const token = seedToken({ userId: UNVERIFIED_USER.id });
+
+        await expect(authService.rotateRefreshToken(token)).rejects.toMatchObject({
+            statusCode: 401,
+            code: 'AUTH_EMAIL_NOT_VERIFIED',
+        });
         expect(store[0].isRevoked).toBe(true);
     });
 

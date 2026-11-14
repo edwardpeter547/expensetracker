@@ -11,27 +11,26 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 const mockAuthService = {
-    confirmVerification: jest.fn(),
     countRecentFailedLogins: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),
     createUser: jest.fn(),
-    createVerificationToken: jest.fn(),
+    createVerificationCode: jest.fn(),
     getSafeUser: jest.fn(),
     getUser: jest.fn(),
     getAccountLockout: jest.fn(),
+    getLatestVerificationCode: jest.fn(),
     resetFailedLogins: jest.fn(),
-    getVerificationToken: jest.fn(),
     refreshRecord: jest.fn(),
-    removeVerificationToken: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),
     revokeAllUserSessions: jest.fn(),
     rotateRefreshToken: jest.fn(),
     sanitizeResponse: jest.fn(),
     savePasswordResetToken: jest.fn(),
-    saveVerificationToken: jest.fn(),
+    saveVerificationCode: jest.fn(),
     updateLastLogin: jest.fn(),
     updateUserPassword: jest.fn(),
+    verifyEmailCode: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
     resetPasswordWithCode: jest.fn(),
     listUserSessions: jest.fn(),
@@ -41,7 +40,7 @@ const mockAuthService = {
 const mockEmailService = {
     sendRegistrationComplete: jest.fn(),
     sendVerificationConfirmation: jest.fn(),
-    resendEmailVerificationLink: jest.fn(),
+    resendEmailVerificationCode: jest.fn(),
     sendPasswordResetCode: jest.fn(),
 };
 

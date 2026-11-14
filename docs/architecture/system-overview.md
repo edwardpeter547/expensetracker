@@ -57,9 +57,9 @@ This layering is preserved as-is; no repository or DI layer is introduced.
 - Status codes come from `http-status-codes`.
 
 ### Auth flow
-1. `POST /api/v1/auth/register` creates an inactive user, issues access + refresh tokens, records a login attempt, creates a verification token, and sends a welcome email (fire-and-forget).
-2. `GET /api/v1/auth/verify-email?token=...` activates the user.
-3. `POST /api/v1/auth/login` validates credentials, updates last login, and returns user + tokens.
+1. `POST /api/v1/auth/register` creates an inactive, unverified user, generates a six-digit verification code, stores its keyed HMAC digest, and sends the code in a welcome email (fire-and-forget). No access or refresh token is issued until verification completes.
+2. `POST /api/v1/auth/verify-email` accepts `{ email, code }` and atomically activates the user after a single-use, attempt-limited check. The code expires after the configured window.
+3. `POST /api/v1/auth/login` validates credentials, rejects unverified or inactive accounts with a generic 401, updates last login, and returns user + tokens.
 4. `POST /api/v1/auth/refresh-token` rotates refresh tokens (old token is revoked).
 5. `POST /api/v1/auth/logout` (protected) revokes the presented refresh token.
 6. `POST /api/v1/auth/forgot-password` creates an unbiased six-digit reset code, stores its SHA-256 digest, and emails the raw code; `POST /api/v1/auth/verify-otp` verifies an unexpired, unused code; `POST /api/v1/auth/reset-password` atomically consumes the code, updates the password, records password history, revokes all refresh sessions, and increments `tokenVersion`.
@@ -151,7 +151,7 @@ Core models:
 - `Transaction` — `amount` (`Decimal`, `NUMERIC(19,4)`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`.
 - `Category` — `name`, `icon`, `isSystem`, optional `userId`.
 - `Budget` — `amount` (`Decimal`, `NUMERIC(19,4)`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
-- `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken`, `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
+- `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken` (hashed, single-use, attempt-limited six-digit codes), `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
 - `AuthAuditEvent` — persistent, secret-safe authentication audit trail (see `docs/authentication-audit-logging.md`).
 - `Notification` — defined but not yet used.
 
@@ -257,4 +257,4 @@ These are the remaining observations after the Phase 0 stabilization pass.
 - **Profile update:** `PUT /api/v1/user/profile` is now implemented and validated.
 - **Unused tooling:** `src/backend/tsconfig.json` and `ts-jest` exist but backend source is JavaScript. Mobile lint and Node-based unit tests are now configured.
 - **Test targets:** backend tests run with `task test`, but the documented 80% coverage threshold is not currently enforced by Jest (the suite exits 0 well below 80%).
-- **Enumeration surfaces:** `resendVerification` still distinguishes unknown versus already-verified accounts; `forgotPassword` now returns a generic response.
+- **Enumeration surfaces:** both `resendVerification` and `forgotPassword` return generic responses and do not reveal account existence; verification-code errors are generic except for a valid code that has expired.

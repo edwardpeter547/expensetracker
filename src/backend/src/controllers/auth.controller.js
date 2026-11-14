@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import Config from '../configurations/env.config.js';
 import i18n from '../configurations/i18n.config.js';
@@ -12,17 +11,15 @@ import {
 } from '../constants/auth-audit.constants.js';
 import {
     countRecentFailedLogins,
-    confirmVerification,
     createLoginAttempt,
     createRefreshToken,
     createUser,
-    createVerificationToken,
+    createVerificationCode,
     getAccountLockout,
+    getLatestVerificationCode,
     getUser,
     getSafeUser,
-    getVerificationToken,
     listUserSessions,
-    removeVerificationToken,
     resetFailedLogins,
     resetPasswordWithCode,
     revokeAllUserSessions,
@@ -30,8 +27,9 @@ import {
     revokeUserSession,
     rotateRefreshToken,
     savePasswordResetToken,
-    saveVerificationToken,
+    saveVerificationCode,
     updateLastLogin,
+    verifyEmailCode,
     verifyResetPasswordToken,
 } from '../services/auth.service.js';
 import { hasRecentEvent, recordAuthAuditEvent } from '../services/auth-audit.service.js';
@@ -119,18 +117,8 @@ export const register = catchAsync(async (request, response) => {
         }
         throw error;
     }
-    const {accessToken, refreshToken } = generateTokens(user.id, user.email, 0);
-
-    await createRefreshToken(refreshToken, user.id, request.ip, null, request.headers['user-agent']);
-    await createLoginAttempt({
-        ipAddress: request.ip, 
-        userAgent: request.headers['user-agent'], 
-        email: email, 
-        loginAttemptStatus: true, 
-        userId: user.id
-    });
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    await createVerificationToken(user, verificationToken);
+    const verificationCode = generateNumericCode(6);
+    await createVerificationCode(user, verificationCode, request.ip);
 
     await recordAuthAuditEvent({
         eventType: AUTH_AUDIT_EVENT_TYPES.REGISTRATION,
@@ -140,14 +128,14 @@ export const register = catchAsync(async (request, response) => {
         correlationId: request.id,
     });
 
-    emailService.sendRegistrationComplete(user, verificationToken).catch(error => logger.error('failed send welcome email', {userId: user.id, error: error.message}));
+    emailService.sendRegistrationComplete(user, verificationCode).catch(error => logger.error('failed send welcome email', {userId: user.id, error: error.message}));
     logger.info("Registration Email sent!", {user: maskEmail(user.email), action: MESSAGING_ACTIONS.WELCOME_EMAIL_SENT})
     logger.info("User Account Created", {user: maskEmail(user.email), action: USER_ACTIONS.USER_CREATED});
 
     response.status(201).json({
         success: true,
         message: request.__('RESPONSE_MSG_USER_CREATED'),
-        data: {user, accessToken, refreshToken},
+        data: {user},
         errors: null
     });
 
@@ -155,38 +143,48 @@ export const register = catchAsync(async (request, response) => {
 
 
 /**
- * Verify an email-verification token and activate the user.
+ * Verify a six-digit email-verification code and activate the user.
  *
- * @param {import('express').Request} request Express request with `query.token`.
+ * @param {import('express').Request} request Express request with
+ *   `body.email` and `body.code`.
  * @param {import('express').Response} response Express response.
  * @returns {Promise<void>}
  */
 export const verifyEmail = catchAsync(async (request, response) => {
 
-    const { token } = request.query;
-    const verification = await getVerificationToken(token);
+    const { email, code } = request.body;
+    const locale = getAppLocale(request);
+    const result = await verifyEmailCode({email, code});
 
-    if(!verification){
-        logger.warn("Invalid Verification Token", {action: AUTH_ACTIONS.TOKEN_INVALID});
-        throw new AppError('Invalid or expired verification token', 400, null, {code: ERROR_CODES.VERIFICATION_TOKEN_INVALID});
+    if (result.status === 'expired') {
+        logger.warn("Verification code has expired", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
+        throw new AppError(
+            i18n.__({phrase: "VERIFICATION_TOKEN_EXPIRED", locale}),
+            StatusCodes.BAD_REQUEST,
+            null,
+            {code: ERROR_CODES.VERIFICATION_TOKEN_EXPIRED}
+        );
     }
 
-    if(verification.expiresAt < new Date()){
-        await removeVerificationToken(verification.id);
-        logger.warn("Verification token has expired", {user: maskEmail(verification.user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
-        throw new AppError('Verification token has expired', 400, null, {code: ERROR_CODES.VERIFICATION_TOKEN_EXPIRED});
+    if (result.status === 'invalid') {
+        logger.warn("Invalid Verification Code", {user: maskEmail(email), action: AUTH_ACTIONS.TOKEN_INVALID});
+        throw new AppError(
+            i18n.__({phrase: "VERIFICATION_TOKEN_INVALID", locale}),
+            StatusCodes.BAD_REQUEST,
+            null,
+            {code: ERROR_CODES.VERIFICATION_TOKEN_INVALID}
+        );
     }
 
-    // Mark user as verified
-    await confirmVerification(verification.id, verification.user.id);
+    const user = await getSafeUser({id: result.user.id});
 
-    await emailService.sendVerificationConfirmation(verification.user)
-    .catch(error => logger.error('Failed to send email', {user: maskEmail(verification.user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}))
+    await emailService.sendVerificationConfirmation(user)
+        .catch(error => logger.error('Failed to send email', {user: maskEmail(user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}));
 
     response.status(200).json({
         success: true,
-        message: i18n.__({phrase: "RESPONSE_MSG_EMAIL_VERIFIED", locale: verification.user.language}),
-        data: {user: verification.user},
+        message: i18n.__({phrase: "RESPONSE_MSG_EMAIL_VERIFIED", locale: user.language}),
+        data: {user},
         errors: null
     });
 
@@ -194,7 +192,11 @@ export const verifyEmail = catchAsync(async (request, response) => {
 
 
 /**
- * Resend the email-verification link for an unverified account.
+ * Resend the six-digit email-verification code for an unverified account.
+ *
+ * The response is identical for unknown accounts, already-verified accounts,
+ * and requests suppressed by the per-account cooldown, so the endpoint does
+ * not reveal account existence.
  *
  * @param {import('express').Request} request Express request with `body.email`.
  * @param {import('express').Response} response Express response.
@@ -222,11 +224,18 @@ export const resendVerification = catchAsync(async (request, response) => {
         return respond();
     }
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    await saveVerificationToken(user, verificationToken);
-    
-    emailService.resendEmailVerificationLink(user, verificationToken)
-    .catch(error => logger.error('Failed to send email', {user: maskEmail(user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}));
+    const latestCode = await getLatestVerificationCode(user.id);
+    const cooldownMs = Config.verificationResendCooldownMinutes * 60 * 1000;
+    if (latestCode && (Date.now() - latestCode.createdAt.getTime()) < cooldownMs) {
+        logger.info('Verification code resend skipped (cooldown)', {user: maskEmail(email)});
+        return respond();
+    }
+
+    const verificationCode = generateNumericCode(6);
+    await saveVerificationCode(user, verificationCode, request.ip);
+
+    emailService.resendEmailVerificationCode(user, verificationCode)
+        .catch(error => logger.error('Failed to send email', {user: maskEmail(user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}));
 
     return respond();
 });
@@ -309,7 +318,10 @@ export const login = catchAsync(async (request, response) => {
         throw genericFailure();
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || !user.isEmailVerified) {
+        const reason = !user.isEmailVerified
+            ? AUTH_AUDIT_REASONS.EMAIL_NOT_VERIFIED
+            : AUTH_AUDIT_REASONS.ACCOUNT_INACTIVE;
         await createLoginAttempt({ipAddress, userAgent, email, loginAttemptStatus: false, userId: user.id});
         await recordAuthAuditEvent({
             eventType: AUTH_AUDIT_EVENT_TYPES.LOGIN,
@@ -317,9 +329,9 @@ export const login = catchAsync(async (request, response) => {
             userId: user.id,
             ipAddress,
             correlationId: request.id,
-            metadata: {reason: AUTH_AUDIT_REASONS.ACCOUNT_INACTIVE},
+            metadata: {reason},
         });
-        logger.warn('Login blocked: account deactivated', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_BLOCKED});
+        logger.warn(!user.isEmailVerified ? 'Login blocked: email not verified' : 'Login blocked: account deactivated', {user: maskEmail(email), action: AUTH_ACTIONS.LOGIN_BLOCKED});
         throw genericFailure();
     }
 

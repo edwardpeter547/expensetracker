@@ -10,9 +10,11 @@ export default {
     WELCOME_EMAIL_TEXT: `
         <h4>Bienvenue sur {{brandName}}, {{firstName}}</h4>
         <p>Merci d'avoir créé un compte. Nous sommes ravis de vous aider à gérer vos finances.</p>
-        <p>Pour commencer, veuillez vérifier votre adresse e-mail en cliquant sur le bouton ci-dessous.</p>
+        <p>Pour finaliser votre inscription, saisissez le code de vérification à six chiffres ci-dessous.</p>
+        <p>Ce code expire dans {{expiryMinutes}} minutes.</p>
         <p>Si vous n'avez pas créé ce compte, veuillez ignorer cet e-mail.</p>
     `,
+    EMAIL_VERIFICATION_CODE_TEXT: "Code de vérification",
     VERIFY_EMAIL_BUTTON_TEXT: "Vérifier l'adresse e-mail",
     RESET_PASSWORD_VERIFICATION_CODE_TEXT: "Code de vérification",
     EMAIL_VERIFIED_SUCCESS: `
@@ -31,9 +33,9 @@ export default {
     RESET_PASSWORD_EMAIL_SUBJECT: `{{brandName}} Compte : Demande de réinitialisation de mot de passe reçue`,
     RESEND_VERIFICATION_EMAIL_TEXT: `
     <h1>Bonjour {{firstName}}</h1>
-    <p>Nous avons reçu une demande de renvoi du lien de vérification pour votre compte {{brandName}}.</p>
-    <p>Cliquez sur le bouton ci-dessous pour vérifier votre adresse e-mail et activer votre compte.</p>
-    <p>Ce lien expirera dans {{expiryMinutes}} minutes. Si vous n'avez pas fait cette demande, veuillez ignorer cet e-mail.</p>
+    <p>Nous avons reçu une demande de renvoi du code de vérification pour votre compte {{brandName}}.</p>
+    <p>Saisissez le code de vérification à six chiffres ci-dessous pour vérifier votre adresse e-mail et activer votre compte.</p>
+    <p>Ce code expire dans {{expiryMinutes}} minutes. Si vous n'avez pas fait cette demande, veuillez ignorer cet e-mail.</p>
     `,
     RESET_PASSWORD_EMAIL_TEXT: `
     <h1>Bonjour {{firstName}}</h1>
@@ -43,7 +45,7 @@ export default {
     `,
     RESPONSE_MSG_EMAIL_VERIFIED: 'E-mail vérifié avec succès',
     RESPONSE_MSG_USER_CREATED: 'Utilisateur créé avec succès',
-    RESPONSE_EMAIL_VERIFICATION_LINK_SENT: 'Lien de vérification envoyé. Veuillez consulter votre boîte mail.',
+    RESPONSE_EMAIL_VERIFICATION_LINK_SENT: 'Code de vérification envoyé. Veuillez consulter votre boîte mail.',
     RESPONSE_PASSWORD_RESET_CODE_SENT: 'Le code de vérification de réinitialisation du mot de passe a été envoyé',
     RESPONSE_PASSWORD_CHANGED: 'Votre mot de passe a été mis à jour.',
     RESPONSE_LOGIN_SUCCESSFUL: 'Connexion réussie',
@@ -82,8 +84,8 @@ export default {
     REFRESH_TOKEN_INVALID: 'Jeton de rafraîchissement invalide',
     REFRESH_TOKEN_EXPIRED: 'Jeton de rafraîchissement expiré',
     SESSION_NOT_FOUND: 'Session introuvable',
-    VERIFICATION_TOKEN_INVALID: 'Jeton de vérification invalide ou expiré',
-    VERIFICATION_TOKEN_EXPIRED: 'Le jeton de vérification a expiré',
+    VERIFICATION_TOKEN_INVALID: 'Code de vérification invalide ou expiré',
+    VERIFICATION_TOKEN_EXPIRED: 'Le code de vérification a expiré',
     RESET_TOKEN_INVALID: 'Mot de passe à usage unique invalide ou expiré. Veuillez en demander un nouveau.',
     RESET_TOKEN_EXPIRED: 'Mot de passe à usage unique expiré, veuillez en demander un nouveau.',
     PASSWORD_INCORRECT: 'Le mot de passe actuel est incorrect',

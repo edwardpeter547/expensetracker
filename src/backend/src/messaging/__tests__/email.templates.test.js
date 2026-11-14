@@ -23,7 +23,8 @@ import { emailTemplates } from '../email.templates.js';
 const renderWelcome = (locale) => emailTemplates.render('welcome', {
     firstName: 'Ada',
     brandName: 'AuditWallet',
-    verifyUrl: 'https://example.test/verify?token=abc',
+    verificationCode: '012345',
+    expiryMinutes: 10,
     unsubscribeToken: 'unsub-token',
 }, locale);
 
@@ -35,7 +36,8 @@ describe('email template localisation', () => {
         const html = renderWelcome('en');
 
         expect(html).toContain('Welcome to AuditWallet, Ada');
-        expect(html).toContain('Verify Email Address');
+        expect(html).toContain('Verification Code');
+        expect(html).toContain('012345');
         expect(html).toContain('All rights reserved');
     });
 
@@ -46,7 +48,8 @@ describe('email template localisation', () => {
         const html = renderWelcome('fr');
 
         expect(html).toContain('Bienvenue sur AuditWallet, Ada');
-        expect(html).toContain('Vérifier l&#x27;adresse e-mail');
+        expect(html).toContain('Code de vérification');
+        expect(html).toContain('012345');
         expect(html).toContain('Tous droits réservés');
     });
 

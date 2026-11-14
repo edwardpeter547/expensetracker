@@ -161,16 +161,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const register = async (data: RegisterData) => {
-        const response = await apiClient.post('/auth/register', {
+        await apiClient.post('/auth/register', {
             ...data,
             language,
             currency,
         });
-        const { user: nextUser, accessToken, refreshToken } = response.data.data;
-
-        await storeTokens(accessToken, refreshToken);
-        setUser(nextUser);
-        applyRemotePreferences(nextUser.language, nextUser.currency);
     };
 
     const logout = async () => {

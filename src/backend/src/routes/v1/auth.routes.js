@@ -14,7 +14,7 @@ import {
     verifyToken
 } from '../../controllers/auth.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
-import { validate, validateParams, validateQuery } from '../../middleware/validation.middleware.js';
+import { validate, validateParams } from '../../middleware/validation.middleware.js';
 import {
     emailVerificationSchema,
     loginSchema,
@@ -24,7 +24,7 @@ import {
     resetPasswordSchema,
     resetPasswordTokenSchema,
     sessionIdSchema,
-    verificationTokenSchema
+    verifyEmailCodeSchema
 } from '../../validations/auth.validation.js';
 import {
     forgotPasswordRateLimiter,
@@ -42,7 +42,7 @@ const authRoutes = express.Router();
 
 // Public routes
 authRoutes.post('/register', registerRateLimiter, validate(registerSchema), register);
-authRoutes.get('/verify-email', validateQuery(verificationTokenSchema), verifyEmail);
+authRoutes.post('/verify-email', validate(verifyEmailCodeSchema), verifyEmail);
 authRoutes.post('/resend-verification', resendVerificationRateLimiter, validate(emailVerificationSchema), resendVerification);
 authRoutes.post('/login', loginRateLimiter, validate(loginSchema), login);
 authRoutes.post('/forgot-password', forgotPasswordRateLimiter, validate(emailVerificationSchema), forgotPassword);
