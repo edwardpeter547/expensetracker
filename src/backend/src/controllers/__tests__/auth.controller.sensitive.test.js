@@ -21,17 +21,16 @@ const mockAuthService = {
     getUser: jest.fn(),
     getAccountLockout: jest.fn(),
     resetFailedLogins: jest.fn(),
-    getVerificationToken: jest.fn(),
-    confirmVerification: jest.fn(),
-    removeVerificationToken: jest.fn(),
-    saveVerificationToken: jest.fn(),
+    getLatestVerificationCode: jest.fn(),
+    saveVerificationCode: jest.fn(),
+    verifyEmailCode: jest.fn(),
     savePasswordResetToken: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
     resetPasswordWithCode: jest.fn(),
     createUser: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),
-    createVerificationToken: jest.fn(),
+    createVerificationCode: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),
     revokeAllUserSessions: jest.fn(),
     rotateRefreshToken: jest.fn(),
@@ -46,7 +45,7 @@ const mockAuthService = {
 const mockEmailService = {
     sendRegistrationComplete: jest.fn(),
     sendVerificationConfirmation: jest.fn(),
-    resendEmailVerificationLink: jest.fn(),
+    resendEmailVerificationCode: jest.fn(),
     sendPasswordResetCode: jest.fn(),
 };
 
@@ -89,22 +88,29 @@ describe('auth.controller sensitive-data responses', () => {
     });
 
     test('verifyEmail returns a user without a password hash', async () => {
-        mockAuthService.getVerificationToken.mockResolvedValue({
-            id: 'v1',
-            token: 'raw-verification-token',
-            expiresAt: new Date(Date.now() + 60 * 1000),
-            user: { id: 1, email: 'a@b.c', language: 'en', username: 'a', firstname: 'A', lastname: 'B' },
+        mockAuthService.verifyEmailCode.mockResolvedValue({
+            status: 'verified',
+            user: { id: 1, email: 'a@b.c', language: 'en' },
         });
-        mockAuthService.confirmVerification.mockResolvedValue(undefined);
+        mockAuthService.getSafeUser.mockResolvedValue({
+            id: 1,
+            email: 'a@b.c',
+            username: 'a',
+            firstname: 'A',
+            lastname: 'B',
+            language: 'en',
+            isActive: true,
+            isEmailVerified: true,
+        });
         mockEmailService.sendVerificationConfirmation.mockResolvedValue(undefined);
 
         const { json, status } = makeResponse();
-        const req = { query: { token: 'tok' }, __: (key) => key };
+        const req = { body: { email: 'a@b.c', code: '123456' }, __: (key) => key };
 
         await authController.verifyEmail(req, { status, json }, jest.fn());
         await flushAsync();
 
-        expect(mockAuthService.getVerificationToken).toHaveBeenCalledWith('tok');
+        expect(mockAuthService.verifyEmailCode).toHaveBeenCalledWith({email: 'a@b.c', code: '123456'});
         expect(status).toHaveBeenCalledWith(200);
         const payload = json.mock.calls[0][0];
         expect(payload.data.user).not.toHaveProperty('password');
@@ -126,17 +132,20 @@ describe('auth.controller sensitive-data responses', () => {
             isEmailVerified: false,
             isActive: false,
         });
-        mockAuthService.saveVerificationToken.mockResolvedValue(undefined);
-        mockEmailService.resendEmailVerificationLink.mockResolvedValue(undefined);
+        mockAuthService.getLatestVerificationCode.mockResolvedValue(null);
+        mockAuthService.saveVerificationCode.mockResolvedValue(undefined);
+        mockEmailService.resendEmailVerificationCode.mockResolvedValue(undefined);
 
         const { json, status } = makeResponse();
-        const req = { body: { email: 'a@b.c' }, __: (key) => key };
+        const req = { body: { email: 'a@b.c' }, ip: '127.0.0.1', __: (key) => key };
 
         await authController.resendVerification(req, { status, json }, jest.fn());
         await flushAsync();
 
-        expect(mockAuthService.getSafeUser).toHaveBeenCalledWith({ email: 'a@b.c' });
+        expect(mockAuthService.getSafeUser).toHaveBeenCalledWith({email: 'a@b.c'});
         expect(mockAuthService.getUser).not.toHaveBeenCalled();
+        expect(mockAuthService.getLatestVerificationCode).toHaveBeenCalledWith(1);
+        expect(mockAuthService.saveVerificationCode).toHaveBeenCalledTimes(1);
         const payload = json.mock.calls[0][0];
         expect(payload.data).toBeNull();
     });
@@ -186,11 +195,11 @@ describe('auth.controller sensitive-data responses', () => {
     });
 
     test('verifyEmail error path does not serialize user data', async () => {
-        mockAuthService.getVerificationToken.mockResolvedValue(null);
+        mockAuthService.verifyEmailCode.mockResolvedValue({status: 'invalid'});
 
         const { json, status } = makeResponse();
         const next = jest.fn();
-        const req = { query: { token: 'bad' }, __: (key) => key };
+        const req = { body: { email: 'a@b.c', code: '000000' }, __: (key) => key };
 
         await authController.verifyEmail(req, { status, json }, next);
         await flushAsync();
@@ -198,5 +207,6 @@ describe('auth.controller sensitive-data responses', () => {
         expect(json).not.toHaveBeenCalled();
         expect(next).toHaveBeenCalledTimes(1);
         expect(next.mock.calls[0][0].statusCode).toBe(400);
+        expect(next.mock.calls[0][0].code).toBe('VERIFICATION_TOKEN_INVALID');
     });
 });

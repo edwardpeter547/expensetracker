@@ -114,21 +114,17 @@ describe('auth.service sensitive-data projections', () => {
         expect(user).toHaveProperty('isEmailVerified', true);
     });
 
-    test('getVerificationToken never returns the raw token or a password hash', async () => {
-        const verification = await authService.getVerificationToken('raw-verification-token');
+    /**
+     * The six-digit code must be stored as a keyed HMAC digest, never in a
+     * reversible or plain-digest form, and must be deterministic so lookups
+     * remain consistent across requests.
+     */
+    test('hashVerificationCode returns a stable keyed digest that hides the raw code', () => {
+        const hash = authService.hashVerificationCode('000123');
 
-        expect(mockPrisma.verificationToken.findUnique).toHaveBeenCalledWith({
-            where: { token: 'raw-verification-token' },
-            select: {
-                id: true,
-                expiresAt: true,
-                user: { select: USER_PUBLIC_SELECT },
-            },
-        });
-        expect(verification).not.toHaveProperty('token');
-        expect(verification).toHaveProperty('id', 'v1');
-        expect(verification.user).not.toHaveProperty('password');
-        expect(verification.user).not.toHaveProperty('dateOfBirth');
-        expect(verification.user).toHaveProperty('email', FULL_USER.email);
+        expect(hash).toHaveLength(64);
+        expect(hash).not.toContain('000123');
+        expect(authService.hashVerificationCode('000123')).toBe(hash);
+        expect(authService.hashVerificationCode('000124')).not.toBe(hash);
     });
 });

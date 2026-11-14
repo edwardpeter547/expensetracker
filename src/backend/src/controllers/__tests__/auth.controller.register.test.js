@@ -18,18 +18,16 @@ const servicesDirectory = path.resolve(
 );
 
 const mockAuthService = {
-    confirmVerification: jest.fn(),
     countRecentFailedLogins: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),
     createUser: jest.fn(),
-    createVerificationToken: jest.fn(),
+    createVerificationCode: jest.fn(),
     getAccountLockout: jest.fn(),
     getUser: jest.fn(),
     getSafeUser: jest.fn(),
-    getVerificationToken: jest.fn(),
+    getLatestVerificationCode: jest.fn(),
     listUserSessions: jest.fn(),
-    removeVerificationToken: jest.fn(),
     resetFailedLogins: jest.fn(),
     resetPasswordWithCode: jest.fn(),
     revokeAllUserSessions: jest.fn(),
@@ -37,8 +35,9 @@ const mockAuthService = {
     revokeUserSession: jest.fn(),
     rotateRefreshToken: jest.fn(),
     savePasswordResetToken: jest.fn(),
-    saveVerificationToken: jest.fn(),
+    saveVerificationCode: jest.fn(),
     updateLastLogin: jest.fn(),
+    verifyEmailCode: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
 };
 
@@ -85,7 +84,7 @@ describe('auth register controller language persistence', () => {
         });
         mockAuthService.createRefreshToken.mockResolvedValue(null);
         mockAuthService.createLoginAttempt.mockResolvedValue(null);
-        mockAuthService.createVerificationToken.mockResolvedValue(null);
+        mockAuthService.createVerificationCode.mockResolvedValue(null);
         mockAuthAuditService.recordAuthAuditEvent.mockResolvedValue(null);
         mockAuthAuditService.hasRecentEvent.mockResolvedValue(false);
     });
@@ -171,5 +170,37 @@ describe('auth register controller language persistence', () => {
             'fr',
             'USD',
         );
+    });
+
+    /**
+     * Registration must not establish an authenticated session: no token pair
+     * may be issued or persisted, and the six-digit code must be generated and
+     * passed to the email service while the response omits any token material.
+     */
+    test('registers without issuing a token pair and emits a verification code', async () => {
+        const response = makeResponse();
+
+        await register(makeRequest({
+            email: 'a@b.c',
+            username: 'ada',
+            password: 'Password123',
+            firstName: 'Ada',
+            lastName: 'Lovelace',
+            currency: 'USD',
+        }), response, jest.fn());
+        await flushAsync();
+
+        expect(mockAuthService.createRefreshToken).not.toHaveBeenCalled();
+        expect(mockAuthService.createLoginAttempt).not.toHaveBeenCalled();
+        expect(mockAuthService.createVerificationCode).toHaveBeenCalledTimes(1);
+        expect(mockAuthService.createVerificationCode.mock.calls[0][0]).toMatchObject({id: 1});
+        expect(mockAuthService.createVerificationCode.mock.calls[0][1]).toMatch(/^\d{6}$/);
+        expect(mockEmailService.sendRegistrationComplete).toHaveBeenCalledTimes(1);
+
+        expect(response.status).toHaveBeenCalledWith(201);
+        const payload = response.json.mock.calls[0][0];
+        expect(payload.data).toHaveProperty('user');
+        expect(payload.data).not.toHaveProperty('accessToken');
+        expect(payload.data).not.toHaveProperty('refreshToken');
     });
 });

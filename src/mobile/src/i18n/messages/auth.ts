@@ -91,6 +91,8 @@ const messages: MessageCatalogue = {
     "Verify email": { "en": "Verify email", "fr": "Vérifier l'e-mail" },
     "Resend verification code": { "en": "Resend verification code", "fr": "Renvoyer le code de vérification" },
     "Enter the verification code": { "en": "Enter the verification code", "fr": "Saisissez le code de vérification" },
+    "Email address is missing": { "en": "Email address is missing", "fr": "L'adresse e-mail est manquante" },
+    "Resend code in {{time}}": { "en": "Resend code in {{time}}s", "fr": "Renvoyer le code dans {{time}}s" },
 };
 
 export default messages;

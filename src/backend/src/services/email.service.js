@@ -100,10 +100,10 @@ class EmailService {
      * Send the registration welcome/verification email.
      *
      * @param {object} user The recipient user.
-     * @param {string} token The raw verification token.
+     * @param {string} code The raw six-digit verification code.
      * @returns {Promise<object>} The send result.
      */
-    async sendRegistrationComplete(user, token){
+    async sendRegistrationComplete(user, code){
 
         const locale = resolveRequestLocale({userLanguage: user.language});
 
@@ -115,7 +115,8 @@ class EmailService {
             data: {
                 brandName: Config.brandName,
                 firstName: user.firstname,
-                verifyUrl: `${Config.baseUrl}/api/${Config.apiVersion}/auth/verify-email?token=${token}`,
+                verificationCode: code,
+                expiryMinutes: Config.verificationTokenExpiryMinutes,
                 unsubscribeToken: user.unsubscribeToken
             }
         });
@@ -143,13 +144,13 @@ class EmailService {
     }
 
     /**
-     * Send a new email-verification link.
+     * Send a new email-verification code.
      *
      * @param {object} user The recipient user.
-     * @param {string} token The raw verification token.
+     * @param {string} code The raw six-digit verification code.
      * @returns {Promise<object>} The send result.
      */
-    async resendEmailVerificationLink(user, token){
+    async resendEmailVerificationCode(user, code){
         const locale = resolveRequestLocale({userLanguage: user.language});
         return this._send({
             to: user.email,
@@ -161,7 +162,7 @@ class EmailService {
                 brandName: Config.brandName,
                 unsubscribeToken: user.unsubscribeToken,
                 expiryMinutes: Config.verificationTokenExpiryMinutes,
-                verifyUrl: `${Config.baseUrl}/api/${Config.apiVersion}/auth/verify-email?token=${token}`,
+                verificationCode: code,
             }
         });
     }

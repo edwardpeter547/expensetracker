@@ -164,7 +164,7 @@ const RegisterScreen = () => {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       });
-      router.replace('/verify-email');
+      router.replace({ pathname: '/verify-email', params: { email: email.trim() } });
     } catch (error) {
       setFormError(normalizeApiError(error).message);
     } finally {

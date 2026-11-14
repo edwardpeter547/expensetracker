@@ -115,7 +115,7 @@ export const authenticate = async (request, response, next) => {
         
         const user = await userProfile({userId: decoded.userId});
 
-        if(!user || !user.isActive || user.tokenVersion !== decoded.tokenVersion){
+        if(!user || !user.isActive || !user.isEmailVerified || user.tokenVersion !== decoded.tokenVersion){
             throw new AppError('User not found or account deactivated', StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.TOKEN_INVALID})
         }
 

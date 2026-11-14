@@ -49,7 +49,12 @@ paths:
     post:
       operationId: register
       tags: [Auth]
-      summary: Register a new account
+      summary: Register a new account and email a six-digit verification code
+      description: |
+        Creates an inactive, unverified account and emails a six-digit
+        verification code. No access or refresh token is issued at this stage;
+        the account becomes usable only after `POST /auth/verify-email`
+        activates it.
       security: []
       requestBody:
         required: true
@@ -68,11 +73,11 @@ paths:
                 currency: { type: string, minLength: 3, maxLength: 3 }
       responses:
         "201":
-          description: Account created; an access/refresh token pair is issued
+          description: Account created; a verification code was emailed
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TokenIssueEnvelope"
+                $ref: "#/components/schemas/UserEnvelope"
         "400":
           $ref: "#/components/responses/ValidationError"
         "409":
@@ -82,16 +87,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /api/v1/auth/verify-email:
-    get:
+    post:
       operationId: verifyEmail
       tags: [Auth]
-      summary: Verify a registration email token
+      summary: Verify a registration email code
       security: []
-      parameters:
-        - name: token
-          in: query
-          required: true
-          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string, minLength: 6, maxLength: 6 }
       responses:
         "200":
           description: Email verified; user activated
@@ -100,12 +110,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserEnvelope"
         "400":
-          $ref: "#/components/responses/ValidationError"
+          description: Invalid, reused, or expired verification code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/auth/resend-verification:
     post:
       operationId: resendVerification
       tags: [Auth]
-      summary: Resend the verification email
+      summary: Resend the six-digit verification code
+      description: |
+        Returns the same generic success response whether or not an account
+        exists, whether it is already verified, or whether a per-account
+        cooldown suppresses delivery, so the endpoint does not reveal account
+        existence.
       security: []
       requestBody:
         required: true
@@ -118,23 +137,19 @@ paths:
                 email: { type: string, format: email }
       responses:
         "200":
-          description: Verification link re-sent
+          description: Verification code re-sent (generic message)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserEnvelope"
+                type: object
+                required: [success, message, data, errors]
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data: { type: "null" }
+                  errors: { type: "null" }
         "400":
-          description: Email already verified or request invalid
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/ValidationError"
   /api/v1/auth/login:
     post:
       operationId: login
@@ -159,13 +174,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/TokenIssueEnvelope"
         "401":
-          description: Unknown email
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Wrong password or deactivated account
+          description: |
+            Unknown email, wrong password, locked account, deactivated account,
+            or unverified email. The response is intentionally generic to avoid
+            account enumeration.
           content:
             application/json:
               schema:

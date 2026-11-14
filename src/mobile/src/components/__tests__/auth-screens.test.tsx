@@ -453,7 +453,10 @@ describe('RegisterScreen', () => {
       firstName: 'Jane',
       lastName: 'Doe',
     });
-    expect(router.replace).toHaveBeenCalledWith('/verify-email');
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/verify-email',
+      params: { email: 'user@example.com' },
+    });
   });
 
   /**

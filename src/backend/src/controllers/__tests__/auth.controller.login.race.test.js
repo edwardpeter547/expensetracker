@@ -17,25 +17,24 @@ const servicesDirectory = path.resolve(
 );
 
 const mockAuthService = {
-    confirmVerification: jest.fn(),
     countRecentFailedLogins: jest.fn(),
     createLoginAttempt: jest.fn(),
     createRefreshToken: jest.fn(),
     createUser: jest.fn(),
-    createVerificationToken: jest.fn(),
+    createVerificationCode: jest.fn(),
     getAccountLockout: jest.fn(),
     getSafeUser: jest.fn(),
     getUser: jest.fn(),
-    getVerificationToken: jest.fn(),
-    removeVerificationToken: jest.fn(),
+    getLatestVerificationCode: jest.fn(),
     resetFailedLogins: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),
     revokeAllUserSessions: jest.fn(),
     rotateRefreshToken: jest.fn(),
     savePasswordResetToken: jest.fn(),
-    saveVerificationToken: jest.fn(),
+    saveVerificationCode: jest.fn(),
     updateLastLogin: jest.fn(),
     updateUserPassword: jest.fn(),
+    verifyEmailCode: jest.fn(),
     verifyResetPasswordToken: jest.fn(),
     resetPasswordWithCode: jest.fn(),
     listUserSessions: jest.fn(),
@@ -87,6 +86,7 @@ describe('auth login lockout ordering', () => {
             email: 'known@example.com',
             password: 'irrelevant',
             isActive: true,
+            isEmailVerified: true,
         });
         mockAuthService.getSafeUser.mockResolvedValue({id: 1, email: 'known@example.com'});
         mockAuthService.getAccountLockout.mockResolvedValue({locked: false, lockedUntil: null});

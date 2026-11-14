@@ -61,6 +61,7 @@ describe('authenticate middleware', () => {
             id: 1,
             email: 'a@b.c',
             isActive: true,
+            isEmailVerified: true,
             tokenVersion: 0,
         });
     });
@@ -92,6 +93,7 @@ describe('authenticate middleware', () => {
             id: 1,
             email: 'a@b.c',
             isActive: true,
+            isEmailVerified: true,
             tokenVersion: 0,
             language: 'fr',
         });
@@ -177,7 +179,34 @@ describe('authenticate middleware', () => {
             id: 1,
             email: 'a@b.c',
             isActive: true,
+            isEmailVerified: true,
             tokenVersion: 1,
+        });
+        const token = signToken({ userId: 1, email: 'a@b.c', tokenVersion: 0 });
+        const next = jest.fn();
+
+        await authenticate(
+            { headers: { authorization: `Bearer ${token}` } },
+            {},
+            next
+        );
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next.mock.calls[0][0].statusCode).toBe(401);
+    });
+
+    /**
+     * An access token issued to an unverified account must be rejected even
+     * when the account is still marked active, so legacy registration sessions
+     * cannot bypass the verification gate.
+     */
+    test('rejects an unverified user with 401', async () => {
+        mockUserProfile.mockResolvedValue({
+            id: 1,
+            email: 'a@b.c',
+            isActive: true,
+            isEmailVerified: false,
+            tokenVersion: 0,
         });
         const token = signToken({ userId: 1, email: 'a@b.c', tokenVersion: 0 });
         const next = jest.fn();
