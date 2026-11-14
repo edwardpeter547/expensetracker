@@ -36,7 +36,8 @@
 | Auth validation schemas | Unit-tested | `src/backend/src/validations/__tests__/auth.validation.test.js` |
 | Mobile login screen | Source only | `src/mobile/app/(auth)/login.tsx` |
 | Mobile register screen | Source only | `src/mobile/app/(auth)/register.tsx` |
-| Mobile forgot-password / reset-password / verify-email | Placeholder | empty files in `src/mobile/app/(auth)/` |
+| Mobile verify-email | Source only | `src/mobile/app/(auth)/verify-email.tsx` — six-digit boxed input wired to `POST /auth/verify-email` |
+| Mobile forgot-password / reset-password | Placeholder | screens exist but are UI-only; no API calls |
 | Mobile token storage + refresh interceptor | Source only | `src/mobile/src/contexts/AuthContext.tsx`, `src/mobile/src/api/client.ts` |
 
 ## Transactions
