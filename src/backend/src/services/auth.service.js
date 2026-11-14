@@ -308,14 +308,14 @@ export const rotateRefreshToken = async (presentedToken) => {
         throw new AppError('Account deactivated', 401, null, {code: ERROR_CODES.AUTH_ACCOUNT_DEACTIVATED});
     }
 
-    if (!stored.user.isActive) {
-        await revokeTokenFamily(stored.familyId);
-        throw new AppError('Account deactivated', 401, null, {code: ERROR_CODES.AUTH_ACCOUNT_DEACTIVATED});
-    }
-
     if (!stored.user.isEmailVerified) {
         await revokeTokenFamily(stored.familyId);
         throw new AppError('Email not verified', 401, null, {code: ERROR_CODES.AUTH_EMAIL_NOT_VERIFIED});
+    }
+
+    if (!stored.user.isActive) {
+        await revokeTokenFamily(stored.familyId);
+        throw new AppError('Account deactivated', 401, null, {code: ERROR_CODES.AUTH_ACCOUNT_DEACTIVATED});
     }
 
     const tokens = generateTokens(stored.user.id, stored.user.email, stored.user.tokenVersion);
