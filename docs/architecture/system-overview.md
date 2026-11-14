@@ -11,7 +11,7 @@ ExpenseTracker is a personal finance application. The current implementation cov
 - Localization scaffolding (`en`, `fr` locale files) and email notifications via templates.
 - A complete mobile UI milestone (Epic #125): authentication with biometric sign-in, a five-tab shell, dashboard, transactions with receipts and recurring schedules, Planning, Teams, Profile/settings with membership, a premium feature gate, and an AI chat surface.
 
-The mobile implementation is frontend-first: several surfaces (Teams, membership/billing, AI chat, receipt OCR, recurring scheduling, premium entitlements, and the password-reset UI) are demo-backed or frontend-only and not yet connected to the backend. Backend `recurring` and `notifications` routes remain empty.
+The mobile implementation is frontend-first: several surfaces (Teams, membership/billing, AI chat, receipt OCR, recurring scheduling, and premium entitlements) are demo-backed or frontend-only and not yet connected to the backend. Backend `recurring` and `notifications` routes remain empty.
 
 ## Package layout
 The repository is a two-package monorepo coordinated by Go Task. It is **not** an npm workspace: each package has independent `package.json`, lockfile, and dependencies.
@@ -151,7 +151,7 @@ Core models:
 - `Transaction` — `amount` (`Decimal`, `NUMERIC(19,4)`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`.
 - `Category` — `name`, `icon`, `isSystem`, optional `userId`.
 - `Budget` — `amount` (`Decimal`, `NUMERIC(19,4)`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
-- `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken` (hashed, single-use, attempt-limited six-digit codes), `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
+- `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken` (keyed-HMAC, single-use, attempt-limited six-digit codes), `PasswordResetToken` (keyed-HMAC, single-use, attempt-limited six-digit codes), `LoginAttempt`, `PasswordHistory` — auth/audit support.
 - `AuthAuditEvent` — persistent, secret-safe authentication audit trail (see `docs/authentication-audit-logging.md`).
 - `Notification` — defined but not yet used.
 
@@ -186,8 +186,8 @@ app-level guide.
 - `app/(tabs)/_layout.tsx` owns the five-tab bar: Home, Transactions, Planning,
   Teams, and Profile. The Planning tab keeps the `budgets` route name and the
   Teams tab keeps the `goals` route name for deep-link compatibility.
-- Other route groups: `(auth)` (login, register, verify-email, forgot/reset
-  password, reset-code), `planning/`, `teams/`, `transaction/`, `recurring-transaction/`,
+- Other route groups: `(auth)` (login, register, verify-email, forgot-password,
+  reset-code, reset-password, password-updated), `planning/`, `teams/`, `transaction/`, `recurring-transaction/`,
   plus top-level `add-transaction`, `add-recurring-transaction`,
   `receipt-preview`, `ai-chat`, `membership`, `profile-settings/[section]`, and
   `welcome`.
@@ -217,10 +217,10 @@ app-level guide.
   `src/mobile/src/contracts/index.ts`, which resolves each data source to its
   API or demo implementation. All demo fixtures and demo implementations live
   under `src/mobile/src/offline`.
-- Dashboard, transactions, categories, budgets, profile, sessions, and
-  account-deletion surfaces are wired to real backend endpoints. Teams,
-  membership/billing, AI chat, receipt OCR, recurring scheduling, premium
-  entitlements, and the password-reset UI are frontend-only or demo-backed.
+- Dashboard, transactions, categories, budgets, profile, sessions,
+  account-deletion, and password-recovery surfaces are wired to real backend
+  endpoints. Teams, membership/billing, AI chat, receipt OCR, recurring
+  scheduling, and premium entitlements are frontend-only or demo-backed.
 
 See `docs/engineering/mobile-data-layer.md` for the contracts/offline wiring.
 
