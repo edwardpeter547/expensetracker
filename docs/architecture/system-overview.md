@@ -186,8 +186,8 @@ app-level guide.
 - `app/(tabs)/_layout.tsx` owns the five-tab bar: Home, Transactions, Planning,
   Teams, and Profile. The Planning tab keeps the `budgets` route name and the
   Teams tab keeps the `goals` route name for deep-link compatibility.
-- Other route groups: `(auth)` (login, register, forgot/reset password,
-  reset-code), `planning/`, `teams/`, `transaction/`, `recurring-transaction/`,
+- Other route groups: `(auth)` (login, register, verify-email, forgot/reset
+  password, reset-code), `planning/`, `teams/`, `transaction/`, `recurring-transaction/`,
   plus top-level `add-transaction`, `add-recurring-transaction`,
   `receipt-preview`, `ai-chat`, `membership`, `profile-settings/[section]`, and
   `welcome`.
