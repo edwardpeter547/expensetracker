@@ -166,7 +166,7 @@ const VerifyEmailScreen = () => {
     };
 
     const resendLabel =
-        resendIn > 0 ? t('Resend code in {{time}}', {time: resendIn}) : t('Resend verification code');
+        resendIn > 0 ? t('Resend code in {{time}}s', {time: resendIn}) : t('Resend verification code');
 
     return (
         <CenteredAuthScreen>

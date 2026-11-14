@@ -20,6 +20,7 @@ const mockAuthService = {
     getUser: jest.fn(),
     getAccountLockout: jest.fn(),
     getLatestVerificationCode: jest.fn(),
+    getLatestPasswordResetToken: jest.fn(),
     resetFailedLogins: jest.fn(),
     refreshRecord: jest.fn(),
     revokeRefreshTokenByHash: jest.fn(),

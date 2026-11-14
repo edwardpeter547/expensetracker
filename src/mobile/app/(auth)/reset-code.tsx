@@ -1,8 +1,12 @@
+import { forgotPassword, verifyOtp } from '@/api/auth';
+import { normalizeApiError } from '@/api/errors';
 import CenteredAuthScreen from '@/components/auth/CenteredAuthScreen';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { usePasswordRecovery } from '@/hooks/usePasswordRecovery';
+import { router } from 'expo-router';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -11,98 +15,163 @@ import {
 } from 'react-native';
 
 const CODE_LENGTH = 6;
-const RESEND_SECONDS = 60;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
- * Format a countdown value as mm:ss.
+ * Password-reset OTP screen.
  *
- * @param seconds - The number of seconds remaining.
- * @returns The formatted expiry time.
- */
-const formatExpiry = (seconds: number): string =>
-  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-
-/**
- * Centered screen for entering the six-digit password-reset code.
- *
- * UI-only: the code is not validated against a backend yet. The mismatch
- * error state and resend countdown are ready for the future API wiring.
+ * Mirrors the six-digit input design introduced for email verification: six
+ * individual boxes with dash separators, automatic focus progression,
+ * backspace navigation, paste support, and leading-zero preservation. The code
+ * is submitted to the real backend and the reset screen is only reached after
+ * successful verification.
  */
 const ResetCodeScreen = () => {
-  const { channel } = useLocalSearchParams<{ channel?: string }>();
   const { t } = useTranslation('auth');
+  const { email, completeVerification } = usePasswordRecovery();
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
-  const [codeError, setCodeError] = useState('');
-  const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsLeft((current) => (current > 0 ? current - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  /**
-   * Update one digit and advance focus to the next empty box.
-   *
-   * @param index - The digit position being edited.
-   * @param value - The raw input value.
-   */
-  const handleDigitChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    setDigits((current) => {
-      const next = [...current];
-      next[index] = digit;
-      return next;
-    });
-    setCodeError('');
-    if (digit && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus?.();
-    }
-  };
-
-  /**
-   * Move focus back when backspace is pressed on an empty box.
-   *
-   * @param index - The digit position being edited.
-   * @param key - The pressed key.
-   */
-  const handleDigitKeyPress = (index: number, key: string) => {
-    if (key === 'Backspace' && !digits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus?.();
-    }
-  };
-
-  /**
-   * Validate the entered digits and advance to the new-password screen.
-   */
-  const handleVerify = () => {
-    const entered = digits.join('');
-    if (entered.length < CODE_LENGTH) {
-      setCodeError(t('Enter all 6 digits'));
+    if (resendIn <= 0) {
       return;
     }
-    setCodeError('');
-    router.push('/reset-password');
-  };
-
-  const channelLabel =
-    channel === 'mobile'
-      ? t('your mobile number')
-      : channel === 'whatsapp'
-        ? t('your WhatsApp')
-        : t('your email');
+    const timer = setInterval(() => {
+      setResendIn((current) => (current > 1 ? current - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendIn]);
 
   /**
-   * Reset the code entry and restart the expiry countdown.
+   * Submit a fully entered code to the backend and advance to the reset screen.
+   *
+   * On a rejected code the boxes are cleared and focus returns to the first
+   * box; on network or timeout failures the digits are retained.
+   *
+   * @param {string} entered The six-digit code to verify.
+   * @returns {Promise<void>}
    */
-  const handleResend = () => {
-    setDigits(Array(CODE_LENGTH).fill(''));
-    setCodeError('');
-    setSecondsLeft(RESEND_SECONDS);
-    inputRefs.current[0]?.focus?.();
+  const submitCode = async (entered: string) => {
+    if (loading) {
+      return;
+    }
+    setError('');
+    if (!email) {
+      setError(t('Email address is missing'));
+      return;
+    }
+    if (entered.length !== CODE_LENGTH) {
+      setError(t('Enter all 6 digits'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await verifyOtp(email, entered);
+      completeVerification(entered);
+      router.replace('/reset-password');
+    } catch (cause) {
+      const normalized = normalizeApiError(cause);
+      setError(normalized.message);
+      if (
+        normalized.code === 'RESET_TOKEN_INVALID' ||
+        normalized.code === 'RESET_TOKEN_EXPIRED'
+      ) {
+        setDigits(Array(CODE_LENGTH).fill(''));
+        inputRefs.current[0]?.focus?.();
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  /**
+   * Update one box from user input, distributing a pasted multi-digit value
+   * across the remaining boxes and advancing focus or submitting when full.
+   *
+   * @param {number} index The box being edited.
+   * @param {string} value The raw input value.
+   */
+  const handleDigitChange = (index: number, value: string) => {
+    const numeric = value.replace(/\D/g, '');
+
+    if (numeric.length === 0) {
+      setDigits((current) => {
+        const next = [...current];
+        next[index] = '';
+        return next;
+      });
+      return;
+    }
+
+    const next = [...digits];
+    const characters = numeric.split('');
+    for (let offset = 0; offset < characters.length && index + offset < CODE_LENGTH; offset += 1) {
+      next[index + offset] = characters[offset];
+    }
+
+    setDigits(next);
+    setError('');
+
+    if (next.every((digit) => digit !== '')) {
+      void submitCode(next.join(''));
+      return;
+    }
+
+    inputRefs.current[Math.min(index + characters.length, CODE_LENGTH - 1)]?.focus?.();
+  };
+
+  /**
+   * Move focus back and clear the previous box when backspace is pressed on an
+   * empty box.
+   *
+   * @param {number} index The box receiving the key press.
+   * @param {string} key The pressed key.
+   */
+  const handleDigitKeyPress = (index: number, key: string) => {
+    if (key !== 'Backspace' || digits[index] || index === 0) {
+      return;
+    }
+    setDigits((current) => {
+      const next = [...current];
+      next[index - 1] = '';
+      return next;
+    });
+    inputRefs.current[index - 1]?.focus?.();
+  };
+
+  /**
+   * Request a fresh code and start the client-side resend cooldown.
+   *
+   * @returns {Promise<void>}
+   */
+  const handleResend = async () => {
+    if (resendLoading || resendIn > 0) {
+      return;
+    }
+    setError('');
+    if (!email) {
+      setError(t('Email address is missing'));
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      await forgotPassword(email);
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+    } catch (cause) {
+      setError(normalizeApiError(cause).message);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const resendLabel =
+    resendIn > 0 ? t('Resend code in {{time}}s', {time: resendIn}) : t('Resend code');
 
   return (
     <CenteredAuthScreen>
@@ -111,80 +180,106 @@ const ResetCodeScreen = () => {
           {t('Enter code')}
         </Text>
         <Text style={styles.subtitle}>
-          {t('We sent a 6-digit code to {{channel}}', {channel: channelLabel})}
+          {t('We sent a 6-digit code to {{channel}}', {channel: t('your email')})}
         </Text>
 
         <View style={styles.codeRow}>
           {digits.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(element) => {
-                inputRefs.current[index] = element;
-              }}
-              style={[styles.digitBox, codeError ? styles.digitBoxError : null]}
-              value={digit}
-              onChangeText={(value) => handleDigitChange(index, value)}
-              onKeyPress={({ nativeEvent }) =>
-                handleDigitKeyPress(index, nativeEvent.key)
-              }
-              keyboardType="number-pad"
-              maxLength={1}
-              textContentType="oneTimeCode"
-              autoComplete="one-time-code"
-              selectTextOnFocus
-              accessibilityLabel={t('Digit {{index}}', {index: index + 1})}
-              returnKeyType={index === CODE_LENGTH - 1 ? 'done' : 'next'}
-              onSubmitEditing={() => {
-                if (index < CODE_LENGTH - 1) {
-                  inputRefs.current[index + 1]?.focus?.();
-                } else {
-                  handleVerify();
+            <Fragment key={`digit-${index}`}>
+              {index > 0 ? (
+                <Text
+                  accessible={false}
+                  importantForAccessibility="no"
+                  style={styles.dash}
+                >
+                  -
+                </Text>
+              ) : null}
+              <TextInput
+                ref={(element) => {
+                  inputRefs.current[index] = element;
+                }}
+                style={[styles.digitBox, error ? styles.digitBoxError : null]}
+                value={digit}
+                onChangeText={(value) => handleDigitChange(index, value)}
+                onKeyPress={({nativeEvent}) =>
+                  handleDigitKeyPress(index, nativeEvent.key)
                 }
-              }}
-            />
+                keyboardType="number-pad"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                selectTextOnFocus
+                editable={!loading}
+                autoFocus={index === 0}
+                maxLength={CODE_LENGTH}
+                accessibilityLabel={t('Digit {{index}}', {index: index + 1})}
+                returnKeyType={index === CODE_LENGTH - 1 ? 'done' : 'next'}
+                onSubmitEditing={() => {
+                  if (index < CODE_LENGTH - 1) {
+                    inputRefs.current[index + 1]?.focus?.();
+                  } else {
+                    void submitCode(digits.join(''));
+                  }
+                }}
+              />
+            </Fragment>
           ))}
         </View>
 
-        {codeError ? (
+        {error ? (
           <Text accessibilityLiveRegion="polite" style={styles.errorText}>
-            {codeError}
+            {error}
           </Text>
         ) : null}
 
-        <Text style={styles.expiryText}>
-          {t('Code expires in {{time}}', {time: formatExpiry(secondsLeft)})}
-        </Text>
-
         <Pressable
-          onPress={handleVerify}
+          onPress={() => void submitCode(digits.join(''))}
+          disabled={loading}
           accessibilityRole="button"
           accessibilityLabel={t('Verify code')}
-          style={({ pressed }) => [
+          accessibilityState={{disabled: loading, busy: loading}}
+          style={({pressed}) => [
             styles.button,
-            pressed && styles.buttonPressed,
+            pressed && !loading && styles.buttonPressed,
+            loading && styles.buttonDisabled,
           ]}
         >
-          <Text style={styles.buttonText}>{t('Verify code')}</Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>{t('Verify code')}</Text>
+          )}
         </Pressable>
 
         <Pressable
           onPress={handleResend}
+          disabled={resendLoading || resendIn > 0}
           accessibilityRole="button"
-          accessibilityLabel={t('Resend code')}
+          accessibilityLabel={resendLabel}
+          accessibilityState={{disabled: resendLoading || resendIn > 0}}
           hitSlop={8}
           style={styles.resendLink}
         >
-          <Text style={styles.linkText}>{t('Resend code')}</Text>
+          <Text
+            style={[
+              styles.linkText,
+              (resendLoading || resendIn > 0) && styles.linkTextDisabled,
+            ]}
+          >
+            {resendLabel}
+          </Text>
         </Pressable>
 
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel={t('Change delivery method')}
+          accessibilityLabel={t('Change email address')}
           hitSlop={8}
           style={styles.backLink}
         >
-          <Text style={styles.linkText}>{t('Change delivery method')}</Text>
+          <Text style={styles.linkText}>{t('Change email address')}</Text>
         </Pressable>
       </View>
     </CenteredAuthScreen>
@@ -222,7 +317,9 @@ const styles = StyleSheet.create({
   codeRow: {
     alignSelf: 'stretch',
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
   digitBox: {
     flex: 1,
@@ -241,17 +338,17 @@ const styles = StyleSheet.create({
   digitBoxError: {
     borderColor: '#D64C4C',
   },
+  dash: {
+    color: '#9AAFA7',
+    fontSize: 22,
+    fontWeight: '700',
+    paddingHorizontal: 2,
+  },
   errorText: {
-    alignSelf: 'stretch',
     color: '#B93B3B',
     fontSize: 13,
     marginTop: 10,
-    textAlign: 'center',
-  },
-  expiryText: {
-    marginTop: 14,
-    fontSize: 13,
-    color: '#74877F',
+    alignSelf: 'stretch',
     textAlign: 'center',
   },
   button: {
@@ -266,13 +363,16 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.9,
   },
+  buttonDisabled: {
+    opacity: 0.65,
+  },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '800',
   },
   resendLink: {
-    marginTop: 16,
+    marginTop: 18,
   },
   backLink: {
     marginTop: 12,
@@ -281,6 +381,9 @@ const styles = StyleSheet.create({
     color: '#168D64',
     fontSize: 15,
     fontWeight: '700',
+  },
+  linkTextDisabled: {
+    opacity: 0.55,
   },
 });
 

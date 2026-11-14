@@ -1,40 +1,61 @@
+import { forgotPassword } from '@/api/auth';
+import { normalizeApiError } from '@/api/errors';
 import CenteredAuthScreen from '@/components/auth/CenteredAuthScreen';
-import { Ionicons } from '@expo/vector-icons';
+import { usePasswordRecovery } from '@/hooks/usePasswordRecovery';
+import { isValidEmail } from '@/utils/authValidation';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-
-type Channel = 'email' | 'mobile' | 'whatsapp';
-
-const CHANNELS: {
-  id: Channel;
-  icon: keyof typeof Ionicons.glyphMap;
-}[] = [
-  { id: 'email', icon: 'mail-outline' },
-  { id: 'mobile', icon: 'phone-portrait-outline' },
-  { id: 'whatsapp', icon: 'logo-whatsapp' },
-];
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 /**
- * Password-reset entry screen: identify the account and choose a delivery
- * channel for the reset code. UI-only; the backend call comes later.
+ * Password-reset entry screen: collect the account email and request a reset
+ * code through the real backend endpoint. Only email delivery is supported.
  */
 const ForgotPasswordScreen = () => {
   const { t } = useTranslation('auth');
+  const { beginRecovery } = usePasswordRecovery();
   const [email, setEmail] = useState('');
-  const [channel, setChannel] = useState<Channel>('email');
-  const channelLabels: Record<Channel, string> = {
-    email: t('Email'),
-    mobile: t('Mobile number'),
-    whatsapp: t('WhatsApp'),
-  };
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   /**
-   * Continue to the reset-code screen.
+   * Validate the email, request a reset code, and advance to the OTP screen.
+   *
+   * The backend returns the same success shape for known and unknown emails,
+   * so the screen never differentiates them.
+   *
+   * @returns {Promise<void>}
    */
-  const handleSendCode = () => {
-    router.push({ pathname: '/reset-code', params: { channel } });
+  const handleSendCode = async () => {
+    setError('');
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError(t('Email is required'));
+      return;
+    }
+    if (!isValidEmail(trimmed)) {
+      setError(t('Enter a valid email address'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await forgotPassword(trimmed);
+      beginRecovery(trimmed);
+      router.push('/reset-code');
+    } catch (cause) {
+      setError(normalizeApiError(cause).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,13 +64,18 @@ const ForgotPasswordScreen = () => {
         <Text accessibilityRole="header" style={styles.title}>
           {t('Forgot password?')}
         </Text>
-        <Text style={styles.subtitle}>{t('Choose where to receive your reset code')}</Text>
+        <Text style={styles.subtitle}>
+          {t("Enter your email and we'll send a reset code")}
+        </Text>
 
         <Text style={styles.label}>{t('Email')}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, error ? styles.inputError : null]}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            setError('');
+          }}
           placeholder={t('you@example.com')}
           placeholderTextColor="#889A92"
           keyboardType="email-address"
@@ -58,50 +84,34 @@ const ForgotPasswordScreen = () => {
           autoComplete="email"
           textContentType="emailAddress"
           accessibilityLabel={t('Email')}
+          editable={!loading}
           returnKeyType="done"
+          onSubmitEditing={handleSendCode}
         />
 
-        <Text style={[styles.label, styles.channelLabel]}>{t('Receive code via')}</Text>
-        {CHANNELS.map((option) => {
-          const selected = channel === option.id;
-          return (
-            <Pressable
-              key={option.id}
-              onPress={() => setChannel(option.id)}
-              accessibilityRole="button"
-              accessibilityLabel={channelLabels[option.id]}
-              accessibilityState={{ selected }}
-              style={[styles.option, selected && styles.optionSelected]}
-            >
-              <Ionicons
-                name={option.icon}
-                size={20}
-                color={selected ? '#1B9568' : '#74877F'}
-              />
-              <Text
-                style={[styles.optionText, selected && styles.optionTextSelected]}
-              >
-                {channelLabels[option.id]}
-              </Text>
-              <Ionicons
-                name={selected ? 'radio-button-on' : 'radio-button-off'}
-                size={20}
-                color={selected ? '#1B9568' : '#C4CCD8'}
-              />
-            </Pressable>
-          );
-        })}
+        {error ? (
+          <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+            {error}
+          </Text>
+        ) : null}
 
         <Pressable
           onPress={handleSendCode}
+          disabled={loading}
           accessibilityRole="button"
           accessibilityLabel={t('Send reset code')}
+          accessibilityState={{ disabled: loading, busy: loading }}
           style={({ pressed }) => [
             styles.button,
-            pressed && styles.buttonPressed,
+            pressed && !loading && styles.buttonPressed,
+            loading && styles.buttonDisabled,
           ]}
         >
-          <Text style={styles.buttonText}>{t('Send reset code')}</Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>{t('Send reset code')}</Text>
+          )}
         </Pressable>
 
         <Pressable
@@ -164,34 +174,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 14,
   },
-  channelLabel: {
-    marginTop: 20,
+  inputError: {
+    borderColor: '#D64C4C',
   },
-  option: {
+  errorText: {
     alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minHeight: 51,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#D7E2DC',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    marginBottom: 10,
-  },
-  optionSelected: {
-    borderColor: '#1B9568',
-    backgroundColor: '#E9F7F0',
-  },
-  optionText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#233D34',
-  },
-  optionTextSelected: {
-    color: '#15372F',
+    color: '#B93B3B',
+    fontSize: 13,
+    marginTop: 10,
   },
   button: {
     alignSelf: 'stretch',
@@ -200,10 +190,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B9568',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: 18,
   },
   buttonPressed: {
     opacity: 0.9,
+  },
+  buttonDisabled: {
+    opacity: 0.65,
   },
   buttonText: {
     color: '#FFFFFF',

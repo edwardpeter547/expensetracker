@@ -17,6 +17,7 @@ import request from 'supertest';
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 process.env.AUTH_RATE_LIMIT_FORGOT_MAX = '1000';
+process.env.PASSWORD_RESET_ATTEMPT_LIMIT = '3';
 
 const RUN_DB = process.env.RUN_DB_INTEGRATION === '1';
 const ADMIN_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -370,6 +371,7 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
 
         const updated = await prisma.user.findUnique({ where: { id: user.id } });
         expect(await bcrypt.compare('NewPassword123', updated.password)).toBe(true);
+        expect(await bcrypt.compare('OldPassword123', updated.password)).toBe(false);
         expect(updated.tokenVersion).toBe(user.tokenVersion + 1);
 
         const activeRefreshTokens = await prisma.refreshToken.count({
@@ -390,6 +392,15 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
         await request(app)
             .post('/api/v1/auth/reset-password')
             .send({ code, email: user.email, password: 'SecondNewPassword1' })
+            .expect(401);
+
+        await request(app)
+            .post('/api/v1/auth/login')
+            .send({ email: user.email, password: 'NewPassword123' })
+            .expect(200);
+        await request(app)
+            .post('/api/v1/auth/login')
+            .send({ email: user.email, password: 'OldPassword123' })
             .expect(401);
     });
 
@@ -600,5 +611,83 @@ describeDb('auth password reset routes (HTTP, real PostgreSQL)', () => {
             password: 'NewPassword123',
         });
         expect(retry.success).toBe(true);
+    });
+
+    /**
+     * Repeated wrong-code verification attempts must invalidate the reset code
+     * once the configured attempt limit is reached.
+     */
+    test('verify-otp enforces the password-reset attempt limit', async () => {
+        const user = await seedUser();
+        const code = await requestResetCode(user);
+
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            await request(app)
+                .post('/api/v1/auth/verify-otp')
+                .send({code: '000000', email: user.email})
+                .expect(401);
+        }
+
+        await request(app)
+            .post('/api/v1/auth/verify-otp')
+            .send({code, email: user.email})
+            .expect(401);
+    });
+
+    /**
+     * A repeat forgot-password request within the per-account cooldown must not
+     * issue or email a second code.
+     */
+    test('forgot-password suppresses duplicate codes within the resend cooldown', async () => {
+        const user = await seedUser();
+        const capturedCodes = [];
+        const sendSpy = jest.spyOn(emailService, 'sendPasswordResetCode')
+            .mockImplementation(async (_recipient, code) => {
+                capturedCodes.push(code);
+            });
+
+        try {
+            await request(app)
+                .post('/api/v1/auth/forgot-password')
+                .send({email: user.email})
+                .expect(200);
+            await request(app)
+                .post('/api/v1/auth/forgot-password')
+                .send({email: user.email})
+                .expect(200);
+        } finally {
+            sendSpy.mockRestore();
+        }
+
+        expect(capturedCodes).toHaveLength(1);
+        const tokens = await prisma.passwordResetToken.findMany({
+            where: {userId: user.id},
+            orderBy: {createdAt: 'asc'},
+        });
+        expect(tokens).toHaveLength(1);
+    });
+
+    /**
+     * Once the cooldown has elapsed, a new code must supersede the previous
+     * unused code so only the most recently issued code is usable.
+     */
+    test('a new code supersedes the previous unused code after the cooldown', async () => {
+        const user = await seedUser();
+        const firstCode = await requestResetCode(user);
+
+        await prisma.passwordResetToken.updateMany({
+            where: {userId: user.id, usedAt: null},
+            data: {createdAt: new Date(Date.now() - 10 * 60 * 1000)},
+        });
+
+        const secondCode = await requestResetCode(user);
+        const tokens = await prisma.passwordResetToken.findMany({
+            where: {userId: user.id},
+            orderBy: {createdAt: 'desc'},
+        });
+
+        expect(tokens).toHaveLength(2);
+        expect(tokens.find((item) => item.token === authService.hashResetCode(firstCode)).usedAt).not.toBeNull();
+        expect(tokens.find((item) => item.token === authService.hashResetCode(secondCode)).usedAt).toBeNull();
     });
 });

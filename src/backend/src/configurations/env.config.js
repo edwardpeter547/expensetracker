@@ -106,6 +106,8 @@ const Config = {
     verificationAttemptLimit: parseInt(process.env.VERIFICATION_ATTEMPT_LIMIT || '5', 10),
     verificationResendCooldownMinutes: parseInt(process.env.VERIFICATION_RESEND_COOLDOWN_MINUTES || '1', 10),
     passwordResetTokenExpiryMinutes: parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES || '10'),
+    passwordResetAttemptLimit: parseInt(process.env.PASSWORD_RESET_ATTEMPT_LIMIT || '5', 10),
+    passwordResetResendCooldownMinutes: parseInt(process.env.PASSWORD_RESET_RESEND_COOLDOWN_MINUTES || '1', 10),
     brandName: process.env.SERVICE_BRAND_NAME || 'EXPENSE TRACKER',
     developerName: process.env.DEVELOPER_NAME || 'Retep Systems',
 

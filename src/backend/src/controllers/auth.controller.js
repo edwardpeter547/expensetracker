@@ -17,6 +17,7 @@ import {
     createVerificationCode,
     getAccountLockout,
     getLatestVerificationCode,
+    getLatestPasswordResetToken,
     getUser,
     getSafeUser,
     listUserSessions,
@@ -401,6 +402,9 @@ export const resetPassword = catchAsync(async (request, response) => {
     });
 
     if(!result.success){
+        const expired = result.reason === 'expired';
+        const phrase = expired ? "RESET_TOKEN_EXPIRED" : "ERROR_INVALID_RESET_TOKEN";
+        const errorCode = expired ? ERROR_CODES.RESET_TOKEN_EXPIRED : ERROR_CODES.RESET_TOKEN_INVALID;
         await recordAuthAuditEvent({
             eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_RESET_COMPLETE,
             outcome: AUTH_AUDIT_OUTCOMES.FAILURE,
@@ -410,7 +414,7 @@ export const resetPassword = catchAsync(async (request, response) => {
             metadata: {reason: AUTH_AUDIT_REASONS.INVALID_RESET_CODE},
         });
         logger.warn("Password reset code invalid or already used", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED});
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: user.language || locale}), StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.RESET_TOKEN_INVALID});
+        throw new AppError(i18n.__({phrase, locale: user.language || locale}), StatusCodes.UNAUTHORIZED, null, {code: errorCode});
     }
 
     response.status(StatusCodes.OK).json({
@@ -444,8 +448,11 @@ export const verifyToken = catchAsync(async (request, response) => {
 
     const result = await verifyResetPasswordToken(code, user);
     if(!result.valid){
+        const expired = result.reason === 'expired';
+        const phrase = expired ? "RESET_TOKEN_EXPIRED" : "ERROR_INVALID_RESET_TOKEN";
+        const errorCode = expired ? ERROR_CODES.RESET_TOKEN_EXPIRED : ERROR_CODES.RESET_TOKEN_INVALID;
         logger.warn("Invalid password reset token", {user: maskEmail(user.email), action: AUTH_ACTIONS.TOKEN_EXPIRED})
-        throw new AppError(i18n.__({phrase: "ERROR_INVALID_RESET_TOKEN", locale: locale}), StatusCodes.UNAUTHORIZED, null, {code: ERROR_CODES.RESET_TOKEN_INVALID});
+        throw new AppError(i18n.__({phrase, locale}), StatusCodes.UNAUTHORIZED, null, {code: errorCode});
     }
 
     response.status(StatusCodes.OK).json({
@@ -468,18 +475,27 @@ export const forgotPassword = catchAsync(async (request, response) => {
     const { email } = request.body;
     const user = await getSafeUser({email});
 
+    const respondGeneric = () => response.status(StatusCodes.OK).json({
+        success: true,
+        message: request.__("RESPONSE_PASSWORD_RESET_CODE_SENT"),
+        data: null,
+        errors: null
+    });
+
     if(!user){
         logger.warn('Password reset requested for unknown email', {user: maskEmail(email), action: USER_ACTIONS.USER_NOT_FOUND});
-        return response.status(StatusCodes.OK).json({
-            success: true,
-            message: request.__("RESPONSE_PASSWORD_RESET_CODE_SENT"),
-            data: null,
-            errors: null
-        });
+        return respondGeneric();
+    }
+
+    const latestToken = await getLatestPasswordResetToken(user.id);
+    const cooldownMs = Config.passwordResetResendCooldownMinutes * 60 * 1000;
+    if (latestToken && !latestToken.usedAt && (Date.now() - latestToken.createdAt.getTime()) < cooldownMs) {
+        logger.info('Password reset code resend skipped (cooldown)', {user: maskEmail(email)});
+        return respondGeneric();
     }
 
     const passwordResetCode = generateNumericCode(6);
-    await savePasswordResetToken(user,  passwordResetCode);
+    await savePasswordResetToken(user, passwordResetCode, request.ip);
     await recordAuthAuditEvent({
         eventType: AUTH_AUDIT_EVENT_TYPES.PASSWORD_RESET_REQUEST,
         outcome: AUTH_AUDIT_OUTCOMES.REQUESTED,
@@ -491,12 +507,7 @@ export const forgotPassword = catchAsync(async (request, response) => {
     emailService.sendPasswordResetCode(user, passwordResetCode)
     .catch(error => logger.error('Failed to send email', {user: maskEmail(user.email), action: MESSAGING_ACTIONS.FAILED_SENDING_EMAIL}));
 
-    response.status(StatusCodes.OK).json({
-        success: true,
-        message: request.__("RESPONSE_PASSWORD_RESET_CODE_SENT"),
-        data: null,
-        errors: null
-    });
+    return respondGeneric();
 });
 
 /**

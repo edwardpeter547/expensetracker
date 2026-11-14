@@ -89,16 +89,22 @@ export const hashToken = (token) => {
 }
 
 /**
- * Hash a short-lived password-reset code before persistence and lookup.
+ * Hash a short-lived password-reset code with a keyed HMAC digest.
  *
- * Reset codes are sensitive but short, so a fast unsalted SHA-256 digest is
- * sufficient to prevent the raw code from being readable in the database.
+ * A six-digit code has only one million possible values, so a fast unsalted
+ * digest would be brute-forceable if the database leaked. The key is derived
+ * from the configured JWT secret and a purpose string, so offline guessing
+ * requires the server secret while per-account attempt limits protect the
+ * live endpoint.
  *
  * @param {string} code The raw numeric reset code.
  * @returns {string} The hex-encoded digest.
  */
 export const hashResetCode = (code) => {
-    return crypto.createHash('sha256').update(code).digest('hex');
+    const key = crypto.createHmac('sha256', Config.jwtSecret)
+        .update('expensetracker:password-reset-otp')
+        .digest();
+    return crypto.createHmac('sha256', key).update(String(code)).digest('hex');
 }
 
 /**
@@ -705,6 +711,29 @@ export const savePasswordResetToken = async (user, passwordResetToken, ipAddress
 }
 
 /**
+ * Load the most recently issued password-reset code for a user.
+ *
+ * Used by the forgot-password path to enforce a per-account resend cooldown
+ * without relying on in-memory state.
+ *
+ * @param {number} userId The owning user id.
+ * @returns {Promise<object|null>} The latest code record, or null.
+ */
+export const getLatestPasswordResetToken = async (userId) => {
+    return prisma.passwordResetToken.findFirst({
+        where: {userId},
+        orderBy: {createdAt: 'desc'},
+        select: {
+            id: true,
+            createdAt: true,
+            expiresAt: true,
+            usedAt: true,
+            attempts: true,
+        },
+    });
+}
+
+/**
  * Load a full user row by arbitrary filters, attaching an internal `_meta`
  * marker for later `refreshRecord` use.
  *
@@ -780,28 +809,98 @@ export const getProfile = async(params) => {
 }
 
 /**
- * Verify an unexpired password-reset code for a user.
+ * Increment the attempt counter on a user's active password-reset code and
+ * invalidate it once the configured limit is reached.
+ *
+ * Runs inside a transaction while the user row is locked, so concurrent wrong
+ * code attempts serialize and cannot race past the limit.
+ *
+ * @param {object} tx The Prisma transaction client.
+ * @param {number} userId The owning user id.
+ * @param {number} attemptLimit The configured attempt limit.
+ * @returns {Promise<void>}
+ */
+const registerFailedPasswordResetAttempt = async (tx, userId, attemptLimit) => {
+    const active = await tx.passwordResetToken.findFirst({
+        where: {userId, usedAt: null, expiresAt: {gt: new Date()}},
+        orderBy: {createdAt: 'desc'},
+        select: {id: true},
+    });
+
+    if (!active) {
+        return;
+    }
+
+    await tx.passwordResetToken.updateMany({
+        where: {id: active.id, usedAt: null},
+        data: {attempts: {increment: 1}},
+    });
+
+    const updated = await tx.passwordResetToken.findUnique({
+        where: {id: active.id},
+        select: {attempts: true},
+    });
+
+    if (updated && updated.attempts >= attemptLimit) {
+        await tx.passwordResetToken.updateMany({
+            where: {id: active.id, usedAt: null},
+            data: {usedAt: new Date()},
+        });
+    }
+}
+
+/**
+ * Verify an unexpired, unused password-reset code for a user.
+ *
+ * The user row is locked first so concurrent verification attempts serialize
+ * and cannot bypass the attempt limit. A wrong code increments the account's
+ * active code counter; when the counter reaches the configured limit the code
+ * is invalidated. The code is deliberately not consumed here: consumption
+ * occurs only on a successful password reset.
  *
  * @param {string} code The presented reset code.
  * @param {object} user The user attempting the reset.
- * @returns {Promise<{valid: boolean, code: object|null}>} Validity and the
- *   matching token record, if any.
+ * @returns {Promise<{valid: boolean, code: object|null, reason: string|null}>}
+ *   Validity, the matching token record (when valid), and the failure reason
+ *   (`'invalid'` or `'expired'`).
  */
 export const verifyResetPasswordToken = async (code, user) => {
+    const codeHash = hashResetCode(code);
+    const attemptLimit = Config.passwordResetAttemptLimit;
 
-    const tokenData = await prisma.passwordResetToken.findFirst({
-        where: {
-            userId: user.id,
-            token: hashResetCode(code),
-            usedAt: null,
-            expiresAt: {gt: new Date()},
+    return prisma.$transaction(async (tx) => {
+        const lockedRows = await tx.$queryRaw`
+            SELECT "id" FROM "user" WHERE "id" = ${user.id} FOR UPDATE
+        `;
+        if (lockedRows.length === 0) {
+            return {valid: false, code: null, reason: 'invalid'};
         }
-    });
 
-    return {
-        valid: !!tokenData,
-        code: tokenData || null
-    }
+        const token = await tx.passwordResetToken.findFirst({
+            where: {
+                userId: user.id,
+                token: codeHash,
+                usedAt: null,
+            },
+            orderBy: {createdAt: 'desc'},
+            select: {id: true, expiresAt: true, attempts: true},
+        });
+
+        if (!token) {
+            await registerFailedPasswordResetAttempt(tx, user.id, attemptLimit);
+            return {valid: false, code: null, reason: 'invalid'};
+        }
+
+        if (token.expiresAt < new Date()) {
+            await tx.passwordResetToken.updateMany({
+                where: {id: token.id, usedAt: null},
+                data: {usedAt: new Date()},
+            });
+            return {valid: false, code: null, reason: 'expired'};
+        }
+
+        return {valid: true, code: token, reason: null};
+    });
 }
 
 /**
@@ -818,10 +917,13 @@ export const verifyResetPasswordToken = async (code, user) => {
  * @param {string} params.password The new plaintext password.
  * @param {string|null} [params.ipAddress=null] The request IP address.
  * @param {string|null} [params.correlationId=null] The request correlation id.
- * @returns {Promise<{success: boolean}>} Whether the reset was applied.
+ * @returns {Promise<{success: boolean, reason: string|null}>} Whether the
+ *   reset was applied and, on failure, `'invalid'` or `'expired'`.
  */
 export const resetPasswordWithCode = async ({userId, code, password, ipAddress = null, correlationId = null}) => {
     const hashedPassword = await bcrypt.hash(password, 12);
+    const codeHash = hashResetCode(code);
+    const attemptLimit = Config.passwordResetAttemptLimit;
 
     return prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
@@ -829,26 +931,37 @@ export const resetPasswordWithCode = async ({userId, code, password, ipAddress =
         const token = await tx.passwordResetToken.findFirst({
             where: {
                 userId,
-                token: hashResetCode(code),
+                token: codeHash,
                 usedAt: null,
-                expiresAt: {gt: new Date()},
             },
-            select: {id: true},
+            orderBy: {createdAt: 'desc'},
+            select: {id: true, expiresAt: true},
         });
 
-        if (!token) return {success: false};
+        if (!token) {
+            await registerFailedPasswordResetAttempt(tx, userId, attemptLimit);
+            return {success: false, reason: 'invalid'};
+        }
+
+        if (token.expiresAt < new Date()) {
+            await tx.passwordResetToken.updateMany({
+                where: {id: token.id, usedAt: null},
+                data: {usedAt: new Date()},
+            });
+            return {success: false, reason: 'expired'};
+        }
 
         const userRecord = await tx.user.findUnique({
             where: {id: userId},
             select: {password: true},
         });
-        if (!userRecord) return {success: false};
+        if (!userRecord) return {success: false, reason: 'invalid'};
 
         const consumed = await tx.passwordResetToken.updateMany({
             where: {id: token.id, usedAt: null},
             data: {usedAt: new Date()},
         });
-        if (consumed.count !== 1) return {success: false};
+        if (consumed.count !== 1) return {success: false, reason: 'invalid'};
 
         await tx.passwordHistory.create({
             data: {
@@ -877,7 +990,7 @@ export const resetPasswordWithCode = async ({userId, code, password, ipAddress =
             correlationId,
         }, {tx, critical: true});
 
-        return {success: true};
+        return {success: true, reason: null};
     });
 }
 
