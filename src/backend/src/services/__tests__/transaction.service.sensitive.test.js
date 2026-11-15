@@ -97,4 +97,44 @@ describe('transaction.service safe owner projection', () => {
         expect(record.user).toHaveProperty('email', 'a@b.c');
         expect(record.user).toHaveProperty('username', 'a');
     });
+
+    test('createTransactionRecord returns amount and transactionDate from the persisted record', async () => {
+        const record = await transactionService.createTransactionRecord({
+            userId: 1,
+            amount: FULL_TRANSACTION.amount,
+            transactionDate: FULL_TRANSACTION.transactionDate,
+        });
+
+        const args = mockPrisma.transaction.create.mock.calls[0][0];
+
+        expect(args.select.amount).toBe(true);
+        expect(args.select.transactionDate).toBe(true);
+        expect(record.amount).toBe(FULL_TRANSACTION.amount);
+        expect(record.transactionDate).toBe(FULL_TRANSACTION.transactionDate);
+    });
+
+    test('createTransactionRecord uses an explicit public projection without internal fields', async () => {
+        await transactionService.createTransactionRecord({ userId: 1, amount: 1000 });
+
+        const args = mockPrisma.transaction.create.mock.calls[0][0];
+        const selectedFields = Object.keys(args.select).sort();
+
+        expect(selectedFields).toEqual([
+            'amount',
+            'category',
+            'categoryId',
+            'createdAt',
+            'currency',
+            'description',
+            'id',
+            'location',
+            'receiptUrl',
+            'transactionDate',
+            'transType',
+            'updatedAt',
+            'user',
+            'userId',
+        ].sort());
+        expect(args.select.user).toEqual({ select: USER_OWNER_SELECT });
+    });
 });

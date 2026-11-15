@@ -7,8 +7,9 @@ import { ERROR_CODES } from "../constants/error-codes.js";
 /**
  * Create a transaction record for its owner.
  *
- * The response projection includes a safe nested owner and omits `amount` and
- * `transactionDate` (a known projection gap).
+ * The response projection is an explicit allowlist that returns the complete
+ * public transaction (including `amount` and `transactionDate`) with a safe
+ * nested owner, and never a full Prisma model object.
  *
  * @param {object} transactionData The transaction fields to persist.
  * @returns {Promise<object>} The created transaction.
@@ -20,6 +21,7 @@ export const createTransactionRecord = async (transactionData) => {
             id: true,
             user: { select: USER_OWNER_SELECT },
             userId: true,
+            amount: true,
             transType: true,
             category: true,
             categoryId: true,
@@ -27,6 +29,7 @@ export const createTransactionRecord = async (transactionData) => {
             description: true,
             receiptUrl: true,
             location: true,
+            transactionDate: true,
             createdAt: true,
             updatedAt: true,
         }
