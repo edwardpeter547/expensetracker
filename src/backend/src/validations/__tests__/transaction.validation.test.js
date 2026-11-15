@@ -16,6 +16,7 @@ describe('Create Transaction Schema Test Suite - createTransactionSchema', () =>
 
     const transactionData = {
         amount: '500',
+        title: 'Monthly salary',
         type: 'INCOME',
         category: 'Salary',
         description: `My salary for the month of ${new Date().toISOString().split('T')}`,
@@ -24,7 +25,7 @@ describe('Create Transaction Schema Test Suite - createTransactionSchema', () =>
         location: 'United Kingdom'
     }
 
-    const requiredFields = ['amount', 'type', 'category'];
+    const requiredFields = ['amount', 'title', 'type', 'category'];
     const optionalFields = ['description', 'date', 'receiptUrl', 'location'];
 
     /**
@@ -51,6 +52,34 @@ describe('Create Transaction Schema Test Suite - createTransactionSchema', () =>
         });
         expect(error).toBeDefined();
         expect(error.message).toContain('amount');
+    });
+
+    /**
+     * Validates that the required title rejects empty, whitespace-only, and
+     * over-length values so the displayed transaction name is always usable.
+     */
+    test('fails for empty, whitespace-only, or over-length titles', () => {
+        for (const title of ['', '   ', 'x'.repeat(121)]) {
+            const { error } = createTransactionSchema.validate({
+                ...transactionData,
+                title
+            });
+            expect(error).toBeDefined();
+            expect(error.message).toContain('title');
+        }
+    });
+
+    /**
+     * Validates that the title is normalized to a trimmed value.
+     */
+    test('trims the title before accepting it', () => {
+        const { error, value } = createTransactionSchema.validate({
+            ...transactionData,
+            title: '  Weekly groceries  '
+        });
+
+        expect(error).toBeUndefined();
+        expect(value.title).toBe('Weekly groceries');
     });
 
     /**
@@ -174,6 +203,7 @@ describe('Update Transaction Schema Test Suite - updateTransactionSchema', () =>
 
     const transactionData = {
         amount: '500',
+        title: 'Monthly salary',
         type: 'INCOME',
         category: 'Salary',
         description: `My salary for the month of ${new Date().toISOString().split('T')}`,
@@ -197,6 +227,23 @@ describe('Update Transaction Schema Test Suite - updateTransactionSchema', () =>
         });
         expect(error).toBeDefined();
         expect(error.message).toContain('amount');
+    });
+
+    /**
+     * Validates that an optional title can be supplied during an update and is
+     * trimmed, while whitespace-only titles remain invalid.
+     */
+    test('update transaction validates and trims an optional title', () => {
+        const { error, value } = updateTransactionSchema.validate({
+            title: '  New title  '
+        });
+
+        expect(error).toBeUndefined();
+        expect(value.title).toBe('New title');
+
+        const invalid = updateTransactionSchema.validate({ title: '   ' });
+        expect(invalid.error).toBeDefined();
+        expect(invalid.error.message).toContain('title');
     });
 
     /**
@@ -303,6 +350,36 @@ describe('Update Transaction Schema Test Suite - updateTransactionSchema', () =>
         expect(error.message).toContain('receiptUrl');
     })
 
+    /**
+     * Validates that nullable optional fields can be explicitly cleared with
+     * null, matching the nullable PostgreSQL columns they map to.
+     */
+    test('update transaction allows clearing nullable fields with null', () => {
+        const { error, value } = updateTransactionSchema.validate({
+            description: null,
+            receiptUrl: null,
+            location: null
+        });
+
+        expect(error).toBeUndefined();
+        expect(value).toEqual({
+            description: null,
+            receiptUrl: null,
+            location: null
+        });
+    });
+
+    /**
+     * Validates that an empty update payload is rejected so the endpoint never
+     * performs a no-op write or reaches Prisma with an empty data object.
+     */
+    test('update transaction rejects an empty payload', () => {
+        const { error } = updateTransactionSchema.validate({});
+
+        expect(error).toBeDefined();
+        expect(error.message).toContain('at least 1 key');
+    });
+
 
 });
 
@@ -319,6 +396,7 @@ describe('Update Transaction Schema Test Suite - updateTransactionSchema', () =>
 describe('Bulk Create Schema Validation - bulkCreateSchema', () => {
     const validTransaction = {
         amount: 500.00,
+        title: 'Monthly salary',
         type: 'INCOME',
         category: 'Salary',
         description: `My salary for the month of ${new Date().toISOString().split('T')}`,

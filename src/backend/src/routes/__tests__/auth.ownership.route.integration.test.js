@@ -133,6 +133,7 @@ describeDb('cross-user ownership denial (HTTP, real PostgreSQL)', () => {
                 amount: '10.00',
                 currency: 'USD',
                 transType: 'EXPENSE',
+                title: 'Owner Transaction',
                 category: 'Owner Category',
                 categoryId: category.id,
                 transactionDate: new Date(),

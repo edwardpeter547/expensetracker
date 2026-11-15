@@ -53,6 +53,7 @@ export const DEMO_TRANSACTIONS: TransactionRecord[] = [
         amount: '4.5',
         currency: 'USD',
         transType: 'EXPENSE',
+        title: 'Coffee Shop',
         category: 'Food',
         categoryId: 'sys.food',
         description: 'Coffee Shop',
@@ -85,6 +86,7 @@ export const DEMO_TRANSACTIONS: TransactionRecord[] = [
         amount: '12.4',
         currency: 'USD',
         transType: 'EXPENSE',
+        title: 'Uber',
         category: 'Transport',
         categoryId: 'sys.transport',
         description: 'Uber',
@@ -98,6 +100,7 @@ export const DEMO_TRANSACTIONS: TransactionRecord[] = [
         amount: '3200',
         currency: 'USD',
         transType: 'INCOME',
+        title: 'Monthly Salary',
         category: 'Salary',
         categoryId: 'sys.salary',
         description: 'Monthly Salary',
@@ -111,6 +114,7 @@ export const DEMO_TRANSACTIONS: TransactionRecord[] = [
         amount: '38',
         currency: 'USD',
         transType: 'EXPENSE',
+        title: 'Groceries',
         category: 'Shopping',
         categoryId: 'sys.shopping',
         description: 'Groceries',
@@ -136,6 +140,7 @@ export const DEMO_TRANSACTIONS: TransactionRecord[] = [
         amount: '120',
         currency: 'USD',
         transType: 'EXPENSE',
+        title: 'Electricity Bill',
         category: 'Bills',
         categoryId: 'sys.bills',
         description: 'Electricity Bill',
@@ -149,6 +154,7 @@ export const DEMO_TRANSACTIONS: TransactionRecord[] = [
         amount: '250',
         currency: 'USD',
         transType: 'INCOME',
+        title: 'Design Invoice',
         category: 'Freelancing',
         categoryId: 'sys.freelancing',
         description: 'Design Invoice',
@@ -202,11 +208,15 @@ let demoTransactions: TransactionRecord[] = [...DEMO_TRANSACTIONS];
 /** Fields supplied when a demo transaction is created. */
 export interface DemoTransactionDraft {
     amount: string;
+    title: string;
     type: TransactionType;
     category: Category;
     date: string;
     currency: string;
     description?: string;
+    budgetId?: string | null;
+    merchant?: TransactionRecord['merchant'];
+    items?: TransactionRecord['items'];
 }
 
 /**
@@ -230,11 +240,15 @@ export const addDemoTransaction = (draft: DemoTransactionDraft): TransactionReco
         amount: draft.amount,
         currency: draft.currency,
         transType: draft.type,
+        title: draft.title,
         category: draft.category.name,
         categoryId: draft.category.id,
         description: draft.description?.trim() || null,
         receiptUrl: null,
         location: null,
+        budgetId: draft.budgetId ?? null,
+        merchant: draft.merchant ?? null,
+        items: draft.items ?? null,
         transactionDate: draft.date,
         createdAt: now,
         updatedAt: now,

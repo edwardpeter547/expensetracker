@@ -28,6 +28,7 @@ import { transactionTitle } from '@/utils/transactions';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Modal,
     Pressable,
     StyleSheet,
@@ -87,6 +88,7 @@ const TransactionsRoute = () => {
     } = useTransactions();
     const firstFocus = useRef(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
     const [blurSignal, setBlurSignal] = useState(0);
 
@@ -145,7 +147,11 @@ const TransactionsRoute = () => {
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={t('Cancel delete')}
-                                onPress={() => setDeleteId(null)}
+                                onPress={() => {
+                                    setDeleteNotice(null);
+                                    setDeleteId(null);
+                                }}
+                                disabled={deleting}
                                 style={styles.modalCancel}
                             >
                                 <Text style={styles.modalCancelText}>{t('Cancel')}</Text>
@@ -155,6 +161,8 @@ const TransactionsRoute = () => {
                                 accessibilityLabel={t('Confirm delete')}
                                 onPress={async () => {
                                     if (!deleteId) return;
+                                    setDeleteNotice(null);
+                                    setDeleting(true);
                                     try {
                                         await transactionDataSource.remove(deleteId);
                                     } catch (cause) {
@@ -163,14 +171,21 @@ const TransactionsRoute = () => {
                                                 ? cause.message
                                                 : t('Deleting is UI-only and unavailable without demo mode.'),
                                         );
+                                        setDeleting(false);
                                         return;
                                     }
+                                    setDeleting(false);
                                     setDeleteId(null);
                                     void refreshSilently();
                                 }}
+                                disabled={deleting}
                                 style={styles.modalDelete}
                             >
-                                <Text style={styles.modalDeleteText}>{t('Delete')}</Text>
+                                {deleting ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.modalDeleteText}>{t('Delete')}</Text>
+                                )}
                             </Pressable>
                         </View>
                     </View>

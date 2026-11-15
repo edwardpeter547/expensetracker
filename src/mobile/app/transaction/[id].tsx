@@ -21,8 +21,8 @@ import {
     reconcileItemization,
 } from '@/utils/itemization';
 import { transactionTitle } from '@/utils/transactions';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -65,7 +65,9 @@ const TransactionDetailsRoute = () => {
     const [transaction, setTransaction] = useState<TransactionRecord | null | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
+    const firstFocus = useRef(true);
 
     useEffect(() => {
         let active = true;
@@ -76,8 +78,9 @@ const TransactionDetailsRoute = () => {
                 if (active) setTransaction(record);
             } catch {
                 if (active) setTransaction(null);
+            } finally {
+                if (active) setLoading(false);
             }
-            if (active) setLoading(false);
         };
         void load();
         return () => {
@@ -85,7 +88,31 @@ const TransactionDetailsRoute = () => {
         };
     }, [id]);
 
+    useFocusEffect(
+        useCallback(() => {
+            if (firstFocus.current) {
+                firstFocus.current = false;
+                return;
+            }
+
+            let active = true;
+            void (async () => {
+                try {
+                    const record = await transactionDataSource.get(id);
+                    if (active) setTransaction(record);
+                } catch {
+                    // Keep the current record when a background refresh fails.
+                }
+            })();
+            return () => {
+                active = false;
+            };
+        }, [id]),
+    );
+
     const confirmDelete = async () => {
+        setDeleteNotice(null);
+        setDeleting(true);
         try {
             await transactionDataSource.remove(id);
         } catch (cause) {
@@ -94,9 +121,10 @@ const TransactionDetailsRoute = () => {
                     ? cause.message
                     : 'Deleting is UI-only and unavailable without demo mode.',
             );
-            setDeleteOpen(false);
+            setDeleting(false);
             return;
         }
+        setDeleting(false);
         setDeleteOpen(false);
         if (router.canGoBack()) {
             router.back();
@@ -166,6 +194,9 @@ const TransactionDetailsRoute = () => {
                     />
                     {transaction.description ? (
                         <DetailRow label={t('Description')} value={transaction.description} />
+                    ) : null}
+                    {transaction.budget?.category?.name ? (
+                        <DetailRow label={t('Budget')} value={transaction.budget.category.name} />
                     ) : null}
                 </View>
 
@@ -299,11 +330,18 @@ const TransactionDetailsRoute = () => {
                         <Text style={styles.modalText}>
                             {t('Deleting this transaction can affect spending totals, budgets, and reports.')}
                         </Text>
+                        {deleteNotice ? (
+                            <Text style={styles.modalNotice}>{deleteNotice}</Text>
+                        ) : null}
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={t('Cancel delete')}
-                                onPress={() => setDeleteOpen(false)}
+                                onPress={() => {
+                                    setDeleteNotice(null);
+                                    setDeleteOpen(false);
+                                }}
+                                disabled={deleting}
                                 style={styles.modalCancel}
                             >
                                 <Text style={styles.modalCancelText}>{t('Cancel')}</Text>
@@ -312,9 +350,14 @@ const TransactionDetailsRoute = () => {
                                 accessibilityRole="button"
                                 accessibilityLabel={t('Confirm delete')}
                                 onPress={confirmDelete}
+                                disabled={deleting}
                                 style={styles.modalDelete}
                             >
-                                <Text style={styles.modalDeleteText}>{t('Delete')}</Text>
+                                {deleting ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.modalDeleteText}>{t('Delete')}</Text>
+                                )}
                             </Pressable>
                         </View>
                     </View>
@@ -440,6 +483,7 @@ const styles = StyleSheet.create({
     },
     modalTitle: { fontSize: T.modalTitle, fontWeight: T.modalTitleWeight, color: C.ink },
     modalText: { fontSize: 14, lineHeight: 20, color: C.muted, marginTop: 8 },
+    modalNotice: { fontSize: 12, color: C.error, marginTop: 10 },
     modalActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
     modalCancel: {
         flex: 1,

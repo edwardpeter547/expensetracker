@@ -55,6 +55,14 @@ interface CreateTransactionEnvelope {
     errors: unknown;
 }
 
+/** Envelope returned by the transaction update endpoint. */
+interface UpdateTransactionEnvelope {
+    success: boolean;
+    message: string;
+    data: { transaction?: TransactionRecord | null };
+    errors: unknown;
+}
+
 /**
  * Fetch every transaction owned by the authenticated user.
  *
@@ -81,6 +89,71 @@ export const createTransaction = async (
 ): Promise<TransactionRecord | null> => {
     const response = await apiClient.post<CreateTransactionEnvelope>('/transactions', input);
     return response.data?.data?.record ?? null;
+};
+
+/**
+ * Convert a `Partial<TransactionRecord>` patch into the backend update payload.
+ *
+ * The transaction data-source contract exposes persisted record fields
+ * (`transType`, `transactionDate`), whereas the backend update endpoint
+ * accepts the request-body names `type` and `date`. Merchant details, line
+ * items, and the linked budget are now persisted and therefore forwarded.
+ *
+ * @param {Partial<TransactionRecord>} patch The transaction fields to update.
+ * @returns {Record<string, unknown>} The backend-compatible payload.
+ */
+const toUpdatePayload = (patch: Partial<TransactionRecord>): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {};
+
+    if (patch.amount !== undefined) payload.amount = patch.amount;
+    if (patch.title !== undefined) payload.title = patch.title;
+    if (patch.transType !== undefined) payload.type = patch.transType;
+    if (patch.category !== undefined) payload.category = patch.category;
+    if (patch.categoryId !== undefined) payload.categoryId = patch.categoryId;
+    if (patch.description !== undefined) payload.description = patch.description;
+    if (patch.receiptUrl !== undefined) payload.receiptUrl = patch.receiptUrl;
+    if (patch.location !== undefined) payload.location = patch.location;
+    if (patch.budgetId !== undefined) payload.budgetId = patch.budgetId;
+    if (patch.merchant !== undefined) payload.merchant = patch.merchant;
+    if (patch.items !== undefined) payload.items = patch.items;
+    if (patch.transactionDate !== undefined) payload.date = patch.transactionDate;
+
+    return payload;
+};
+
+/**
+ * Update a transaction owned by the authenticated user.
+ *
+ * Only backend-supported fields are forwarded; the response is the updated
+ * public transaction record. Amounts remain canonical decimal strings and
+ * dates remain ISO 8601 strings through the round trip.
+ *
+ * @param {string} id The transaction id.
+ * @param {Partial<TransactionRecord>} patch The fields to update.
+ * @returns {Promise<TransactionRecord|null>} The updated record, when present.
+ */
+export const updateTransaction = async (
+    id: string,
+    patch: Partial<TransactionRecord>,
+): Promise<TransactionRecord | null> => {
+    const response = await apiClient.put<UpdateTransactionEnvelope>(
+        `/transactions/${id}`,
+        toUpdatePayload(patch),
+    );
+    return response.data?.data?.transaction ?? null;
+};
+
+/**
+ * Delete a transaction owned by the authenticated user.
+ *
+ * The backend returns a 200 success envelope with a null data payload, so a
+ * resolved call means the transaction was removed and need not be inspected.
+ *
+ * @param {string} id The transaction id.
+ * @returns {Promise<void>} Resolves after the backend confirms deletion.
+ */
+export const deleteTransaction = async (id: string): Promise<void> => {
+    await apiClient.delete(`/transactions/${id}`);
 };
 
 /**

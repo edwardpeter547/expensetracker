@@ -285,11 +285,22 @@ const AddTransactionRoute = () => {
     const handleSave = async (draft: TransactionDraft): Promise<void> => {
         setFormError(null);
         const validation = validateTransactionForm(
-            { amount: draft.amount, categoryId: draft.categoryId, description: draft.description },
+            {
+                amount: draft.amount,
+                title: draft.title,
+                categoryId: draft.categoryId,
+                description: draft.description,
+            },
             language,
         );
         if (Object.keys(validation).length > 0) {
-            setFormError(validation.amount ?? validation.category ?? validation.description ?? null);
+            setFormError(
+                validation.amount
+                    ?? validation.title
+                    ?? validation.category
+                    ?? validation.description
+                    ?? null,
+            );
             return;
         }
 
@@ -306,22 +317,28 @@ const AddTransactionRoute = () => {
             if (editId) {
                 await transactionDataSource.update(editId, {
                     amount: draft.amount,
+                    title: draft.title,
                     transType: type,
                     category: category.name,
                     categoryId: category.id,
                     description: draft.description.trim() || null,
                     transactionDate: dateISO,
+                    budgetId: draft.budgetId ?? null,
                     merchant: draft.merchant ?? merchant,
                     items: draft.items ?? items,
                 });
             } else {
                 await transactionDataSource.create({
                     amount: draft.amount,
+                    title: draft.title,
                     type,
                     category: category.name,
                     categoryId: category.id,
                     description: draft.description.trim() || undefined,
                     date: dateISO,
+                    budgetId: draft.budgetId ?? null,
+                    merchant: draft.merchant ?? merchant,
+                    items: draft.items ?? items,
                 });
             }
             router.back();
@@ -350,11 +367,12 @@ const AddTransactionRoute = () => {
                     editTransaction
                         ? {
                               kind: editTransaction.transType === 'INCOME' ? 'income' : 'expense',
+                              title: editTransaction.title,
                               amount: String(editTransaction.amount),
                               categoryId: editTransaction.categoryId ?? '',
-                              date: new Date(editTransaction.transactionDate).toISOString().slice(0, 10),
+                              date: isoToLocalDate(new Date(editTransaction.transactionDate)),
                               description: editTransaction.description ?? '',
-                              budgetId: null,
+                              budgetId: editTransaction.budgetId ?? null,
                           }
                         : undefined
                 }

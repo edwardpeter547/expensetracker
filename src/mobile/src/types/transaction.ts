@@ -51,6 +51,8 @@ export interface TransactionRecord {
     currency?: string | null;
     /** Income or expense. */
     transType: TransactionType;
+    /** Dedicated display title. */
+    title: string;
     /** Stored category label. */
     category: string;
     /** Optional category reference. */
@@ -61,6 +63,13 @@ export interface TransactionRecord {
     receiptUrl?: string | null;
     /** Optional location string. */
     location?: string | null;
+    /** Optional linked budget id. */
+    budgetId?: string | null;
+    /** Optional linked budget label, when the backend resolves one. */
+    budget?: {
+        id: string;
+        category?: { id?: string; name?: string } | null;
+    } | null;
     /** Transaction date/time as an ISO string. */
     transactionDate: string;
     /** Created timestamp. */
@@ -110,6 +119,7 @@ export interface Budget {
 /** Request body for `POST /api/v1/transactions`. */
 export interface CreateTransactionInput {
     amount: string;
+    title: string;
     type: TransactionType;
     category: string;
     categoryId?: string;
@@ -117,4 +127,7 @@ export interface CreateTransactionInput {
     date?: string;
     receiptUrl?: string;
     location?: string;
+    budgetId?: string | null;
+    merchant?: MerchantDetails;
+    items?: PurchasedItem[];
 }

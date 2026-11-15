@@ -41,9 +41,11 @@ import ReceiptAttachmentPreview from '@/components/receipts/ReceiptAttachmentPre
 import type { ReceiptAttachmentState } from '@/types/receipt';
 import RecurringShortcut from '@/components/recurring/RecurringShortcut';
 import SwipeableTransactionRow from '@/components/transactions/SwipeableTransactionRow';
+import AdditionalDetailsAccordion from '@/components/transactions/AdditionalDetailsAccordion';
 import type { Swipeable } from 'react-native-gesture-handler';
 import MerchantDetailsFields from '@/components/transactions/MerchantDetailsFields';
 import PurchasedItemsEditor from '@/components/transactions/PurchasedItemsEditor';
+import { isValidQuantity, isValidUnitPrice } from '@/utils/itemization';
 import type {
     MerchantDetails,
     PurchasedItem,
@@ -76,6 +78,7 @@ export type SelectOption = {
 /** Values emitted by the Add Transaction form on save. */
 export type TransactionDraft = {
     kind: TransactionKind;
+    title: string;
     amount: string;
     categoryId: string;
     date: string;
@@ -464,17 +467,23 @@ const SelectField = ({
     onPress,
     icon,
     disabled,
+    error = false,
 }: {
     label: string;
     value: string;
     onPress: () => void;
     icon?: keyof typeof Ionicons.glyphMap;
     disabled?: boolean;
+    error?: boolean;
 }) => (
     <View style={styles.field}>
         <Text style={styles.fieldLabel}>{label}</Text>
         <Pressable
-            style={[styles.selectField, disabled && { opacity: 0.55 }]}
+            style={[
+                styles.selectField,
+                disabled && { opacity: 0.55 },
+                error && styles.inputError,
+            ]}
             onPress={onPress}
             disabled={disabled}
             accessibilityRole="button"
@@ -488,6 +497,29 @@ const SelectField = ({
         </Pressable>
     </View>
 );
+
+/** Field-level validation error with an alert icon. */
+const FieldError = ({ message }: { message: string }) => (
+    <View style={styles.fieldError}>
+        <Ionicons name="alert-circle" size={14} color={C.error} />
+        <Text style={styles.fieldErrorText}>{message}</Text>
+    </View>
+);
+
+/** Form-level error banner for server, network, and cross-field failures. */
+const ErrorBanner = ({ message }: { message: string }) => (
+    <View style={styles.errorBanner}>
+        <Ionicons name="alert-circle" size={16} color={C.error} />
+        <Text style={styles.errorBannerText}>{message}</Text>
+    </View>
+);
+
+/** Per-field validation errors emitted by the form. */
+interface TransactionFieldErrors {
+    title?: string;
+    amount?: string;
+    category?: string;
+}
 
 /** Add Transaction screen props. */
 export interface AddTransactionScreenProps {
@@ -519,6 +551,7 @@ export interface AddTransactionScreenProps {
     mode?: 'create' | 'edit';
     initialValues?: {
         kind?: TransactionKind;
+        title?: string;
         amount?: string;
         categoryId?: string;
         date?: string;
@@ -577,6 +610,7 @@ export function AddTransactionScreen({
     const insets = useSafeAreaInsets();
     const { t: tx } = useTranslation('transactions');
     const [kind, setKind] = useState<TransactionKind>(initialValues?.kind ?? 'expense');
+    const [title, setTitle] = useState(initialValues?.title ?? '');
     const [amount, setAmount] = useState(initialValues?.amount ?? '');
     const [categoryId, setCategoryId] = useState(initialValues?.categoryId ?? '');
     const [budgetId, setBudgetId] = useState<string | null>(initialValues?.budgetId ?? null);
@@ -584,26 +618,114 @@ export function AddTransactionScreen({
         initialValues?.date ?? selectedDate ?? toLocalDateString(new Date()),
     );
     const [description, setDescription] = useState(initialValues?.description ?? '');
-    const [validation, setValidation] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<TransactionFieldErrors>({});
+    const [additionalExpanded, setAdditionalExpanded] = useState(false);
+    const [itemsError, setItemsError] = useState<string | null>(null);
+    const scrollRef = useRef<ScrollView>(null);
+    const [formOffset, setFormOffset] = useState(0);
+    const [detailsOffset, setDetailsOffset] = useState(0);
 
     const category = categories.find((option) => option.id === categoryId);
     const budget = budgets.find((option) => option.id === budgetId);
 
     /**
+     * Expand Additional Details automatically when an edit loads with existing
+     * merchant or line-item data, without scrolling away from the main fields.
+     */
+    useEffect(() => {
+        if (mode !== 'edit' || kind !== 'expense') return;
+
+        const merchantHasData = [
+            merchant.name,
+            merchant.address,
+            merchant.purchaseTime,
+            merchant.paymentMethod,
+            merchant.reference,
+        ].some((entry) => typeof entry === 'string' && entry.trim() !== '');
+
+        if (merchantHasData || items.length > 0) {
+            setAdditionalExpanded(true);
+        }
+    }, [items, kind, merchant, mode]);
+
+    /**
+     * Scroll the Additional Details section into view.
+     *
+     * Offsets are captured through `onLayout` relative to the scrollable
+     * content, so the same target works for a manual expand and for an
+     * automatic expand triggered by invalid nested fields.
+     */
+    const scrollToAdditionalDetails = () => {
+        const target = formOffset + detailsOffset;
+        if (target <= 0) return;
+        scrollRef.current?.scrollTo({ y: Math.max(0, target - 8), animated: true });
+    };
+
+    /**
+     * Toggle Additional Details and scroll it into view when expanding.
+     */
+    const toggleAdditionalDetails = () => {
+        if (additionalExpanded) {
+            setAdditionalExpanded(false);
+            return;
+        }
+        setAdditionalExpanded(true);
+        scrollToAdditionalDetails();
+    };
+
+    /**
+     * Clear one field-level error as the user corrects that field.
+     *
+     * @param {keyof TransactionFieldErrors} field The field being edited.
+     */
+    const clearFieldError = (field: keyof TransactionFieldErrors) => {
+        setFieldErrors((current) => {
+            if (!current[field]) return current;
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
+    };
+
+    /**
      * Validate and emit the draft; host persistence and errors remain external.
      */
     const submit = () => {
+        const errors: TransactionFieldErrors = {};
+        if (!title.trim()) {
+            errors.title = tx('Enter a title');
+        } else if (title.trim().length > 120) {
+            errors.title = tx('Title must be 120 characters or fewer');
+        }
         if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
-            setValidation(tx('Enter a valid positive amount.'));
-            return;
+            errors.amount = tx('Enter a valid positive amount.');
         }
         if (!categoryId) {
-            setValidation(tx('Select a category'));
+            errors.category = tx('Select a category');
+        }
+
+        const itemsInvalid = kind === 'expense' && items.some((item) => (
+            !item.name.trim()
+            || !isValidQuantity(item.quantity)
+            || !isValidUnitPrice(item.unitPrice)
+        ));
+
+        if (itemsInvalid) {
+            setAdditionalExpanded(true);
+            scrollToAdditionalDetails();
+            setItemsError(tx('Complete or remove invalid line items.'));
+        } else {
+            setItemsError(null);
+        }
+
+        if (Object.keys(errors).length > 0 || itemsInvalid) {
+            setFieldErrors(errors);
             return;
         }
-        setValidation('');
+        setFieldErrors({});
         onSave({
             kind,
+            title: title.trim(),
             amount,
             categoryId,
             date,
@@ -622,6 +744,7 @@ export function AddTransactionScreen({
             <StatusBar style="dark" />
             <Header title={mode === 'edit' ? tx('Edit Transaction') : tx('Add Transaction')} onBack={onBack} />
             <ScrollView
+                ref={scrollRef}
                 contentContainerStyle={styles.formScroll}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
@@ -656,7 +779,10 @@ export function AddTransactionScreen({
                         ) : null}
                     </>
                 ) : null}
-                <View style={styles.form}>
+                <View
+                    style={styles.form}
+                    onLayout={(event) => setFormOffset(event.nativeEvent.layout.y)}
+                >
                     {optionsError ? (
                         <View style={styles.optionsError}>
                             <Text style={styles.optionsErrorText}>{optionsError}</Text>
@@ -668,17 +794,36 @@ export function AddTransactionScreen({
 
                     <View style={styles.field}>
                         <Text style={styles.fieldLabel}>{tx('Amount')}</Text>
-                        <View style={styles.amountField}>
+                        <View style={[styles.amountField, fieldErrors.amount && styles.inputError]}>
                             <Text style={styles.currency}>{currencySymbol}</Text>
                             <TextInput
                                 keyboardType="decimal-pad"
                                 placeholder="0.00"
                                 placeholderTextColor="#b9c5d9"
                                 value={amount}
-                                onChangeText={setAmount}
+                                onChangeText={(value) => {
+                                    setAmount(value);
+                                    clearFieldError('amount');
+                                }}
                                 style={styles.amountInput}
                             />
                         </View>
+                        {fieldErrors.amount ? <FieldError message={fieldErrors.amount} /> : null}
+                    </View>
+
+                    <View style={styles.field}>
+                        <Text style={styles.fieldLabel}>{tx('Title')}</Text>
+                        <TextInput
+                            value={title}
+                            onChangeText={(value) => {
+                                setTitle(value);
+                                clearFieldError('title');
+                            }}
+                            placeholder={tx('e.g. Weekly groceries, Monthly rent, Electricity bill')}
+                            placeholderTextColor="#9aa9c0"
+                            style={[styles.titleInput, fieldErrors.title && styles.inputError]}
+                        />
+                        {fieldErrors.title ? <FieldError message={fieldErrors.title} /> : null}
                     </View>
 
                     <SelectField
@@ -686,8 +831,10 @@ export function AddTransactionScreen({
                         value={category?.label || tx('Select a category')}
                         icon={category?.iconName || 'fast-food-outline'}
                         disabled={optionsLoading}
+                        error={Boolean(fieldErrors.category)}
                         onPress={() => onChooseCategory?.(categories, categoryId, setCategoryId)}
                     />
+                    {fieldErrors.category ? <FieldError message={fieldErrors.category} /> : null}
 
                     <SelectField
                         label={tx('Date')}
@@ -697,7 +844,7 @@ export function AddTransactionScreen({
                     />
 
                     <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>{tx('Description')}</Text>
+                        <Text style={styles.fieldLabel}>{tx('Description (Optional)')}</Text>
                         <TextInput
                             multiline
                             textAlignVertical="top"
@@ -716,30 +863,33 @@ export function AddTransactionScreen({
                         onPress={() => onChooseBudget?.(budgets, budgetId, setBudgetId)}
                     />
 
-                    {budgetId ? (
-                        <Text style={styles.budgetHint}>
-                            {tx("Budget linking isn't supported by the API yet, so this selection will not be attached to the saved transaction.")}
-                        </Text>
-                    ) : null}
+                    <View
+                        collapsable={false}
+                        onLayout={(event) => setDetailsOffset(event.nativeEvent.layout.y)}
+                    >
+                        {kind === 'expense' ? (
+                            <AdditionalDetailsAccordion
+                                expanded={additionalExpanded}
+                                onToggle={toggleAdditionalDetails}
+                                errorText={itemsError}
+                            >
+                                <MerchantDetailsFields
+                                    value={merchant}
+                                    language={language}
+                                    onChange={onMerchantChange ?? (() => undefined)}
+                                />
+                                <PurchasedItemsEditor
+                                    items={items}
+                                    transactionAmount={amount || '0'}
+                                    language={language}
+                                    currency={currency}
+                                    onChange={onItemsChange ?? (() => undefined)}
+                                />
+                            </AdditionalDetailsAccordion>
+                        ) : null}
+                    </View>
 
-                    {mode === 'edit' && kind === 'expense' ? (
-                        <>
-                            <MerchantDetailsFields
-                                value={merchant}
-                                onChange={onMerchantChange ?? (() => undefined)}
-                            />
-                            <PurchasedItemsEditor
-                                items={items}
-                                transactionAmount={amount || '0'}
-                                language={language}
-                                currency={currency}
-                                onChange={onItemsChange ?? (() => undefined)}
-                            />
-                        </>
-                    ) : null}
-
-                    {validation ? <Text style={styles.validation}>{validation}</Text> : null}
-                    {formError ? <Text style={styles.validation}>{formError}</Text> : null}
+                    {formError ? <ErrorBanner message={formError} /> : null}
                 </View>
             </ScrollView>
             <GradientButton
@@ -929,6 +1079,16 @@ const styles = StyleSheet.create({
     },
     currency: { fontSize: T.currency, color: C.ink },
     amountInput: { flex: 1, fontSize: T.amountInput, color: C.ink, padding: 0 },
+    titleInput: {
+        height: 53,
+        borderWidth: 1,
+        borderColor: C.line,
+        borderRadius: 10,
+        paddingHorizontal: 13,
+        fontSize: 16,
+        color: C.ink,
+        backgroundColor: C.white,
+    },
     selectField: {
         height: 53,
         borderWidth: 1,
@@ -981,6 +1141,40 @@ const styles = StyleSheet.create({
         fontWeight: T.saveButtonWeight,
     },
     validation: { color: C.error, fontSize: T.validation, marginTop: 4 },
+    inputError: {
+        borderColor: C.error,
+        borderWidth: 1.5,
+    },
+    fieldError: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        marginTop: 6,
+    },
+    fieldErrorText: {
+        flex: 1,
+        color: C.error,
+        fontSize: T.validation,
+        lineHeight: 18,
+    },
+    errorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#F3C2C2',
+        backgroundColor: C.errorBackground,
+    },
+    errorBannerText: {
+        flex: 1,
+        color: C.error,
+        fontSize: T.validation,
+        lineHeight: 18,
+    },
     budgetHint: { color: C.muted, fontSize: T.hint, marginTop: -12, marginBottom: 12 },
     optionsError: {
         alignItems: 'center',

@@ -92,11 +92,15 @@ export const demoTransactionDataSource: TransactionDataSource = {
         };
         return addDemoTransaction({
             amount: input.amount,
+            title: input.title,
             type: input.type,
             category,
             date: input.date ?? new Date().toISOString(),
             currency: 'USD',
             description: input.description,
+            budgetId: input.budgetId ?? null,
+            merchant: input.merchant ?? null,
+            items: input.items ?? null,
         });
     },
     get: async (id) => getDemoTransaction(id) ?? null,

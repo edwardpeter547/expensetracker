@@ -31,6 +31,7 @@ const transaction = (
     amount: '10.00',
     currency: 'USD',
     transType: 'EXPENSE',
+    title: 'Lunch',
     category: 'Food',
     categoryId: 'sys.food',
     description: 'Lunch',
@@ -40,8 +41,8 @@ const transaction = (
 
 describe('filterTransactions', () => {
     const rows = [
-        transaction({ id: 'a', description: 'Coffee', category: 'Food', transType: 'EXPENSE' }),
-        transaction({ id: 'b', description: 'Salary', category: 'Income', transType: 'INCOME' }),
+        transaction({ id: 'a', title: 'Coffee', description: 'Latte', category: 'Food', transType: 'EXPENSE' }),
+        transaction({ id: 'b', title: 'Salary', description: 'Monthly pay', category: 'Income', transType: 'INCOME' }),
     ];
 
     it('keeps every transaction for the All filter and empty query', () => {
@@ -158,28 +159,60 @@ describe('filterCategoriesForType', () => {
 describe('validateTransactionForm', () => {
     it('accepts a positive amount, category, and short description', () => {
         const errors = validateTransactionForm(
-            { amount: '12.50', categoryId: 'sys.food', description: 'Lunch' },
+            { title: 'Lunch', amount: '12.50', categoryId: 'sys.food', description: 'Lunch' },
             'en-US',
         );
         expect(errors).toEqual({});
     });
 
-    it('rejects missing and invalid amounts', () => {
+    it('requires a non-empty, bounded title', () => {
         expect(
-            validateTransactionForm({ amount: '', categoryId: 'sys.food' }, 'en-US').amount,
+            validateTransactionForm({ amount: '1', categoryId: 'sys.food' }, 'en-US').title,
         ).toBeTruthy();
         expect(
-            validateTransactionForm({ amount: '0', categoryId: 'sys.food' }, 'en-US').amount,
+            validateTransactionForm(
+                { title: '   ', amount: '1', categoryId: 'sys.food' },
+                'en-US',
+            ).title,
+        ).toBeTruthy();
+        expect(
+            validateTransactionForm(
+                { title: 'x'.repeat(121), amount: '1', categoryId: 'sys.food' },
+                'en-US',
+            ).title,
+        ).toBeTruthy();
+    });
+
+    it('rejects missing and invalid amounts', () => {
+        expect(
+            validateTransactionForm(
+                { title: 'Lunch', amount: '', categoryId: 'sys.food' },
+                'en-US',
+            ).amount,
+        ).toBeTruthy();
+        expect(
+            validateTransactionForm(
+                { title: 'Lunch', amount: '0', categoryId: 'sys.food' },
+                'en-US',
+            ).amount,
         ).toBeTruthy();
     });
 
     it('requires a category and bounds the description', () => {
         expect(
-            validateTransactionForm({ amount: '1', categoryId: '' }, 'en-US').category,
+            validateTransactionForm(
+                { title: 'Lunch', amount: '1', categoryId: '' },
+                'en-US',
+            ).category,
         ).toBeTruthy();
         expect(
             validateTransactionForm(
-                { amount: '1', categoryId: 'sys.food', description: 'x'.repeat(501) },
+                {
+                    title: 'Lunch',
+                    amount: '1',
+                    categoryId: 'sys.food',
+                    description: 'x'.repeat(501),
+                },
                 'en-US',
             ).description,
         ).toBeTruthy();
@@ -187,7 +220,10 @@ describe('validateTransactionForm', () => {
 
     it('accepts up to four decimal places', () => {
         expect(
-            validateTransactionForm({ amount: '1.2345', categoryId: 'sys.food' }, 'en-US'),
+            validateTransactionForm(
+                { title: 'Lunch', amount: '1.2345', categoryId: 'sys.food' },
+                'en-US',
+            ),
         ).toEqual({});
     });
 });

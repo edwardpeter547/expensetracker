@@ -136,7 +136,12 @@ describe('transaction controller ownership', () => {
         await transactionController.updateTransaction(req, { status, json }, jest.fn());
         await flushAsync();
 
-        expect(mockTransactionService.updateTransactionRecord).toHaveBeenCalledWith('t1', 1, expect.any(Object));
+        expect(mockTransactionService.updateTransactionRecord).toHaveBeenCalledWith(
+            't1',
+            1,
+            expect.any(Object),
+            undefined,
+        );
         expect(status).toHaveBeenCalledWith(200);
     });
 
@@ -161,11 +166,14 @@ describe('transaction controller ownership', () => {
         await transactionController.createTransaction(req, { status, json }, jest.fn());
         await flushAsync();
 
-        expect(mockTransactionService.createTransactionRecord).toHaveBeenCalledWith(expect.objectContaining({
-            userId: 1,
-            transType: 'EXPENSE',
-            receiptUrl: 'https://example.com/receipt.png',
-        }));
+        expect(mockTransactionService.createTransactionRecord).toHaveBeenCalledWith(
+            expect.objectContaining({
+                userId: 1,
+                transType: 'EXPENSE',
+                receiptUrl: 'https://example.com/receipt.png',
+            }),
+            undefined,
+        );
         expect(status).toHaveBeenCalledWith(201);
         expect(json.mock.calls[0][0].errors).toBeNull();
     });
