@@ -6,7 +6,8 @@
 
 ### Existing (in code today)
 - `User` — identity, credentials, preferences (`currency`, `timezone`, `language`, `theme`).
-- `Transaction` — amount, type, category (string), date, description, receipt URL, location.
+- `Transaction` — required title, amount, type, category (string), date, description, receipt URL, location, optional merchant details, and an optional budget link.
+- `TransactionItem` — manually entered line items attached to a transaction (display and itemization, not budget splitting).
 - `Category` — system or user-defined category.
 - `Budget` — amount, period, dates, alert threshold, category and user links.
 - `RefreshToken`, `VerificationToken`, `PasswordResetToken`, `LoginAttempt`, `PasswordHistory` — auth/audit support.
@@ -68,6 +69,7 @@ The proposed `Account` entity represents a source of transactions.
 ## Transactions and categories
 - **Initial domain:** one transaction has exactly one category (many-to-one). This matches the current single `Transaction.category` string and keeps budget aggregation unambiguous.
 - **Future capability:** transaction splitting is a separate feature that would introduce a transaction-split line model, not a many-to-many `Transaction`↔`Category` link.
+- **Manual itemization:** `TransactionItem` rows persist user-entered line items for display and receipt reconciliation. They do not participate in budget aggregation; budgets still aggregate `Transaction.categoryId`.
 - **Existing mismatch:** today `Transaction.category` is a string while `Budget.categoryId` references the `Category` table. These must be aligned (either normalize transactions to a category relation or change budget scoping) before budget aggregation can be correct.
 - **Subcategories:** introduced later as a parent/child relationship within `Category`, not as additional transaction links.
 

@@ -4,7 +4,7 @@
 ExpenseTracker is a personal finance application. The current implementation covers:
 
 - User registration, email verification, login, logout, token refresh, password reset, and device-session management.
-- Transaction recording (income and expense) with amount, category, description, receipt URL, location, and date.
+- Transaction recording (income and expense) with a required title, amount, category, optional description, receipt URL, location, date, optional merchant details, optional line items, and an optional budget link.
 - A dashboard summarizing monthly income, expenses, balance, and recent transactions.
 - Budget creation per category with monthly/weekly/yearly periods and alert thresholds.
 - User categories, with system categories and per-user categories.
@@ -148,7 +148,8 @@ The Prisma schema is split across `src/backend/src/prisma/schema.prisma` (genera
 Core models:
 
 - `User` — credentials, profile fields, verification flags, preferences (`currency`, `timezone`, `language`, `theme`), and `tokenVersion` for access-token invalidation.
-- `Transaction` — `amount` (`Decimal`, `NUMERIC(19,4)`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`.
+- `Transaction` — `title`, `amount` (`Decimal`, `NUMERIC(19,4)`), `transType` (`INCOME`/`EXPENSE`), `category` (string), `description`, `receiptUrl`, `location`, `transactionDate`, `userId`, optional merchant columns (`merchantName`, `merchantAddress`, `merchantPurchaseTime`, `merchantPaymentMethod`, `merchantReference`), and an optional `budgetId` link to `Budget`.
+- `TransactionItem` — manually maintained line items (`name`, `quantity`, `unitPrice` (`Decimal`, `NUMERIC(19,4)`), optional `category`) owned by a `Transaction` and cascade-deleted with it.
 - `Category` — `name`, `icon`, `isSystem`, optional `userId`.
 - `Budget` — `amount` (`Decimal`, `NUMERIC(19,4)`), `period`, `startDate`/`endDate`, `alertThreshold`, `isActive`, `userId`, `categoryId`.
 - `RefreshToken` (including `createdByIp`, `userAgent`, `lastUsedAt`), `VerificationToken` (keyed-HMAC, single-use, attempt-limited six-digit codes), `PasswordResetToken` (keyed-HMAC, single-use, attempt-limited six-digit codes), `LoginAttempt`, `PasswordHistory` — auth/audit support.

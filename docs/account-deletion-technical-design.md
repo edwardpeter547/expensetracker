@@ -26,7 +26,7 @@ counts, and progress live in the `account_deletion_request` and
 
 | Category | Prisma model / table | Handler | External storage | Dependencies | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Transactions | `transaction` | `transactions` | — | — | deleted before categories (RESTRICT FK) |
+| Transactions | `transaction` | `transactions` | — | — | deleted before categories (RESTRICT FK); line items (`transaction_item`) cascade with the parent row |
 | Budgets | `budget` | `budgets` | — | — | deleted before categories (RESTRICT FK) |
 | User categories | `categories` (userId) | `categories` | — | transactions, budgets | system categories are untouched |
 | Notifications | `notification` | `notifications` | — | — | |
