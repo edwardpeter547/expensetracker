@@ -503,9 +503,9 @@ paths:
       tags: [Transactions]
       summary: Create a transaction for the authenticated user
       description: |
-        Creates a user-scoped transaction. The returned record omits `amount`
-        and `transactionDate` because the service projection does not include
-        them.
+        Creates a user-scoped transaction and returns the complete created
+        record, including `amount` (a canonical decimal string) and
+        `transactionDate` (an ISO 8601 date-time).
       requestBody:
         required: true
         content:

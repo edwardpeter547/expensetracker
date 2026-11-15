@@ -68,9 +68,10 @@ export const fetchTransactions = async (): Promise<TransactionRecord[]> => {
 /**
  * Create a transaction for the authenticated user.
  *
- * The backend's create response intentionally omits `amount` and
- * `transactionDate`, so callers should refetch the list after a successful
- * create rather than relying on the returned record for display.
+ * The backend's create response is a complete public transaction record
+ * (including `amount` and `transactionDate`), so callers may consume it
+ * directly. List and dashboard refreshes are still performed on focus to keep
+ * server-derived totals consistent.
  *
  * @param {CreateTransactionInput} input The transaction fields to persist.
  * @returns {Promise<TransactionRecord|null>} The created record, when present.
