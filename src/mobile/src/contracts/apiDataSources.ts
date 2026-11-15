@@ -11,10 +11,12 @@ import {
     createCategory,
     createTransaction,
     deleteCategory,
+    deleteTransaction,
     fetchBudgets,
     fetchCategories,
     fetchTransactions,
     updateCategory,
+    updateTransaction,
 } from '@/api/transactions';
 import { mapBudgetToPlanningBudget } from '@/utils/planning';
 import type {
@@ -41,11 +43,10 @@ export const apiTransactionDataSource: TransactionDataSource = {
     create: (input) => createTransaction(input),
     get: async (id) =>
         (await fetchTransactions()).find((record) => record.id === id) ?? null,
-    update: async () => {
-        throw new Error('Editing transactions is not available yet.');
-    },
-    remove: async () => {
-        throw new Error('Deleting transactions is not available yet.');
+    update: (id, patch) => updateTransaction(id, patch),
+    remove: async (id) => {
+        await deleteTransaction(id);
+        return true;
     },
 };
 

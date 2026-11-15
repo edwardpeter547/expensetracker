@@ -74,6 +74,10 @@ const mockPrisma = {
             count: matchesIdAndUser(where, OWNED_TRANSACTION) ? 1 : 0,
         })),
     },
+    transactionItem: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+    },
     budget: {
         findFirst: jest.fn(({ where }) => (
             matchesIdAndUser(where, OWNED_BUDGET) ? OWNED_BUDGET : null
@@ -100,6 +104,8 @@ const mockPrisma = {
     },
 };
 
+mockPrisma.$transaction = jest.fn(async (callback) => callback(mockPrisma));
+
 const prismaModulePath = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     '../../configurations/prisma.connect.js'
@@ -121,10 +127,12 @@ describe('transaction ownership', () => {
         const found = await transactionService.getTransactionById('t1', OWNER_ID);
         const denied = await transactionService.getTransactionById('t1', OTHER_ID);
 
-        expect(mockPrisma.transaction.findFirst).toHaveBeenCalledWith({
-            where: { id: 't1', userId: OWNER_ID },
-        });
-        expect(found).toEqual(OWNED_TRANSACTION);
+        expect(mockPrisma.transaction.findFirst).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: 't1', userId: OWNER_ID },
+            }),
+        );
+        expect(found).toEqual({ ...OWNED_TRANSACTION, merchant: null, items: [] });
         expect(denied).toBeNull();
     });
 

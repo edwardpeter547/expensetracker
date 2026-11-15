@@ -29,6 +29,7 @@ export interface TransactionSection {
 /** Field-level validation errors for the Add Transaction form. */
 export interface TransactionFormErrors {
     amount?: string;
+    title?: string;
     category?: string;
     description?: string;
 }
@@ -36,6 +37,7 @@ export interface TransactionFormErrors {
 /** Values validated before a transaction is submitted. */
 export interface TransactionFormValues {
     amount: string;
+    title?: string;
     categoryId?: string | null;
     description?: string;
 }
@@ -59,6 +61,9 @@ export const startOfTransactionDay = (date: Date): Date =>
  * @returns {string} The row title.
  */
 export const transactionTitle = (transaction: TransactionRecord): string => {
+    const title = (transaction.title ?? '').trim();
+    if (title) return title;
+
     const description = (transaction.description ?? '').trim();
     return description || transaction.category || 'Transaction';
 };
@@ -256,6 +261,12 @@ export const validateTransactionForm = (
 ): TransactionFormErrors => {
     const errors: TransactionFormErrors = {};
     const normalized = parseMoneyInput(values.amount, locale, 4);
+
+    if (!(values.title ?? '').trim()) {
+        errors.title = 'Enter a title';
+    } else if ((values.title ?? '').trim().length > 120) {
+        errors.title = 'Title must be 120 characters or fewer';
+    }
 
     if (!normalized || Number(normalized) <= 0) {
         errors.amount = 'Enter an amount greater than zero';

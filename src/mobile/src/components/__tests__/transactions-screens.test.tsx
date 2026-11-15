@@ -285,16 +285,37 @@ describe('AddTransactionScreen', () => {
         const text = allText(tree);
         expect(text).toContain('Add Transaction');
         expect(text).toContain('Amount');
+        expect(text).toContain('Title');
         expect(text).toContain('Category');
         expect(text).toContain('Date');
-        expect(text).toContain('Description');
+        expect(text).toContain('Description (Optional)');
         expect(text).toContain('Save Transaction');
+    });
+
+    it('requires a title before saving', () => {
+        const onSave = jest.fn();
+        const tree = render(
+            <AddTransactionScreen
+                categories={categories}
+                budgets={[]}
+                onBack={jest.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        act(() => {
+            tree.root.findByProps({ accessibilityLabel: 'Save Transaction' }).props.onPress();
+        });
+
+        expect(onSave).not.toHaveBeenCalled();
+        expect(allText(tree)).toContain('Enter a title');
     });
 
     it('validates amount and category before saving', () => {
         const onSave = jest.fn();
         const tree = render(
             <AddTransactionScreen
+                initialValues={{ title: 'Lunch' }}
                 categories={categories}
                 budgets={[]}
                 onBack={jest.fn()}
@@ -373,6 +394,143 @@ describe('AddTransactionScreen', () => {
         const text = allText(tree);
         expect(text).toContain('Edit Transaction');
         expect(text).toContain('Save Changes');
+        expect(tree.root.findByProps({ value: '12.50' })).toBeTruthy();
+    });
+
+    /**
+     * Edit mode must emit the form draft with the prepopulated amount,
+     * category, date, description, and empty merchant/item attachments so the
+     * host can forward exactly the fields the user reviewed.
+     */
+    it('emits the edited draft with the prepopulated values', () => {
+        const onSave = jest.fn();
+        const tree = render(
+            <AddTransactionScreen
+                mode="edit"
+                initialValues={{
+                    kind: 'expense',
+                    title: 'Lunch',
+                    amount: '12.50',
+                    categoryId: 'sys.food',
+                    date: '2026-10-27',
+                    description: 'Lunch',
+                    budgetId: null,
+                }}
+                categories={categories}
+                budgets={[]}
+                onBack={jest.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        act(() => {
+            tree.root.findByProps({ accessibilityLabel: 'Save Changes' }).props.onPress();
+        });
+
+        expect(onSave).toHaveBeenCalledWith({
+            kind: 'expense',
+            title: 'Lunch',
+            amount: '12.50',
+            categoryId: 'sys.food',
+            date: '2026-10-27',
+            description: 'Lunch',
+            budgetId: null,
+            merchant: {},
+            items: [],
+        });
+    });
+
+    it('keeps Additional Details collapsed by default on Add and expands on toggle', () => {
+        const tree = render(
+            <AddTransactionScreen
+                categories={categories}
+                budgets={[]}
+                onBack={jest.fn()}
+                onSave={jest.fn()}
+            />,
+        );
+
+        expect(allText(tree)).not.toContain('Merchant Details');
+
+        act(() => {
+            tree.root
+                .findByProps({ accessibilityLabel: 'Toggle additional details' })
+                .props.onPress();
+        });
+
+        expect(allText(tree)).toContain('Merchant Details');
+    });
+
+    it('expands Additional Details and blocks save for an incomplete line item', () => {
+        const onSave = jest.fn();
+        const tree = render(
+            <AddTransactionScreen
+                initialValues={{ title: 'Groceries', amount: '12.50', categoryId: 'sys.food' }}
+                categories={categories}
+                budgets={[]}
+                items={[{ id: 'item-1', name: '', quantity: '1', unitPrice: '' }]}
+                onBack={jest.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        act(() => {
+            tree.root.findByProps({ accessibilityLabel: 'Save Transaction' }).props.onPress();
+        });
+
+        expect(onSave).not.toHaveBeenCalled();
+        expect(allText(tree)).toContain('Complete or remove invalid line items.');
+        expect(allText(tree)).toContain('Merchant Details');
+    });
+
+    /**
+     * The save button must be disabled while a save is in flight so a user
+     * cannot submit the same update twice.
+     */
+    it('disables the save button while a save is in flight', () => {
+        const tree = render(
+            <AddTransactionScreen
+                mode="edit"
+                saving
+                initialValues={{
+                    amount: '12.50',
+                    categoryId: 'sys.food',
+                    description: 'Lunch',
+                }}
+                categories={categories}
+                budgets={[]}
+                onBack={jest.fn()}
+                onSave={jest.fn()}
+            />,
+        );
+
+        expect(
+            tree.root.findByProps({ accessibilityLabel: 'Save Changes' }).props.disabled,
+        ).toBe(true);
+    });
+
+    /**
+     * A host-level form error must be visible without clearing the values the
+     * user already entered, preserving input for a retry.
+     */
+    it('renders a form error without clearing the entered values', () => {
+        const tree = render(
+            <AddTransactionScreen
+                mode="edit"
+                formError="Could not reach the server."
+                initialValues={{
+                    amount: '12.50',
+                    categoryId: 'sys.food',
+                    description: 'Lunch',
+                }}
+                categories={categories}
+                budgets={[]}
+                onBack={jest.fn()}
+                onSave={jest.fn()}
+            />,
+        );
+
+        expect(allText(tree)).toContain('Could not reach the server.');
         expect(tree.root.findByProps({ value: '12.50' })).toBeTruthy();
     });
 });

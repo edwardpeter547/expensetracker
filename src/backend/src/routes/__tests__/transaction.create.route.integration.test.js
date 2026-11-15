@@ -158,6 +158,7 @@ describeDb('transaction create route (HTTP, real PostgreSQL)', () => {
     test('create returns amount and transactionDate with the complete public record', async () => {
         const record = await createThroughApi({
             amount: '1234.5600',
+            title: 'Weekly groceries',
             type: 'EXPENSE',
             category: 'Food',
             description: 'Lunch',
@@ -170,6 +171,7 @@ describeDb('transaction create route (HTTP, real PostgreSQL)', () => {
         expect(record.id).toEqual(expect.any(String));
         expect(record.userId).toBe(ownerId);
         expect(record.transType).toBe('EXPENSE');
+        expect(record.title).toBe('Weekly groceries');
         expect(record.category).toBe('Food');
         expect(record.categoryId).toBeNull();
         expect(record.currency).toBe('USD');
@@ -196,6 +198,7 @@ describeDb('transaction create route (HTTP, real PostgreSQL)', () => {
     test('the create response matches a subsequent read-back of the same transaction', async () => {
         const created = await createThroughApi({
             amount: '50',
+            title: 'Monthly salary',
             type: 'INCOME',
             category: 'Salary',
             date: '2026-10-26T23:59:59.999Z',
@@ -214,6 +217,7 @@ describeDb('transaction create route (HTTP, real PostgreSQL)', () => {
     test('create preserves large fractional amounts without floating-point loss', async () => {
         const record = await createThroughApi({
             amount: '999999999999999.9999',
+            title: 'Rent',
             type: 'EXPENSE',
             category: 'Rent',
             date: '2026-10-27T00:00:00.000Z',
@@ -225,6 +229,7 @@ describeDb('transaction create route (HTTP, real PostgreSQL)', () => {
     test('a different user cannot read the created transaction', async () => {
         const created = await createThroughApi({
             amount: '12.34',
+            title: 'Lunch',
             type: 'EXPENSE',
             category: 'Food',
             date: '2026-10-27T12:00:00.000Z',

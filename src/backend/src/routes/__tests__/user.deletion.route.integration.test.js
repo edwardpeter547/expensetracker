@@ -123,6 +123,7 @@ describeDb('user deletion routes (HTTP, real PostgreSQL)', () => {
                 amount: 12.5,
                 currency: 'USD',
                 transType: 'EXPENSE',
+                title: 'Deletion Fixture',
                 category: 'Food',
                 transactionDate: new Date(),
                 userId: user.id,

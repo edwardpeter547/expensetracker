@@ -6,6 +6,7 @@ import { decimalAmount } from "./common.validation.js";
  * @type {Joi.ObjectSchema}
  * 
  * @property {number} amount - Transaction amount (must be positive). Required.
+ * @property {string} title - Transaction title. Required.
  * @property {string} type - Transaction type ('INCOME' or 'EXPENSE'). Required.
  * @property {string} category - Transaction category. Required.
  * @property {string} [description] - Optional transaction description (max 500 characters).
@@ -15,13 +16,28 @@ import { decimalAmount } from "./common.validation.js";
  */
 export const createTransactionSchema = Joi.object({
     amount: decimalAmount().required(),
+    title: Joi.string().trim().min(1).max(120).required(),
     type: Joi.string().valid('INCOME', 'EXPENSE').required(),
     category: Joi.string().required(),
     categoryId: Joi.string(),
     description: Joi.string().max(500),
     date: Joi.date().iso(),
     receiptUrl: Joi.string().uri(),
-    location: Joi.string()
+    location: Joi.string(),
+    budgetId: Joi.string(),
+    merchant: Joi.object({
+        name: Joi.string().trim().max(120),
+        address: Joi.string().max(500),
+        purchaseTime: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/),
+        paymentMethod: Joi.string().max(80),
+        reference: Joi.string().max(120)
+    }),
+    items: Joi.array().items(Joi.object({
+        name: Joi.string().trim().min(1).max(120).required(),
+        quantity: Joi.string().pattern(/^\d+$/).required(),
+        unitPrice: decimalAmount().required(),
+        category: Joi.string().max(120).allow(null)
+    })).max(100)
 });
 
 
@@ -31,6 +47,7 @@ export const createTransactionSchema = Joi.object({
  * @type {Joi.ObjectSchema}
  * 
  * @property {number} [amount] - Transaction amount (must be positive). Optional.
+ * @property {string} [title] - Transaction title. Optional.
  * @property {string} [type] - Transaction type ('INCOME' or 'EXPENSE'). Optional.
  * @property {string} [category] - Transaction category. Optional.
  * @property {string} [description] - Optional transaction description (max 500 characters).
@@ -40,14 +57,29 @@ export const createTransactionSchema = Joi.object({
  */
 export const updateTransactionSchema = Joi.object({
     amount: decimalAmount(),
+    title: Joi.string().trim().min(1).max(120),
     type: Joi.string().valid('INCOME', 'EXPENSE'),
     category: Joi.string(),
     categoryId: Joi.string(),
-    description: Joi.string().max(500),
+    description: Joi.string().max(500).allow(null),
     date: Joi.date().iso(),
-    receiptUrl: Joi.string().uri(),
-    location: Joi.string()
-});
+    receiptUrl: Joi.string().uri().allow(null),
+    location: Joi.string().allow(null),
+    budgetId: Joi.string().allow(null),
+    merchant: Joi.object({
+        name: Joi.string().trim().max(120).allow(null),
+        address: Joi.string().max(500).allow(null),
+        purchaseTime: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).allow(null),
+        paymentMethod: Joi.string().max(80).allow(null),
+        reference: Joi.string().max(120).allow(null)
+    }),
+    items: Joi.array().items(Joi.object({
+        name: Joi.string().trim().min(1).max(120).required(),
+        quantity: Joi.string().pattern(/^\d+$/).required(),
+        unitPrice: decimalAmount().required(),
+        category: Joi.string().max(120).allow(null)
+    })).max(100)
+}).min(1);
 
 
 

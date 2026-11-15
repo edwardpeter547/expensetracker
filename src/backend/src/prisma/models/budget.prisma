@@ -13,6 +13,7 @@ model Budget {
     user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
     categoryId          String
     category            Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+    transactions        Transaction[]
 
     // Timestamps
     createdAt           DateTime            @default(now())
